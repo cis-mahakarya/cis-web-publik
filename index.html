@@ -803,9 +803,18 @@
                     <input class='input-dark' id='profRefCode' readonly='true' style='color:#3498db; font-weight:bold; border-color:#3498db;' type='text'/>
                 </div>
                 <div style='display:flex; gap:10px; margin-bottom:15px;'>
-                    <button class='btn-cyan' onclick='window.copyRefLink()' style='padding:10px; font-size:0.75rem; background:#3498db; color:#fff; flex:1;'><i class='fa-solid fa-copy'></i> COPY LINK</button>
-                    <button class='btn-cyan' onclick='window.shareWaRef()' style='padding:10px; font-size:0.75rem; background:#2ecc71; color:#fff; flex:1;'><i class='fa-brands fa-whatsapp'></i> SHARE WA</button>
-                </div>
+                    <button class='btn-cyan' onclick='window.copyRefLink()' style='padding:10px; font-size:0.75rem; background:#3498db; color:#fff; flex:1;'><i class='fa-solid fa-copy'></i> COPY LINK</button>
+                    <button class='btn-cyan' onclick='window.shareWaRef()' style='padding:10px; font-size:0.75rem; background:#2ecc71; color:#fff; flex:1;'><i class='fa-brands fa-whatsapp'></i> SHARE WA</button>
+                </div>
+                
+                <label class='prof-label' style='color:#f1c40f;'><i class="fa-solid fa-bell"></i> NADA DERING NOTIFIKASI P2P</label>
+                <div class='input-group' style='margin-bottom:20px;'>
+                    <select class='input-dark no-icon' id='profNadaDering' onchange='window.gantiNadaDering(this.value)' style='border-color:#f1c40f; color:#f1c40f;'>
+                        <option value='1'>Nada 1 (Pesan Masuk WA)</option>
+                        <option value='2'>Nada 2 (Alarm Digital)</option>
+                        <option value='3'>Nada 3 (Tetesan Air)</option>
+                    </select>
+                </div>
             </div>
 
             <div id='areaProfP2P' style='display:none;'>
@@ -1832,26 +1841,22 @@
     };
 
     // Mesin Sintesis Suara Mandiri (Ting-Ting!) Tanpa Link File Eksternal
+    window.gantiNadaDering = (val) => {
+        localStorage.setItem("cisNadaDering", val);
+        window.showToast("Nada dering disimpan!");
+        mainkanSuaraNotif(); // Tes bunyi
+    };
+
     function mainkanSuaraNotif() {
         try {
-            let audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-            let oscillator = audioCtx.createOscillator();
-            let gainNode = audioCtx.createGain();
-            
-            oscillator.type = "sine";
-            // Nada tinggi ala aplikasi profesional
-            oscillator.frequency.setValueAtTime(659.25, audioCtx.currentTime); // E5
-            oscillator.frequency.setValueAtTime(880.00, audioCtx.currentTime + 0.08); // A5
-            
-            gainNode.gain.setValueAtTime(0.06, audioCtx.currentTime);
-            gainNode.gain.exponentialRampToValueAtTime(0.00001, audioCtx.currentTime + 0.35);
-            
-            oscillator.connect(gainNode);
-            gainNode.connect(audioCtx.destination);
-            
-            oscillator.start();
-            oscillator.stop(audioCtx.currentTime + 0.35);
-        } catch(err) { console.log("Audio play blocked by browser safety policy."); }
+            let nada = localStorage.getItem("cisNadaDering") || "1";
+            let audioUrl = "https://actions.google.com/sounds/v1/communications/incoming_message.ogg"; // 1: Nada Pesan Biasa
+            if (nada === "2") audioUrl = "https://actions.google.com/sounds/v1/alarms/digital_watch_alarm_long.ogg"; // 2: Alarm Digital
+            if (nada === "3") audioUrl = "https://actions.google.com/sounds/v1/water/water_drop.ogg"; // 3: Tetesan Air
+
+            let player = new Audio(audioUrl);
+            player.play().catch(e => console.log("Auto-play diblokir browser"));
+        } catch(err) {}
     }
 
     window.renderNotifikasi = () => {
@@ -1902,12 +1907,18 @@
             snap.forEach(doc => { let d = doc.data(); d.tipe = 'GLOBAL'; globalNotifs.push(d); }); 
             window.renderNotifikasi();
             snap.docChanges().forEach((change) => { 
-                if (change.type === "added") { 
-                    let d = change.doc.data(); 
-                    if(Date.now() - (d.timestamp_local || Date.now()) < 8000) window.tampilkanPopUpAdmin(d.pesan); 
-                } 
+                    if (change.type === "added") { 
+                        let d = change.doc.data(); 
+                        if(Date.now() - (d.timestamp_local || Date.now()) < 8000) window.tampilkanPopUpAdmin(d.pesan); 
+                    } 
+                });
+            }, (error) => { 
+                console.error("FIREBASE INDEX ERROR (Notifikasi_Personal):", error);
+                const notifDiv = document.getElementById('notifList');
+                if(notifDiv) notifDiv.innerHTML = "<div style='padding:15px; color:#ef4444; font-size:0.75rem; text-align:center;'><b>INDEX DATABASE KURANG!</b><br/>Tekan F12 (Console) di PC Anda, temukan pesan error merah dari Firebase, lalu klik linknya untuk membuat Index <b>Notifikasi_Personal</b>.</div>";
             });
-        });
+        }
+    }
         
         if(myEmail) {
             unsubNotifPersonal = onSnapshot(query(collection(db, "Notifikasi_Personal"), where("email", "==", myEmail), orderBy("timestamp_local", "desc"), limit(10)), (snap) => {
@@ -2780,6 +2791,7 @@
 
     function setupProfileUI() {
       document.getElementById('profUser').value = localStorage.getItem("cisMinerUser"); document.getElementById('profEmail').value = myEmail; document.getElementById('profNewPass').value = ""; document.getElementById('profConfirmPass').value = "";
+      let elNada = document.getElementById('profNadaDering'); if(elNada) elNada.value = localStorage.getItem("cisNadaDering") || "1";
       
       if(window.myProfileData) {
           let bData = window.myProfileData.bank || "";
