@@ -3327,7 +3327,27 @@ if(!passwordRegex.test(pass)) { msg('msgReg', "Password harus diawali huruf besa
               let expT = 0; let sttAkun = "INACTIVE";
               if(!window.REQ_REG_TOKEN) { expT = Date.now() + (window.FREE_DAYS_REG * 86400000); sttAkun = "AKTIF"; }
 
-              let newData = { username: u, wa: wa, email: email, password: pass, tx_pin: pin, last_checkin: 0, referred_by: ref, saldo_vrsc: 0, kecepatan_hash: (window.BONUS_SPEED_REG || 0), expired_at: expT, status_akun: sttAkun, edit_user: 0, edit_email: 0, created_at: serverTimestamp(), saldo_rupiah: 0, total_bonus_sponsor_vrsc: 0, device_id: (sttAkun === "AKTIF" ? myDeviceID : "") };
+              // --- FIX GARASI MESIN: Masukkan Bonus Speed sebagai Mesin Pertama ---
+              let mesinGratis = [];
+              if(window.BONUS_SPEED_REG > 0) {
+                  mesinGratis.push({
+                      id_mesin: "FREE-" + Math.random().toString(36).substr(2, 5).toUpperCase(),
+                      nominal_beli: 0,
+                      speed_bawaan: window.BONUS_SPEED_REG,
+                      expired_kontrak: Date.now() + ((window.FREE_DAYS_REG || 30) * 86400000)
+                  });
+              }
+              // ----------------------------------------------------------------
+
+              let newData = { 
+                  username: u, wa: wa, email: email, password: pass, tx_pin: pin, 
+                  last_checkin: 0, referred_by: ref, saldo_vrsc: 0, 
+                  kecepatan_hash: (window.BONUS_SPEED_REG || 0), 
+                  daftar_mesin: mesinGratis, // <-- KUNCI SAKTINYA DI SINI
+                  expired_at: expT, status_akun: sttAkun, edit_user: 0, edit_email: 0, 
+                  created_at: serverTimestamp(), saldo_rupiah: 0, total_bonus_sponsor_vrsc: 0, 
+                  device_id: (sttAkun === "AKTIF" ? myDeviceID : "") 
+              };
               const newAkun = await addDoc(collection(db, "Akun_Publik"), newData);
               
               document.getElementById('regPass').value = ''; 
