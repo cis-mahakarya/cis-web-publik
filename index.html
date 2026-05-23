@@ -1907,18 +1907,12 @@
             snap.forEach(doc => { let d = doc.data(); d.tipe = 'GLOBAL'; globalNotifs.push(d); }); 
             window.renderNotifikasi();
             snap.docChanges().forEach((change) => { 
-                    if (change.type === "added") { 
-                        let d = change.doc.data(); 
-                        if(Date.now() - (d.timestamp_local || Date.now()) < 8000) window.tampilkanPopUpAdmin(d.pesan); 
-                    } 
-                });
-            }, (error) => { 
-                console.error("FIREBASE INDEX ERROR (Notifikasi_Personal):", error);
-                const notifDiv = document.getElementById('notifList');
-                if(notifDiv) notifDiv.innerHTML = "<div style='padding:15px; color:#ef4444; font-size:0.75rem; text-align:center;'><b>INDEX DATABASE KURANG!</b><br/>Tekan F12 (Console) di PC Anda, temukan pesan error merah dari Firebase, lalu klik linknya untuk membuat Index <b>Notifikasi_Personal</b>.</div>";
+                if (change.type === "added") { 
+                    let d = change.doc.data(); 
+                    if(Date.now() - (d.timestamp_local || Date.now()) < 8000) window.tampilkanPopUpAdmin(d.pesan); 
+                } 
             });
-        }
-    }
+        });
         
         if(myEmail) {
             unsubNotifPersonal = onSnapshot(query(collection(db, "Notifikasi_Personal"), where("email", "==", myEmail), orderBy("timestamp_local", "desc"), limit(10)), (snap) => {
@@ -1931,7 +1925,11 @@
                         if(Date.now() - (d.timestamp_local || Date.now()) < 8000) window.tampilkanPopUpAdmin(d.pesan); 
                     } 
                 });
-            }, (error) => { console.log("Notif listener error masked."); });
+            }, (error) => { 
+                console.error("FIREBASE INDEX ERROR (Notifikasi_Personal):", error);
+                const notifDiv = document.getElementById('notifList');
+                if(notifDiv) notifDiv.innerHTML = "<div style='padding:15px; color:#ef4444; font-size:0.75rem; text-align:center;'><b>INDEX DATABASE KURANG!</b><br/>Tekan F12 (Console) di PC Anda, temukan pesan error merah dari Firebase, lalu klik linknya untuk membuat Index <b>Notifikasi_Personal</b>.</div>";
+            });
         }
     }
 
