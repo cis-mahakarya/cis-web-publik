@@ -12,7 +12,8 @@
   <meta content='yes' name='mobile-web-app-capable'/>
   <meta content='yes' name='apple-mobile-web-app-capable'/>
   <meta content='black-translucent' name='apple-mobile-web-app-status-bar-style'/>
-   
+   <link rel="manifest" href="manifest.json">
+	
   <link href='https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;700;900&family=Plus+Jakarta+Sans:wght@400;600;700;900&family=Share+Tech+Mono&display=swap' rel='stylesheet'/>
   <link href='https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css' rel='stylesheet'/>
   
@@ -3463,57 +3464,54 @@ if(!passwordRegex.test(pass)) { msg('msgReg', "Password harus diawali huruf besa
     });
 
     // ==========================================
-    // SISTEM PWA INSTALL PROMPT
-    // ==========================================
-    let deferredInstallPrompt = null;
+    // SISTEM PWA INSTALL PROMPT (NATIVE ANDROID)
+    // ==========================================
+    
+    // 1. Registrasi Service Worker (Syarat Wajib Google Chrome)
+    if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+            navigator.serviceWorker.register('sw.js').catch(err => console.log('SW Gagal:', err));
+        });
+    }
 
-    // Menangkap event install dari Google Chrome Android
+    let deferredInstallPrompt = null;
+
+    // 2. Chrome otomatis menembakkan event ini JIKA manifest & sw.js valid
     window.addEventListener('beforeinstallprompt', (e) => {
-        e.preventDefault();
+        e.preventDefault(); // Tahan pop-up default browser
         deferredInstallPrompt = e;
         
-        // Cek apakah user sudah menekan cancel sebelumnya agar tidak dispam terus
         let isDismissed = sessionStorage.getItem('cisInstallDismissed');
-        // Cek apakah sedang tidak di dalam mode standalone (aplikasi)
         const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone;
         
         if(!isDismissed && !isStandalone) {
             setTimeout(() => {
                 document.getElementById('modalInstallApp').style.display = 'flex';
-            }, 1000); // Tampil 1 detik setelah web dimuat
+            }, 1500); // Tampil 1.5 detik setelah PWA siap diinstal
         }
     });
 
     window.tutupModalInstall = () => {
         document.getElementById('modalInstallApp').style.display = 'none';
-        // Simpan keputusan 'Cancel' di session agar tidak muncul lagi selama browser belum ditutup
         sessionStorage.setItem('cisInstallDismissed', 'true');
     };
 
+    // 3. Eksekusi Instalasi Asli (Native UI)
     document.getElementById('btnConfirmInstall').addEventListener('click', async () => {
         document.getElementById('modalInstallApp').style.display = 'none';
         if (deferredInstallPrompt) {
-            // Tampilkan pop-up instalasi native bawaan Google Chrome
+            // Memicu jendela instalasi sistem operasi HP dari bawah layar
             deferredInstallPrompt.prompt();
             const { outcome } = await deferredInstallPrompt.userChoice;
             if (outcome === 'accepted') {
-                console.log('User menginstal aplikasi');
+                window.showToast("Menginstal Aplikasi...");
             }
             deferredInstallPrompt = null;
         } else {
-            // Fallback untuk perangkat iOS (Safari) atau browser yang tidak support beforeinstallprompt
-            window.showInstallGuide();
+            // Fallback jika belum siap
+            window.showToast("Sistem Instal sedang disiapkan, tunggu sebentar lalu coba lagi.");
         }
     });
-
-    window.showInstallGuide = () => {
-        const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
-        if(isIOS) {
-            alert("PENGGUNA iPHONE (SAFARI):\n1. Klik tombol 'Share' (kotak dengan panah ke atas) di menu bawah.\n2. Gulir layar, lalu pilih 'Add to Home Screen' (Tambah ke Layar Utama).\n3. Klik 'Tambah'. Selesai!");
-        } else {
-            alert("PENGGUNA ANDROID:\n1. Klik titik tiga (⋮) di pojok kanan atas browser Chrome.\n2. Pilih 'Instal Aplikasi' atau 'Tambahkan ke Layar Utama'.\n3. Selesai!");
-        }
-    };
     }); 
 </script>
 </body>
