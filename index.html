@@ -1329,10 +1329,12 @@
         document.getElementById(id).style.display = 'none'; 
         if(id === 'modalStokToken') { let f = document.getElementById('formTransferToken'); if(f) f.style.display = 'none'; } 
         
-        // PINTU DARURAT: Kunci kembali layar jika status akun belum aktif atau waktu habis setelah tutup modal
-        let isWaktuHabis = (window.REQ_PERPANJANG && typeof expTime !== 'undefined' && expTime < Date.now());
-        if (window.STATUS_AKUN_USER === "INACTIVE" || isWaktuHabis) {
-             document.getElementById('modalTopup').style.display = 'flex';
+        // PINTU DARURAT: Kunci kembali layar jika status akun belum aktif, KECUALI jika yang ditutup adalah modalLegal
+        if (id !== 'modalLegal') {
+            let isWaktuHabis = (window.REQ_PERPANJANG && typeof expTime !== 'undefined' && expTime < Date.now());
+            if (window.STATUS_AKUN_USER === "INACTIVE" || isWaktuHabis) {
+                document.getElementById('modalTopup').style.display = 'flex';
+            }
         }
     };
     window.openNetworkModal = () => { document.getElementById('modalNetwork').style.display = 'flex'; window.loadNetworkTree(); };
