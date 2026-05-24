@@ -758,7 +758,7 @@
         </div>
         <div class='panel-box wallet-btn' onclick='window.openWalletModal("modalSaldo")' style='border-color:#00f2fe;'><h3 style='margin:0; color:#00f2fe;'><i class='fa-solid fa-wallet'></i> <span data-i18n='idrBalance'>IDR BALANCE</span></h3><p data-i18n='idrDesc' style='font-size:0.75rem; color:#94a3b8; margin:5px 0 0 0;'>Exchange VRSC Coins to IDR</p></div>
         <div class='panel-box wallet-btn' onclick='window.openWalletModal("modalBeliDaya")' style='border-color:#2ecc71;'><h3 style='margin:0; color:#2ecc71;'><i class='fa-solid fa-bolt'></i> <span data-i18n='menuUpgrade'>UPGRADE SPEED</span></h3><p data-i18n='upgradeDesc' style='font-size:0.75rem; color:#94a3b8; margin:5px 0 0 0;'>Upgrade Mining Engine</p></div>
-        <div class='panel-box wallet-btn' onclick='window.openWalletModal("modalWithdraw")' style='border-color:#f39c12;'><h3 style='margin:0; color:#f39c12;'><i class='fa-solid fa-print'></i> <span data-i18n='menuWd'>WITHDRAW BALANCE</span></h3><p data-i18n='wdDesc' style='font-size:0.75rem; color:#94a3b8; margin:5px 0 0 0;'>Convert Balance to Crypto Token</p></div>
+        <div class='panel-box wallet-btn' onclick='window.openWalletModal("modalWithdraw")' style='border-color:#f39c12;'><h3 style='margin:0; color:#f39c12;'><i class='fa-solid fa-right-left'></i> SWAP BALANCE</h3><p style='font-size:0.75rem; color:#94a3b8; margin:5px 0 0 0;'>Swap IDR Balance to Token</p></div>
         <div class='panel-box wallet-btn' onclick='window.openWalletModal("modalStokToken")' style='border-color:#9b59b6;'><h3 style='margin:0; color:#9b59b6;'><i class='fa-solid fa-box-open'></i> <span data-i18n='menuStock'>MY TOKEN STOCK</span></h3><p data-i18n='stockDesc' style='font-size:0.75rem; color:#94a3b8; margin:5px 0 0 0;'>View &amp; Send Tokens to Friends</p></div>
       </div>
     </div>
@@ -1033,8 +1033,8 @@
       <div class='modal-overlay' id='modalWithdraw'>
         <div class='modal-card'>
           <button class='btn-close-modal' onclick='window.closeWalletModal("modalWithdraw")' style='position:absolute; right:15px; top:15px; background:none; border:none; color:#ef4444; font-size:1.2rem; cursor:pointer;'><i class='fa-solid fa-xmark'></i></button>
-          <h3 style='color:#f39c12; margin:0;'><i class='fa-solid fa-print'></i> <span data-i18n='menuWd'>WITHDRAW BALANCE</span></h3>
-          <p data-i18n='wdNote' style='font-size:0.8rem; color:#94a3b8; margin:0 0 10px 0;'>Mint IDR Balance to Token to sell/send to friends.</p>
+          <h3 style='color:#f39c12; margin:0;'><i class='fa-solid fa-right-left'></i> SWAP BALANCE</h3>
+          <p style='font-size:0.8rem; color:#94a3b8; margin:0 0 10px 0;'>Swap IDR Balance to Token to sell/send to friends.</p>
           <div style='background:rgba(243, 156, 18, 0.1); border:1px dashed #f39c12; padding:10px; border-radius:8px; margin-bottom:15px; text-align:center;'>
               <span data-i18n='lblAvBal' style='font-size:0.75rem; color:#f39c12; font-weight:bold;'>AVAILABLE BALANCE</span><br/><span id='infoSaldoCetak' style='font-family:Orbitron; font-size:1.3rem; font-weight:900; color:#fff;'>Rp 0</span>
           </div>
@@ -1046,12 +1046,12 @@
           <input class='input-dark no-icon' id='targetUserWd' placeholder='Target Username (Your Friend)' style='margin-bottom:10px;' type='text' oninput='this.value = this.value.toUpperCase().replace(/\s/g, "")'/>
           
           <select class='input-dark no-icon' id='inputWithdraw' style='color:#f39c12; font-weight:bold; margin-bottom:15px;'>
-              <option value='10000'>Withdraw: Rp 10.000</option>
-              <option value='20000'>Withdraw: Rp 20.000</option>
-              <option value='50000'>Withdraw: Rp 50.000</option>
-              <option value='100000'>Withdraw: Rp 100.000</option>
-              <option value='500000'>Withdraw: Rp 500.000</option>
-              <option value='1000000'>Withdraw: Rp 1.000.000</option>
+              <option value='10000'>Swap: Rp 10.000</option>
+              <option value='20000'>Swap: Rp 20.000</option>
+              <option value='50000'>Swap: Rp 50.000</option>
+              <option value='100000'>Swap: Rp 100.000</option>
+              <option value='500000'>Swap: Rp 500.000</option>
+              <option value='1000000'>Swap: Rp 1.000.000</option>
           </select>
 
           <div class='input-group' style='margin-bottom:15px;'>
@@ -1059,7 +1059,7 @@
               <i class='fa-solid fa-eye right-icon' onclick='window.togglePass("pinWithdrawInline", this)'></i>
           </div>
 
-          <button class='btn-cyan' data-i18n='btnMint' id='btnWithdraw' onclick='window.eksekusiWdInline()' style='background:#f39c12; color:#fff;'>PROCESS WITHDRAWAL</button>
+          <button class='btn-cyan' id='btnWithdraw' onclick='window.eksekusiWdInline()' style='background:#f39c12; color:#fff;'>PROCESS SWAP</button>
           <div class='sys-msg' id='msgWithdraw'></div>
         </div>
       </div>
