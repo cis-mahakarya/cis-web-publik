@@ -2524,19 +2524,33 @@
             const q = query(collection(db, "P2P_Order"), where(qField, "==", myEmail));
             
             // Gunakan onSnapshot agar list berubah OTOMATIS saat Sultan/Pembeli memencet tombol
-            unsubP2POrders = onSnapshot(q, (snap) => {
+            unsubP2POrders = onSnapshot(q, async (snap) => {
                 let dataArr = []; 
                 snap.forEach(d => { dataArr.push({id: d.id, ...d.data()})});
                 dataArr.sort((a,b) => (b.waktu_order?.seconds || 0) - (a.waktu_order?.seconds || 0));
 
                 if(dataArr.length === 0) { tbody.innerHTML = "<tr><td colspan='3' style='text-align:center; color:#94a3b8;'>Belum ada transaksi P2P.</td></tr>"; return; }
 
+                // MATA-MATA WA: Tarik nomor WA Partner secara dinamis dari Database
+                let waMap = {};
+                for (let x of dataArr) {
+                    let pEmail = currentP2PTab === "beli" ? x.penjual : x.pembeli;
+                    if(!waMap[pEmail]) {
+                        try {
+                            const uSnap = await getDocs(query(collection(db, "Akun_Publik"), where("email", "==", pEmail)));
+                            if(!uSnap.empty) waMap[pEmail] = uSnap.docs[0].data().wa || "";
+                        } catch(e) { waMap[pEmail] = ""; }
+                    }
+                }
+
                 let html = "";
                 dataArr.forEach(x => {
                     let waktu = formatTanggalJam(x.waktu_order);
                     let partner = currentP2PTab === "beli" ? x.penjual_user : x.pembeli_user;
+                    let partnerEmail = currentP2PTab === "beli" ? x.penjual : x.pembeli;
+                    let noWaPartner = waMap[partnerEmail] || "";
                     let btnAksi = ""; let statusWarna = "#3498db";
-                    let linkWa = `https://wa.me/?text=Halo%20${partner},%20terkait%20transaksi%20P2P%20Token%20CIS%20saya...`;
+                    let linkWa = `https://wa.me/${noWaPartner}?text=Halo%20${partner},%20terkait%20transaksi%20P2P%20Token%20CIS%20saya...`;
 
                     if(currentP2PTab === "beli") {
                         // TAMPILAN PEMBELI
