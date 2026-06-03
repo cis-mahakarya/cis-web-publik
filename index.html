@@ -1019,12 +1019,7 @@
           <div class='token-card-list' id='listTokenBeliDaya' style='max-height: 180px; overflow-y: auto; padding-right: 5px; margin-bottom: 15px;'><div style='text-align:center; padding:15px; color:#64748b; font-size:0.85rem;'>Searching token...</div></div>
           <input id='selectedTokenBeliDaya' type='hidden' value=''/>
           <input id='selectedNominalTokenBeliDaya' type='hidden' value='0'/>
-          
-          <div class='input-group' style='margin-bottom:15px;'>
-              <input class='input-dark no-icon' id='pinBeliHashInline' placeholder='Masukkan 4-Digit PIN Anda' style='border-color:#2ecc71;' type='password' maxlength='4' inputmode='numeric'/>
-              <i class='fa-solid fa-eye right-icon' onclick='window.togglePass("pinBeliHashInline", this)'></i>
-          </div>
-
+        
           <button class='btn-cyan' data-i18n='btnUseTokenNow' id='btnBeliHash' onclick='window.eksekusiBeliHashInline()' style='background:#2ecc71; color:#fff;'><i class='fa-solid fa-fire'></i> USE TOKEN NOW</button>
           <div class='sys-msg' id='msgBeliHash'></div>
         </div>
@@ -2000,12 +1995,9 @@
     let currentPinAction = "";
 
     window.eksekusiBeliHashInline = () => {
-        const inp = document.getElementById('pinBeliHashInline').value;
-        if(inp && inp.length === 4) {
-            if(inp === myPin) { document.getElementById('btnBeliHashActual').click(); }
-            else { msg('msgBeliHash', "PIN Salah!", "error"); }
-        } else { msg('msgBeliHash', "Masukkan 4-Digit PIN Anda!", "error"); }
-    };
+    // Langsung eksekusi tombol asli tanpa validasi PIN
+    document.getElementById('btnBeliHashActual').click(); 
+};
 
     window.eksekusiWdInline = () => {
         const inp = document.getElementById('pinWithdrawInline').value;
