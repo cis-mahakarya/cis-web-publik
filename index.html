@@ -2548,7 +2548,13 @@
                     if(!waMap[pEmail]) {
                         try {
                             const uSnap = await getDocs(query(collection(db, "Akun_Publik"), where("email", "==", pEmail)));
-                            if(!uSnap.empty) waMap[pEmail] = uSnap.docs[0].data().wa || "";
+                            if(!uSnap.empty) {
+    let uData = uSnap.docs[0].data();
+    waMap[pEmail] = {
+        wa: uData.wa || "",
+        bank: uData.bank || uData.ewallet || uData.crypto || "Rekening belum diisi"
+    };
+}
                         } catch(e) { waMap[pEmail] = ""; }
                     }
                 }
@@ -2558,7 +2564,9 @@
                     let waktu = formatTanggalJam(x.waktu_order);
                     let partner = currentP2PTab === "beli" ? x.penjual_user : x.pembeli_user;
                     let partnerEmail = currentP2PTab === "beli" ? x.penjual : x.pembeli;
-                    let noWaPartner = waMap[partnerEmail] || "";
+                    let partnerInfo = waMap[partnerEmail] || { wa: "", bank: "" };
+					let noWaPartner = partnerInfo.wa;
+					let rekPartner = partnerInfo.bank;
                     let btnAksi = ""; let statusWarna = "#3498db";
                     let linkWa = `https://wa.me/${noWaPartner}?text=Halo%20${partner},%20terkait%20transaksi%20P2P%20Token%20CIS%20saya...`;
 
@@ -2594,7 +2602,7 @@
 
                     html += `<tr>
                         <td><span style='font-size:0.7rem; color:#94a3b8;'>${waktu}</span><br/><span style='font-family:Orbitron; font-size:0.6rem; color:#64748b;'>ID: ${x.id.slice(0,6).toUpperCase()}</span></td>
-                        <td><b style='color:#e84393; font-size:0.75rem;'>${x.qty}x ${x.jenis_token}</b><br/><span style='color:#94a3b8; font-size:0.7rem;'>Total: <b style='color:#2ecc71;'>Rp ${(x.total_harga||0).toLocaleString('id-ID')}</b></span><br/><span style='font-size:0.65rem;'>Partner: <b style='color:#00f2fe;'>${partner}</b></span></td>
+                        <td><b style='color:#e84393; font-size:0.75rem;'>${x.qty}x ${x.jenis_token}</b><br/><span style='color:#94a3b8; font-size:0.7rem;'>Total: <b style='color:#2ecc71;'>Rp ${(x.total_harga||0).toLocaleString('id-ID')}</b></span><br/><span style='font-size:0.65rem;'>Partner: <b style='color:#00f2fe;'>${partner}</b></span><br/><span style='font-size:0.65rem; color:#f1c40f;'><i class='fa-solid fa-building-columns'></i> ${rekPartner}</span></td>
                         <td><b style='color:${statusWarna}; font-size:0.75rem;'>${x.status}</b><div style='margin-top:5px;'>${btnAksi}</div></td>
                     </tr>`;
                 });
