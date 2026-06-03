@@ -2550,9 +2550,19 @@
                             const uSnap = await getDocs(query(collection(db, "Akun_Publik"), where("email", "==", pEmail)));
                             if(!uSnap.empty) {
     let uData = uSnap.docs[0].data();
+    
+    // Siapkan wadah untuk mengumpulkan semua rekening
+    let semuaRekening = [];
+    
+    // Masukkan data jika tidak kosong
+    if (uData.bank) semuaRekening.push(uData.bank);
+    if (uData.ewallet) semuaRekening.push(uData.ewallet);
+    if (uData.crypto) semuaRekening.push(uData.crypto);
+
     waMap[pEmail] = {
         wa: uData.wa || "",
-        bank: uData.bank || uData.ewallet || uData.crypto || "Rekening belum diisi"
+        // Gabungkan semua rekening dengan enter (<br/>) agar rapi ke bawah
+        bank: semuaRekening.length > 0 ? semuaRekening.join("<br/><i class='fa-solid fa-building-columns'></i> ") : "Rekening belum diisi"
     };
 }
                         } catch(e) { waMap[pEmail] = ""; }
