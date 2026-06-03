@@ -2777,19 +2777,26 @@
     };
 
     window.openLeaderboard = async () => {
-    window.openWalletModal('modalLeaderboard');
-    const listDiv = document.getElementById('leaderboardList');
-    listDiv.innerHTML = "<div style='text-align:center; padding:30px;'><i class='fa-solid fa-spinner fa-spin' style='font-size:2rem; color:#f1c40f;'></i><br/><br/>Memindai Sultan Berpenghasilan Tinggi...</div>";
-    
-    try {
-        // Query Akun_Publik yang memiliki saldo IDR, diurutkan dari yang terbesar
-        const qSultan = query(collection(db, "Akun_Publik"), where("saldo_rupiah", ">", 0), orderBy("saldo_rupiah", "desc"), limit(10));
-        const snap = await getDocs(qSultan);
-        
-        if(snap.empty) {
-            listDiv.innerHTML = "<div style='text-align:center; padding:20px; color:#94a3b8;'>Belum ada Sultan yang melakukan konversi koin.</div>";
-            return;
-        }
+    window.openWalletModal('modalLeaderboard');
+    const listDiv = document.getElementById('leaderboardList');
+    listDiv.innerHTML = "<div style='text-align:center; padding:30px;'><i class='fa-solid fa-spinner fa-spin' style='font-size:2rem; color:#f1c40f;'></i><br/><br/>Memindai Sultan Berpenghasilan Tinggi...</div>";
+    
+    try {
+        // 1. Ambil aturan minimal saldo dari Master Pusat
+        let minSaldoSyarat = 0;
+        const confSnap = await getDocs(query(collection(db, "System_Config"), where("tipe", "==", "GLOBAL_STATS")));
+        if(!confSnap.empty && confSnap.docs[0].data().min_sultan) {
+            minSaldoSyarat = confSnap.docs[0].data().min_sultan;
+        }
+
+        // 2. Terapkan aturan tersebut ke sensor pencarian Sultan
+        const qSultan = query(collection(db, "Akun_Publik"), where("saldo_rupiah", ">=", minSaldoSyarat), orderBy("saldo_rupiah", "desc"), limit(10));
+        const snap = await getDocs(qSultan);
+        
+        if(snap.empty) {
+            listDiv.innerHTML = `<div style='text-align:center; padding:20px; color:#94a3b8;'>Belum ada Sultan yang memenuhi syarat minimal saldo (Rp ${minSaldoSyarat.toLocaleString('id-ID')}).</div>`;
+            return;
+        }
         
         let html = ""; let rank = 1;
         snap.forEach(doc => {
