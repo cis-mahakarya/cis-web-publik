@@ -1224,7 +1224,7 @@
         localStorage.setItem("cisMinerDeviceID", myDeviceID);
     }
 
-    let globalVrscPriceIdr = 0; let globalVrscPriceUsdt = 0; let globalSpeedMultiplier = 1.0; 
+    let globalVrscPriceIdr = 0; let globalVrscPriceUsdt = 0; let globalSpeedMultiplier = 1.0; let globalMinExchangeRp = 100; 
     let currentAdminRole = ""; let currentAdminAkses = []; let allUsersData = [];
 
     function formatKripto(angka) { return new Intl.NumberFormat('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 10 }).format(angka); }
@@ -1525,7 +1525,7 @@
         try {
             let online = 1204; let registered = 8450; let withdrawn = 452890;
             const snap = await getDocs(query(collection(db, "System_Config"), where("tipe", "==", "GLOBAL_STATS")));
-            if(!snap.empty) { const data = snap.docs[0].data(); if(data.online) online = data.online; if(data.registered) registered = data.registered; if(data.withdrawn) withdrawn = data.withdrawn; }
+            if(!snap.empty) { const data = snap.docs[0].data(); if(data.online) online = data.online; if(data.registered) registered = data.registered; if(data.withdrawn) withdrawn = data.withdrawn; if(data.min_exchange_rp !== undefined) globalMinExchangeRp = data.min_exchange_rp; }
             if(online > registered) online = registered; if(4 > online) { if (registered >= 4) { online = 4; } else { online = registered; } }
 
             let diffOnline = 0; if (registered > online) { diffOnline = Math.min(10, registered-online); }
@@ -1986,9 +1986,8 @@
     };
 
     window.tukarVrscKeRupiah = async () => {
-        let vrscValueRp = Math.floor(myVrsc * vrscPriceRp);
-        if(vrscValueRp < 100) { window.showToast("VRSC Coin not enough to exchange!"); return; }
-        if(!confirm(`Exchange ${formatKripto(myVrsc)} VRSC to Rp ${vrscValueRp.toLocaleString('en-US')}?`)) return;
+        let vrscValueRp = Math.floor(myVrsc * vrscPriceRp);
+        if(vrscValueRp < globalMinExchangeRp) { window.showToast("Batas minimal Exchange adalah Rp " + globalMinExchangeRp.toLocaleString('id-ID')); return; }
         const btn = document.getElementById('btnTukarVrsc'); btn.disabled=true; btn.innerText="PROCESSING...";
         mySaldoRupiah += vrscValueRp; myVrsc = 0;
         await updateDoc(doc(db, "Akun_Publik", docId), { saldo_vrsc: 0, saldo_rupiah: mySaldoRupiah });
