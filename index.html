@@ -633,6 +633,7 @@
         <li onclick='window.openScreen("screen-p2p", this)'><i class='fa-solid fa-cart-shopping'></i> <span data-i18n='menuP2P'>Beli Token P2P</span></li>
         <li onclick='window.openScreen("screen-mutasi", this)'><i class='fa-solid fa-receipt'></i> <span data-i18n='menuHistory'>Transaction History</span></li>
         <li onclick='window.openScreen("screen-profile", this)'><i class='fa-solid fa-user-shield'></i> <span data-i18n='menuProfile'>My Profile</span></li>
+        <li onclick='window.openHargaPasar()'><i class='fa-solid fa-tags'></i> <span data-i18n='menuHarga'>Harga Pasar</span></li>
         <li onclick='window.logoutUser()' style='color:#ef4444; border-top:1px solid #1e293b; margin-top:10px;'><i class='fa-solid fa-power-off'></i> <span data-i18n='menuLogout'>Logout</span></li>
       </ul>
     </div>
@@ -733,7 +734,7 @@
             <div class='menu-box' onclick='window.openScreen("screen-p2p")' style='border-color:#e84393;'><i class='fa-solid fa-cart-shopping' style='color:#e84393;'></i><span data-i18n='menuP2P'>Beli Token P2P</span></div>
             <div class='menu-box' onclick='window.openLeaderboard()' style='border-color:#f1c40f;'><i class='fa-solid fa-trophy' style='color:#f1c40f;'></i><span data-i18n='menuTopSultan'>Top 10 Sultan</span></div>
             <div class='menu-box' onclick='window.openNetworkModal()' style='border-color:#3498db;'><i class='fa-solid fa-sitemap' style='color:#3498db;'></i><span data-i18n='menuNetwork'>Network Tree</span></div>
-            <div class='menu-box' onclick='window.openHargaPasar()' style='border-color:#e67e22;'><i class='fa-solid fa-tags' style='color:#e67e22;'></i><span data-i18n='menuHarga'>Harga Pasar</span></div>
+            <div class='menu-box' onclick='window.openWalletModal("modalDonasi")' style='border-color:#1abc9c;'><i class='fa-solid fa-hand-holding-heart' style='color:#1abc9c;'></i><span>CIS Charity</span></div>
             <div class='menu-box' onclick='window.openScreen("screen-profile")' style='border-color:#9b59b6;'><i class='fa-solid fa-user-shield' style='color:#9b59b6;'></i><span data-i18n='menuProfile'>My Profile</span></div>
           </div>
 
@@ -1014,6 +1015,33 @@
         </div>
       </div>
 
+	<div class='modal-overlay' id='modalDonasi'>
+        <div class='modal-card' style='max-width: 450px; text-align:center;'>
+          <button class='btn-close-modal' onclick='window.closeWalletModal("modalDonasi")' style='position:absolute; right:15px; top:15px; background:none; border:none; color:#ef4444; font-size:1.2rem; cursor:pointer;'><i class='fa-solid fa-xmark'></i></button>
+          
+          <div style='width: 60px; height: 60px; background: rgba(26, 188, 156, 0.1); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 15px auto; border: 2px solid #1abc9c;'>
+              <i class='fa-solid fa-hand-holding-dollar' style='font-size: 1.8rem; color: #1abc9c;'></i>
+          </div>
+          <h3 style='color:#1abc9c; font-family:Orbitron; margin:0 0 10px 0;'>SUPPORT CIS CHARITY</h3>
+          
+          <div style='background:rgba(26, 188, 156, 0.05); border:1px dashed #1abc9c; padding:15px; border-radius:10px; margin-bottom:15px;'>
+              <p style='color:#e2e8f0; font-size:0.8rem; line-height:1.6; margin-top:0; text-align:justify;'>
+                  Visi utama <b>CIS Protocol</b> bukanlah sekadar profit individu, melainkan membangun sebuah <b>Maha Karya</b> yang dapat menyejahterakan banyak orang melalui sistem komunitas sosial.
+              </p>
+              <p style='color:#f1c40f; font-size:0.8rem; font-weight:bold; margin-bottom:0;'>
+                  Mari berdonasi! Kontribusi Anda akan digunakan untuk memperkuat server, memperluas jaringan, dan menebar manfaat yang lebih luas bagi sesama.
+              </p>
+          </div>
+
+          <div style='text-align:left; background:#0b0f19; padding:10px; border-radius:8px; border:1px solid #1e293b; margin-bottom:15px;'>
+              <label class='prof-label' style='color:#2ecc71; font-size:0.7rem;'><i class='fa-brands fa-usdt'></i> ALAMAT DONASI (USDT BEP-20)</label>
+              <input class='input-dark no-icon' id='walletDonasiTarget' type='text' value='0x5db09b3fe5265d35805d554837caa27967ca09db' readonly='true' style='color:#2ecc71; font-size:0.75rem; text-align:center; padding-left:15px !important; margin-top:5px; border-color:#2ecc71;'/>
+          </div>
+          
+          <button class='btn-cyan' onclick='window.copyDonasiTarget()' style='background:linear-gradient(135deg, #1abc9c 0%, #16a085 100%); color:#fff; font-size:0.85rem;'><i class='fa-solid fa-copy'></i> COPY WALLET ADDRESS</button>
+        </div>
+      </div>
+	
       <div class='modal-overlay' id='modalSaldo'>
         <div class='modal-card'>
           <button class='btn-close-modal' onclick='window.closeWalletModal("modalSaldo")' style='position:absolute; right:15px; top:15px; background:none; border:none; color:#ef4444; font-size:1.2rem; cursor:pointer;'><i class='fa-solid fa-xmark'></i></button>
@@ -3012,6 +3040,17 @@
             if(!myUsername) return window.showToast("Sistem belum siap, tunggu sebentar.");
             const link = window.location.origin + window.location.pathname + "?ref=" + myUsername;
             navigator.clipboard.writeText(link).then(() => window.showToast("Link Referral Tersalin!")).catch(() => window.showToast("Gagal menyalin link"));
+        };
+
+		window.copyDonasiTarget = () => {
+            const copyText = document.getElementById("walletDonasiTarget");
+            copyText.select();
+            copyText.setSelectionRange(0, 99999); // Untuk perangkat mobile
+            navigator.clipboard.writeText(copyText.value).then(() => {
+                window.showToast("Alamat Donasi USDT Tersalin!");
+            }).catch(() => {
+                window.showToast("Gagal menyalin alamat");
+            });
         };
         
         window.shareWaRef = () => {
