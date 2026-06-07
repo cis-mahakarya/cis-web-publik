@@ -734,7 +734,7 @@
             <div class='menu-box' onclick='window.openScreen("screen-p2p")' style='border-color:#e84393;'><i class='fa-solid fa-cart-shopping' style='color:#e84393;'></i><span data-i18n='menuP2P'>Beli Token P2P</span></div>
             <div class='menu-box' onclick='window.openLeaderboard()' style='border-color:#f1c40f;'><i class='fa-solid fa-trophy' style='color:#f1c40f;'></i><span data-i18n='menuTopSultan'>Top 10 Sultan</span></div>
             <div class='menu-box' onclick='window.openNetworkModal()' style='border-color:#3498db;'><i class='fa-solid fa-sitemap' style='color:#3498db;'></i><span data-i18n='menuNetwork'>Network Tree</span></div>
-            <div class='menu-box' onclick='window.openWalletModal("modalDonasi")' style='border-color:#1abc9c;'><i class='fa-solid fa-hand-holding-heart' style='color:#1abc9c;'></i><span>CIS Charity</span></div>
+            <div class='menu-box' onclick='window.openModalDonasi()' style='border-color:#1abc9c;'><i class='fa-solid fa-hand-holding-heart' style='color:#1abc9c;'></i><span>CIS Charity</span></div>
             <div class='menu-box' onclick='window.openScreen("screen-profile")' style='border-color:#9b59b6;'><i class='fa-solid fa-user-shield' style='color:#9b59b6;'></i><span data-i18n='menuProfile'>My Profile</span></div>
           </div>
 
@@ -1015,31 +1015,77 @@
         </div>
       </div>
 
-	<div class='modal-overlay' id='modalDonasi'>
-        <div class='modal-card' style='max-width: 450px; text-align:center;'>
-          <button class='btn-close-modal' onclick='window.closeWalletModal("modalDonasi")' style='position:absolute; right:15px; top:15px; background:none; border:none; color:#ef4444; font-size:1.2rem; cursor:pointer;'><i class='fa-solid fa-xmark'></i></button>
-          
-          <div style='width: 60px; height: 60px; background: rgba(26, 188, 156, 0.1); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 15px auto; border: 2px solid #1abc9c;'>
-              <i class='fa-solid fa-hand-holding-dollar' style='font-size: 1.8rem; color: #1abc9c;'></i>
-          </div>
-          <h3 style='color:#1abc9c; font-family:Orbitron; margin:0 0 10px 0;'>SUPPORT CIS CHARITY</h3>
-          
-          <div style='background:rgba(26, 188, 156, 0.05); border:1px dashed #1abc9c; padding:15px; border-radius:10px; margin-bottom:15px;'>
-              <p style='color:#e2e8f0; font-size:0.8rem; line-height:1.6; margin-top:0; text-align:justify;'>
-                  Visi utama <b>CIS Protocol</b> bukanlah sekadar profit individu, melainkan membangun sebuah <b>Maha Karya</b> yang dapat menyejahterakan banyak orang melalui sistem komunitas sosial.
-              </p>
-              <p style='color:#f1c40f; font-size:0.8rem; font-weight:bold; margin-bottom:0;'>
-                  Mari berdonasi! Kontribusi Anda akan digunakan untuk memperkuat server, memperluas jaringan, dan menebar manfaat yang lebih luas bagi sesama.
-              </p>
-          </div>
+	<!-- POP-UP DONASI MAHA KARYA -->
+      <div class='modal-overlay' id='modalDonasi'>
+          <div class='modal-card' style='max-width: 500px; text-align:center; max-height: 85vh; display: flex; flex-direction: column; padding:0; overflow:hidden;'>
+              <button class='btn-close-modal' onclick='window.closeWalletModal("modalDonasi")' style='position:absolute; right:15px; top:15px; background:none; border:none; color:#ef4444; font-size:1.2rem; cursor:pointer; z-index:10;'><i class='fa-solid fa-xmark'></i></button>
+              
+              <div style='padding: 20px 20px 0 20px; flex-shrink:0;'>
+                  <h3 style='color:#1abc9c; font-family:Orbitron; margin:0 0 10px 0;'><i class='fa-solid fa-hand-holding-heart'></i> CIS CHARITY</h3>
+                  
+                  <!-- TAB MENU -->
+                  <div style='display:flex; border-bottom:1px solid #334155; margin-bottom:15px;'>
+                      <div id='tabDonasiInfo' onclick='window.switchDonasiTab("info")' style='flex:1; padding:10px; cursor:pointer; font-weight:bold; color:#1abc9c; border-bottom:2px solid #1abc9c; font-size:0.8rem;'>Form Donasi</div>
+                      <div id='tabDonasiList' onclick='window.switchDonasiTab("list")' style='flex:1; padding:10px; cursor:pointer; font-weight:bold; color:#94a3b8; font-size:0.8rem;'>Daftar Donatur</div>
+                  </div>
+              </div>
 
-          <div style='text-align:left; background:#0b0f19; padding:10px; border-radius:8px; border:1px solid #1e293b; margin-bottom:15px;'>
-              <label class='prof-label' style='color:#2ecc71; font-size:0.7rem;'><i class='fa-brands fa-usdt'></i> ALAMAT DONASI (USDT BEP-20)</label>
-              <input class='input-dark no-icon' id='walletDonasiTarget' type='text' value='0x5db09b3fe5265d35805d554837caa27967ca09db' readonly='true' style='color:#2ecc71; font-size:0.75rem; text-align:center; padding-left:15px !important; margin-top:5px; border-color:#2ecc71;'/>
+              <!-- AREA KONTEN BISA DI-SCROLL -->
+              <div style='flex:1; overflow-y:auto; padding: 0 20px 20px 20px;'>
+                  
+                  <!-- AREA 1: INFO & FORM -->
+                  <div id='areaDonasiInfo'>
+                      <div style='background:rgba(26, 188, 156, 0.05); border:1px dashed #1abc9c; padding:12px; border-radius:10px; margin-bottom:15px;'>
+                          <p style='color:#e2e8f0; font-size:0.75rem; line-height:1.5; margin-top:0; text-align:justify;'>
+                              Visi utama <b>CIS Protocol</b> adalah membangun <b>Maha Karya</b> yang menyejahterakan banyak orang. Kontribusi Anda sangat berarti untuk memperkuat server, ekosistem, dan menebar manfaat luas bagi sesama.
+                          </p>
+                      </div>
+
+                      <div style='text-align:left; background:#0b0f19; padding:10px; border-radius:8px; border:1px solid #1e293b; margin-bottom:15px;'>
+                          <label class='prof-label' style='color:#2ecc71; font-size:0.7rem;'><i class='fa-brands fa-usdt'></i> ALAMAT DONASI (USDT BEP-20)</label>
+                          <div style='display:flex; gap:5px; margin-top:5px;'>
+                              <input class='input-dark no-icon' id='walletDonasiTarget' type='text' value='0x5db09b3fe5265d35805d554837caa27967ca09db' readonly='true' style='color:#2ecc71; font-size:0.7rem; text-align:center; padding:10px !important; border-color:#2ecc71; flex:1;'/>
+                              <button class='btn-cyan' onclick='window.copyDonasiTarget()' style='background:#1abc9c; color:#fff; width:45px; padding:0; border-radius:6px;'><i class='fa-solid fa-copy'></i></button>
+                          </div>
+                      </div>
+                      
+                      <h4 style='color:#f1c40f; margin:0 0 10px 0; text-align:left; font-size:0.8rem;'><i class='fa-solid fa-file-invoice-dollar'></i> Form Konfirmasi Transfer</h4>
+                      <p style='font-size:0.65rem; color:#94a3b8; text-align:left; margin-top:0;'>Username Anda otomatis tercatat oleh sistem saat pengiriman.</p>
+                      
+                      <div class='input-group'>
+                          <input class='input-dark no-icon' id='donasiKota' placeholder='Kota Asal Anda (Misal: Jakarta)' type='text' style='border-color:#3498db; font-size:0.8rem;'/>
+                      </div>
+                      <div class='input-group'>
+                          <input class='input-dark no-icon' id='donasiNominal' placeholder='Nominal USDT (Misal: 50)' type='number' style='border-color:#2ecc71; font-size:0.8rem;'/>
+                      </div>
+                      <div class='input-group'>
+                          <input class='input-dark no-icon' id='donasiTxid' placeholder='Paste Kode TXID / Hash Transfer' type='text' style='border-color:#e84393; font-size:0.8rem;'/>
+                      </div>
+                      
+                      <button class='btn-cyan' id='btnKirimDonasi' onclick='window.kirimKonfirmasiDonasi()' style='background:linear-gradient(135deg, #1abc9c 0%, #16a085 100%); color:#fff; font-size:0.85rem; margin-bottom:10px;'><i class='fa-solid fa-paper-plane'></i> KIRIM KONFIRMASI DONASI</button>
+                      <div class='sys-msg' id='msgDonasi'></div>
+                  </div>
+
+                  <!-- AREA 2: DAFTAR DONATUR SULTAN -->
+                  <div id='areaDonasiList' style='display:none;'>
+                      <div class='table-responsive'>
+                          <table style='width: 100%; border-collapse: collapse; text-align: left; font-size:0.8rem;'>
+                              <thead>
+                                  <tr style='background: #1e293b;'>
+                                      <th style='padding:10px 8px; color:#f1c40f;'>Tgl & Kota</th>
+                                      <th style='padding:10px 8px; color:#00f2fe;'>Sultan</th>
+                                      <th style='padding:10px 8px; text-align:right; color:#2ecc71;'>Nominal</th>
+                                  </tr>
+                              </thead>
+                              <tbody id='tblDonaturList'>
+                                  <tr><td colspan='3' style='text-align:center; padding:20px;'><i class='fa-solid fa-spinner fa-spin'></i> Memuat data pahlawan...</td></tr>
+                              </tbody>
+                          </table>
+                      </div>
+                  </div>
+
+              </div>
           </div>
-          
-          <button class='btn-cyan' onclick='window.copyDonasiTarget()' style='background:linear-gradient(135deg, #1abc9c 0%, #16a085 100%); color:#fff; font-size:0.85rem;'><i class='fa-solid fa-copy'></i> COPY WALLET ADDRESS</button>
-        </div>
       </div>
 	
       <div class='modal-overlay' id='modalSaldo'>
@@ -2944,6 +2990,102 @@
       btn.disabled = false;
     });
 
+	window.copyDonasiTarget = () => {
+            const copyText = document.getElementById("walletDonasiTarget");
+            copyText.select(); copyText.setSelectionRange(0, 99999);
+            navigator.clipboard.writeText(copyText.value).then(() => { window.showToast("Alamat USDT Tersalin!"); }).catch(() => {});
+        };
+
+        window.switchDonasiTab = (tab) => {
+            document.getElementById('areaDonasiInfo').style.display = tab === 'info' ? 'block' : 'none';
+            document.getElementById('areaDonasiList').style.display = tab === 'list' ? 'block' : 'none';
+            document.getElementById('tabDonasiInfo').style.color = tab === 'info' ? '#1abc9c' : '#94a3b8';
+            document.getElementById('tabDonasiInfo').style.borderBottom = tab === 'info' ? '2px solid #1abc9c' : 'none';
+            document.getElementById('tabDonasiList').style.color = tab === 'list' ? '#1abc9c' : '#94a3b8';
+            document.getElementById('tabDonasiList').style.borderBottom = tab === 'list' ? '2px solid #1abc9c' : 'none';
+        };
+
+        window.openModalDonasi = () => {
+            window.openWalletModal('modalDonasi');
+            window.switchDonasiTab('info');
+            window.loadDaftarDonatur();
+        };
+
+        window.kirimKonfirmasiDonasi = async () => {
+            const kota = document.getElementById('donasiKota').value.trim();
+            const nominal = document.getElementById('donasiNominal').value;
+            const txid = document.getElementById('donasiTxid').value.trim();
+            const btn = document.getElementById('btnKirimDonasi');
+
+            if(!kota || !nominal || !txid) {
+                msg('msgDonasi', "Lengkapi Kota, Nominal USDT, dan TXID!", "error");
+                return;
+            }
+
+            btn.disabled = true;
+            btn.innerHTML = "<i class='fa-solid fa-spinner fa-spin'></i> MENGIRIM DATA...";
+
+            try {
+                await addDoc(collection(db, "Donasi_USDT"), {
+                    username: myUsername,
+                    email: myEmail,
+                    kota: kota,
+                    nominal_usdt: parseFloat(nominal),
+                    txid: txid,
+                    status: "PENDING",
+                    waktu_konfirmasi: serverTimestamp()
+                });
+                
+                msg('msgDonasi', "Konfirmasi Terkirim! Menunggu persetujuan Admin Pusat.", "ok");
+                document.getElementById('donasiKota').value = '';
+                document.getElementById('donasiNominal').value = '';
+                document.getElementById('donasiTxid').value = '';
+            } catch(e) {
+                msg('msgDonasi', "Gagal mengirim data. Coba lagi.", "error");
+            }
+            
+            setTimeout(() => {
+               btn.disabled = false;
+               btn.innerHTML = "<i class='fa-solid fa-paper-plane'></i> KIRIM KONFIRMASI DONASI";
+               document.getElementById('msgDonasi').style.display = 'none';
+            }, 3000);
+        };
+
+        window.loadDaftarDonatur = async () => {
+            const tbody = document.getElementById('tblDonaturList');
+            tbody.innerHTML = "<tr><td colspan='3' style='text-align:center; padding:20px;'><i class='fa-solid fa-spinner fa-spin'></i> Memuat Pahlawan CIS...</td></tr>";
+            
+            try {
+                // Hanya menarik data donatur yang sudah "DISETUJUI" dari Web Master Pusat
+                const q = query(collection(db, "Donasi_USDT"), where("status", "==", "DISETUJUI"));
+                const snap = await getDocs(q);
+                
+                let dataDonatur = [];
+                snap.forEach(d => dataDonatur.push(d.data()));
+                
+                // Urutkan dari donasi terbaru
+                dataDonatur.sort((a,b) => (b.waktu_konfirmasi?.seconds || 0) - (a.waktu_konfirmasi?.seconds || 0));
+
+                if(dataDonatur.length === 0) {
+                    tbody.innerHTML = "<tr><td colspan='3' style='text-align:center; color:#94a3b8; padding:20px;'>Belum ada data donatur yang diverifikasi Pusat.</td></tr>";
+                    return;
+                }
+
+                let html = "";
+                dataDonatur.forEach(x => {
+                    let dDate = x.waktu_konfirmasi ? new Date(x.waktu_konfirmasi.seconds * 1000).toLocaleDateString('id-ID') : '-';
+                    html += `<tr>
+                        <td style='padding:12px 8px; border-bottom:1px solid #334155;'><span style='font-size:0.65rem; color:#94a3b8;'>${dDate}</span><br/><b style='color:#fff; font-size:0.75rem;'>${x.kota}</b></td>
+                        <td style='padding:12px 8px; border-bottom:1px solid #334155; color:#00f2fe; font-weight:bold; font-size:0.8rem;'><i class='fa-solid fa-user-check'></i> ${x.username}</td>
+                        <td style='padding:12px 8px; border-bottom:1px solid #334155; text-align:right; color:#2ecc71; font-weight:bold; font-size:0.9rem;'>+${x.nominal_usdt} USDT</td>
+                    </tr>`;
+                });
+                tbody.innerHTML = html;
+            } catch(e) {
+                tbody.innerHTML = "<tr><td colspan='3' style='text-align:center; color:#ef4444; padding:20px;'>Gagal memuat data donatur.</td></tr>";
+            }
+        };
+		  
     window.addEventListener('load', () => {
 
         let launchTimerInt = null;
