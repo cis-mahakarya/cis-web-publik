@@ -1705,13 +1705,40 @@
         updateClaimTimer();
     }
 
-    window.kirimPesanPusat = async () => {
-      const p = document.getElementById('chatPesan').value; const btn = document.getElementById('btnKirimChat');
-      if(5 > p.length) { msg('msgChat', "Message too short!", "error"); return; }
-      btn.innerText = "SENDING..."; btn.disabled = true;
-      try { await addDoc(collection(db, "Pesan_Bantuan"), { email: myEmail, username: myUsername, pesan: p, waktu: serverTimestamp(), status: "OPEN", sender: "USER" }); document.getElementById('chatPesan').value = ""; msg('msgChat', "Message Sent Successfully!", "ok"); setTimeout(window.closeChatModal, 2000); } 
-      catch(e) { msg('msgChat', "Failed to Send", "error"); } btn.innerText = "SEND MESSAGE"; btn.disabled = false;
-    };
+    window.kirimPesanBantuan = async () => {
+            // Sesuaikan ID input di bawah ini dengan ID textarea di HTML web member Anda
+            let isiPesan = document.getElementById('inputHelpMessage').value.trim(); 
+            
+            if(!isiPesan) return alert("Pesan tidak boleh kosong!");
+            
+            // Ubah tombol jadi loading (Opsional, sesuaikan ID tombolnya)
+            let btn = document.getElementById('btnSendHelp');
+            let textAsli = btn.innerText;
+            btn.innerText = "SENDING...";
+            btn.disabled = true;
+            
+            try {
+                // WAJIB: Nama koleksi harus "Pesan_Bantuan" agar terbaca oleh Master Pusat
+                await addDoc(collection(db, "Pesan_Bantuan"), {
+                    username: myUsername, // Pastikan variabel username Anda benar
+                    email: myEmail,       // Pastikan variabel email Anda benar
+                    pesan: isiPesan,
+                    status: "PENDING",
+                    balasan_admin: "",
+                    created_at: serverTimestamp() // WAJIB: Admin mensortir berdasarkan ini
+                });
+                
+                // Pesan Sukses (Sesuaikan dengan desain notifikasi Anda)
+                document.getElementById('inputHelpMessage').value = "";
+                alert("Message Sent Successfully!"); 
+                
+            } catch(e) {
+                alert("Gagal mengirim pesan ke server.");
+            }
+            
+            btn.innerText = textAsli;
+            btn.disabled = false;
+        };
 
     let miningTickCount = 0;
     function startMiningEngine() {
