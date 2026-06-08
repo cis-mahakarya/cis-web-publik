@@ -940,7 +940,13 @@
           <h3 style='color:#00f2fe; font-family:Orbitron; margin:0 0 10px 0;'><i class='fa-solid fa-headset'></i> <span data-i18n='chatTitle'>Help Center</span></h3>
           <p data-i18n='chatDesc' style='font-size:0.75rem; color:#94a3b8;'>Contact Admin for issues.</p>
           <textarea id='chatPesan' placeholder='Type your message or issue...' style='width:100%; height:100px; background:#0b0f19; border:1px solid #334155; border-radius:8px; padding:10px; color:#fff; font-family:inherit; margin-bottom:10px;'></textarea>
-          <button class='btn-cyan' data-i18n='btnSendChat' id='btnKirimChat' onclick='window.kirimPesanPusat()' style='padding:10px; font-size:0.9rem;'>SEND MESSAGE</button>
+          <div style="margin-bottom: 10px; text-align: left;">
+              <label for="lampiranHelp" style="font-size: 0.75rem; color: #38bdf8; cursor: pointer;">
+                  <i class="fa-solid fa-paperclip"></i> Lampirkan Foto / Bukti (Opsional)
+              </label>
+              <input type="file" id="lampiranHelp" accept="image/*" class="input-dark" style="display: block; margin-top: 5px; width: 100%; font-size: 0.8rem; padding: 8px; border-color: #334155;">
+          </div>
+			<button class='btn-cyan' data-i18n='btnSendChat' id='btnKirimChat' onclick='window.kirimPesanPusat()' style='padding:10px; font-size:0.9rem;'>SEND MESSAGE</button>
           <div class='sys-msg msg-ok' id='msgChat'></div>
         </div>
       </div>
@@ -1705,40 +1711,66 @@
         updateClaimTimer();
     }
 
-    window.kirimPesanBantuan = async () => {
-            // Sesuaikan ID input di bawah ini dengan ID textarea di HTML web member Anda
-            let isiPesan = document.getElementById('inputHelpMessage').value.trim(); 
-            
-            if(!isiPesan) return alert("Pesan tidak boleh kosong!");
-            
-            // Ubah tombol jadi loading (Opsional, sesuaikan ID tombolnya)
-            let btn = document.getElementById('btnSendHelp');
-            let textAsli = btn.innerText;
-            btn.innerText = "SENDING...";
+    window.kirimPesanPusat = async () => {
+        let textarea = document.getElementById('chatPesan');
+        let isiPesan = textarea ? textarea.value.trim() : ""; 
+        let fileInput = document.getElementById('lampiranHelp');
+        let file = fileInput && fileInput.files.length > 0 ? fileInput.files[0] : null;
+        
+        if(!isiPesan && !file) {
+            msg('msgChat', "Pesan atau lampiran tidak boleh kosong!", "error");
+            return;
+        }
+        
+        let btn = document.getElementById('btnKirimChat'); 
+        let textAsli = btn ? btn.innerText : "SEND MESSAGE";
+        
+        if(btn) {
+            btn.innerHTML = "<i class='fa-solid fa-spinner fa-spin'></i> MENGIRIM...";
             btn.disabled = true;
+        }
+        
+        try {
+            let fileUrl = "";
             
-            try {
-                // WAJIB: Nama koleksi harus "Pesan_Bantuan" agar terbaca oleh Master Pusat
-                await addDoc(collection(db, "Pesan_Bantuan"), {
-                    username: myUsername, // Pastikan variabel username Anda benar
-                    email: myEmail,       // Pastikan variabel email Anda benar
-                    pesan: isiPesan,
-                    status: "PENDING",
-                    balasan_admin: "",
-                    created_at: serverTimestamp() // WAJIB: Admin mensortir berdasarkan ini
-                });
-                
-                // Pesan Sukses (Sesuaikan dengan desain notifikasi Anda)
-                document.getElementById('inputHelpMessage').value = "";
-                alert("Message Sent Successfully!"); 
-                
-            } catch(e) {
-                alert("Gagal mengirim pesan ke server.");
+            // 1. Upload ke Storage jika ada gambar
+            if(file) {
+                if(btn) btn.innerHTML = "<i class='fa-solid fa-cloud-arrow-up fa-bounce'></i> UPLOADING FOTO...";
+                const storageRef = ref(storage, 'lampiran_bantuan/' + Date.now() + '_' + file.name);
+                const snapshot = await uploadBytesResumable(storageRef, file);
+                fileUrl = await getDownloadURL(snapshot.ref);
             }
             
+            // 2. Simpan Data ke Firestore
+            if(btn) btn.innerHTML = "<i class='fa-solid fa-spinner fa-spin'></i> MENYIMPAN KE PUSAT...";
+            
+            await addDoc(collection(db, "Pesan_Bantuan"), {
+                username: myUsername || "Unknown",
+                email: myEmail || "Unknown",
+                pesan: isiPesan,
+                lampiran_url: fileUrl,
+                status: "PENDING",
+                balasan_admin: "",
+                created_at: serverTimestamp()
+            });
+            
+            msg('msgChat', "Message Sent Successfully!", "ok");
+            
+            // Bersihkan form
+            if(textarea) textarea.value = "";
+            if(fileInput) fileInput.value = "";
+            setTimeout(() => { document.getElementById('msgChat').style.display = 'none'; window.closeChatModal(); }, 2000);
+            
+        } catch(e) {
+            console.error(e);
+            msg('msgChat', "Gagal mengirim! Pastikan Rules Firebase Storage mengizinkan upload.", "error");
+        }
+        
+        if(btn) {
             btn.innerText = textAsli;
             btn.disabled = false;
-        };
+        }
+    };
 
     let miningTickCount = 0;
     function startMiningEngine() {
