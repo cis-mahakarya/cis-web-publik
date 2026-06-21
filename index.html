@@ -985,8 +985,15 @@
           <button class='btn-close-modal' onclick='window.closeWalletModal("modalBeliP2P")' style='position:absolute; right:15px; top:15px; background:none; border:none; color:#ef4444; font-size:1.2rem; cursor:pointer;'><i class='fa-solid fa-xmark'></i></button>
           <h3 style='color:#e84393; margin:0 0 15px 0;'><i class='fa-solid fa-cart-plus'></i> FORM ORDER P2P</h3>
           <p style='font-size:0.75rem; color:#94a3b8;'>Pilih penjual, order, bayar, lalu konfirmasi.</p>
-          <div class='input-group'>
+          <div class='input-group' style='margin-bottom: 5px;'>
               <select class='input-dark no-icon' id='p2pTargetSultan' onchange='window.tampilkanRekeningSultan()'><option value=''>Memuat Data...</option></select>
+          </div>
+          <!-- CHECKBOX DARURAT P2P -->
+          <div id='boxPengepulMini' style='display:none; margin-bottom:15px; padding:8px; background:rgba(241,196,15,0.1); border:1px dashed #f1c40f; border-radius:8px;'>
+              <label style='font-size:0.7rem; color:#f1c40f; cursor:pointer; display:flex; align-items:center; gap:8px;'>
+                  <input type='checkbox' id='chkPengepulMini' onchange='window.bukaModalBeliP2P()' style='accent-color:#f1c40f; width:16px; height:16px;'/>
+                  <span>⚠️ Sultan lambat respon? Centang ini untuk mencari Pengepul Alternatif (Saldo > 50K).</span>
+              </label>
           </div>
           <div id='infoRekeningSultan' style='display:none; font-size:0.75rem; background:rgba(255,255,255,0.05); padding:10px; border-radius:8px; border:1px dashed #e84393; margin-bottom:10px;'></div>
           <div class='input-group'>
@@ -2537,55 +2544,78 @@
     };
 
     window.bukaModalBeliP2P = async () => {
-        window.openWalletModal('modalBeliP2P');
-        const selSultan = document.getElementById('p2pTargetSultan');
-        selSultan.innerHTML = "<option value=''>Memindai Penjual Valid...</option>";
-        document.getElementById('infoRekeningSultan').style.display = 'none';
-        
-        try {
-            let calonSultan = new Set();
+        window.openWalletModal('modalBeliP2P');
+        const selSultan = document.getElementById('p2pTargetSultan');
+        const boxPengepul = document.getElementById('boxPengepulMini');
+        const chkPengepul = document.getElementById('chkPengepulMini');
+        selSultan.innerHTML = "<option value=''>Memindai Penjual Valid...</option>";
+        document.getElementById('infoRekeningSultan').style.display = 'none';
+        
+        try {
+            // 1. TENTUKAN SYARAT MINIMAL SULTAN DARI PUSAT (Default 1 Juta)
+            let minSultan = 1000000; 
+            const confSnap = await getDocs(query(collection(db, "System_Config"), where("tipe", "==", "GLOBAL_STATS")));
+            if(!confSnap.empty && confSnap.docs[0].data().min_sultan) {
+                minSultan = confSnap.docs[0].data().min_sultan;
+            }
 
-            // 1. CARI DARI SALDO IDR TERBANYAK (SULTAN ASLI)
-            const qSultan = query(collection(db, "Akun_Publik"), where("saldo_rupiah", ">", 0), orderBy("saldo_rupiah", "desc"), limit(20));
-            const snapSultan = await getDocs(qSultan);
-            snapSultan.forEach(d => {
-                if(d.data().username && d.data().username !== "Pusat" && d.data().username !== myUsername) {
-                    calonSultan.add(d.data().username);
-                }
-            });
+            // 2. CEK RIWAYAT BATAL PEMBELI (Sebagai Pemicu Tombol Darurat)
+            const qBatal = query(collection(db, "P2P_Order"), where("pembeli", "==", myEmail), where("status", "==", "BATAL"));
+            const snapBatal = await getDocs(qBatal);
+            if(!snapBatal.empty) {
+                boxPengepul.style.display = 'block'; // Tampilkan tombol darurat
+            } else {
+                boxPengepul.style.display = 'none';
+                chkPengepul.checked = false; // Reset ceklis jika belum berhak
+            }
 
-            // 2. CARI DARI STOK TOKEN (Berjaga-jaga jika ada yang IDR 0 tapi punya stok)
-            const snapToken = await getDocs(query(collection(db, "Database_Token"), where("status", "==", "AKTIF")));
-            snapToken.forEach(d => {
-                let owner = d.data().pemilik_username;
-                if(owner && owner !== "Pusat" && owner !== "CIS_USER" && owner !== "CIS01" && owner !== myUsername) {
-                    calonSultan.add(owner);
-                }
-            });
+            // 3. TENTUKAN FILTER BERDASARKAN CHECKBOX
+            let targetMinimal = chkPengepul.checked ? 50000 : minSultan;
 
-            let html = "<option value=''>-- Pilih Penjual (Sultan) --</option>";
-            let adaPenjual = false;
+            let calonSultan = new Set();
 
-            for (let sName of calonSultan) {
-                const snapUser = await getDocs(query(collection(db, "Akun_Publik"), where("username", "==", sName)));
-                if(!snapUser.empty) {
-                    let uData = snapUser.docs[0].data();
-                    // SYARAT: Harus isi bank/wallet/crypto
-                    if(uData.bank || uData.ewallet || uData.crypto) {
-                        html += `<option value='${sName}'>${sName} (IDR: Rp ${(uData.saldo_rupiah || 0).toLocaleString('id-ID')})</option>`;
-                        adaPenjual = true;
-                    }
-                }
-            }
+            // 4. CARI PENJUAL DENGAN SALDO >= TARGET
+            const qSultan = query(collection(db, "Akun_Publik"), where("saldo_rupiah", ">=", targetMinimal), orderBy("saldo_rupiah", "desc"), limit(20));
+            const snapSultan = await getDocs(qSultan);
+            snapSultan.forEach(d => {
+                if(d.data().username && d.data().username !== "Pusat" && d.data().username !== myUsername) {
+                    calonSultan.add(d.data().username);
+                }
+            });
 
-            if(!adaPenjual) {
-                html = "<option value=''>Maaf, belum ada Sultan dengan stok/saldo & rekening lengkap.</option>";
-            }
-            selSultan.innerHTML = html;
-        } catch(e) { 
-            selSultan.innerHTML = "<option value=''>Gagal memuat data penjual.</option>"; 
-        }
-    };
+            // 5. CARI DARI STOK TOKEN (Untuk antisipasi jika saldo 0 tapi punya stok token aktif)
+            const snapToken = await getDocs(query(collection(db, "Database_Token"), where("status", "==", "AKTIF")));
+            snapToken.forEach(d => {
+                let owner = d.data().pemilik_username;
+                if(owner && owner !== "Pusat" && owner !== "CIS_USER" && owner !== "CIS01" && owner !== myUsername) {
+                    calonSultan.add(owner);
+                }
+            });
+
+            let titleSelect = chkPengepul.checked ? "-- Pilih Pengepul Alternatif --" : "-- Pilih Penjual (Sultan) --";
+            let html = `<option value=''>${titleSelect}</option>`;
+            let adaPenjual = false;
+
+            for (let sName of calonSultan) {
+                const snapUser = await getDocs(query(collection(db, "Akun_Publik"), where("username", "==", sName)));
+                if(!snapUser.empty) {
+                    let uData = snapUser.docs[0].data();
+                    // FILTER KEDUA: Pastikan saldo memenuhi syarat, dan rekening terisi
+                    if((uData.saldo_rupiah || 0) >= targetMinimal && (uData.bank || uData.ewallet || uData.crypto)) {
+                        html += `<option value='${sName}'>${sName} (IDR: Rp ${(uData.saldo_rupiah || 0).toLocaleString('id-ID')})</option>`;
+                        adaPenjual = true;
+                    }
+                }
+            }
+
+            if(!adaPenjual) {
+                html = `<option value=''>Maaf, belum ada penjual dengan saldo minimal Rp ${targetMinimal.toLocaleString('id-ID')}.</option>`;
+            }
+            selSultan.innerHTML = html;
+        } catch(e) { 
+            selSultan.innerHTML = "<option value=''>Gagal memuat data penjual.</option>"; 
+        }
+    };
 
     window.tampilkanRekeningSultan = async () => {
         const sultan = document.getElementById('p2pTargetSultan').value;
