@@ -1109,6 +1109,9 @@
           <div id='wdSisaSaldo' style='font-size:2rem; font-family:Orbitron; font-weight:900; color:#fff;'>Rp 0</div>
           <div style='background:rgba(243, 156, 18, 0.1); border:1px dashed #f39c12; padding:15px; border-radius:8px; margin-top:15px;'>
               <p style='margin:0 0 10px 0; font-size:0.8rem; color:#f39c12;'><i class='fa-brands fa-digital-ocean'></i> <span data-i18n='vrscEx'>Exchangeable VRSC Coins:</span> <strong id='txtVrscBelumTukar'>Rp 0</strong></p>
+              <div class='input-group' style='margin-bottom: 10px;'>
+                  <input class='input-dark no-icon' id='inputNominalTukar' placeholder='Ketik Kelipatan 10000 (Cth: 20000)' type='number' step='10000' min='10000' style='border-color:#f39c12; color:#f39c12; font-weight:bold; text-align:center;'/>
+              </div>
               <button class='btn-cyan' data-i18n='btnEx' id='btnTukarVrsc' onclick='window.tukarVrscKeRupiah()' style='padding:10px; font-size:0.8rem; background:#f39c12; color:#fff;'><i class='fa-solid fa-exchange-alt'></i> EXCHANGE COINS TO IDR</button>
           </div>
         </div>
@@ -2127,14 +2130,28 @@
     };
 
     window.tukarVrscKeRupiah = async () => {
-        let vrscValueRp = Math.floor(myVrsc * vrscPriceRp);
-        if(vrscValueRp < globalMinExchangeRp) { window.showToast("Batas minimal Exchange adalah Rp " + globalMinExchangeRp.toLocaleString('id-ID')); return; }
+        let maxRp = Math.floor(myVrsc * vrscPriceRp);
+        let inputEl = document.getElementById('inputNominalTukar');
+        let targetRp = parseInt(inputEl.value);
+
+        if(!targetRp || isNaN(targetRp)) { window.showToast("Masukkan nominal yang ingin ditukar!"); return; }
+        if(targetRp < 10000 || targetRp % 10000 !== 0) { window.showToast("Nominal harus kelipatan Rp 10.000!"); return; }
+        if(targetRp > maxRp) { window.showToast("Saldo koin VRSC Anda tidak mencukupi untuk nominal ini!"); return; }
+
         const btn = document.getElementById('btnTukarVrsc'); btn.disabled=true; btn.innerText="PROCESSING...";
-        mySaldoRupiah += vrscValueRp; myVrsc = 0;
-        await updateDoc(doc(db, "Akun_Publik", docId), { saldo_vrsc: 0, saldo_rupiah: mySaldoRupiah });
-        catatMutasi("IN", `Exchange Coins: VRSC to IDR`, vrscValueRp);
-        localStorage.setItem("cisVrsc", 0); localStorage.setItem("cisSaldoRp", mySaldoRupiah);
-        window.showToast("Exchange Successful!"); updateUI();
+        
+        let vrscToDeduct = targetRp / vrscPriceRp;
+        mySaldoRupiah += targetRp; 
+        myVrsc -= vrscToDeduct;
+        if(myVrsc < 0) myVrsc = 0; // Proteksi agar tidak minus
+
+        await updateDoc(doc(db, "Akun_Publik", docId), { saldo_vrsc: myVrsc, saldo_rupiah: mySaldoRupiah });
+        catatMutasi("IN", `Exchange Coins: VRSC to IDR`, targetRp);
+        localStorage.setItem("cisVrsc", myVrsc); localStorage.setItem("cisSaldoRp", mySaldoRupiah);
+        
+        window.showToast("Exchange Successful!"); 
+        inputEl.value = ''; // Kosongkan input setelah sukses
+        updateUI();
         btn.disabled=false; btn.innerHTML=`<i class='fa-solid fa-exchange-alt'></i> EXCHANGE COINS TO IDR`;
     };
 
