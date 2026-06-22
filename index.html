@@ -2934,14 +2934,15 @@
                     transaction.set(doc(collection(db, "Notifikasi_Personal")), { email: oData.penjual, pesan: `✅ P2P SELESAI: Pembeli (${oData.pembeli_user}) telah mengkonfirmasi penerimaan Token. Transaksi Sukses!`, timestamp_local: Date.now() });
                 }
                 else if (aksi === "LAPOR") {
-                    transaction.update(orderRef, { status: "SENGKETA", waktu_update: serverTimestamp() });
-                    let targetBlokir = currentP2PTab === "beli" ? oData.penjual : oData.pembeli;
-                    const uSnap = await getDocs(query(collection(db, "Akun_Publik"), where("email", "==", targetBlokir)));
-                    if(!uSnap.empty) {
-                        transaction.update(doc(db, "Akun_Publik", uSnap.docs[0].id), { status_akun: "BLOKIR" });
-                    }
-                    transaction.set(doc(collection(db, "Notifikasi_Global")), { pesan: `🚨 SISTEM ANTI-FRAUD: Akun telah dibekukan karena indikasi penipuan P2P.`, timestamp_local: Date.now() });
-                }
+                    transaction.update(orderRef, { status: "SENGKETA", waktu_update: serverTimestamp() });
+                    let targetBlokir = currentP2PTab === "beli" ? oData.penjual : oData.pembeli;
+                    const uSnap = await getDocs(query(collection(db, "Akun_Publik"), where("email", "==", targetBlokir)));
+                    if(!uSnap.empty) {
+                        transaction.update(doc(db, "Akun_Publik", uSnap.docs[0].id), { status_akun: "BLOKIR" });
+                    }
+                    // Diubah menjadi Notifikasi_Personal agar hanya pelapor yang mendapat pesan ini
+                    transaction.set(doc(collection(db, "Notifikasi_Personal")), { email: myEmail, pesan: `🚨 Laporan diproses! Akun partner P2P Anda telah dibekukan oleh Sistem Anti-Fraud.`, timestamp_local: Date.now() });
+                }
                 else {
                     transaction.update(orderRef, { status: aksi, waktu_update: serverTimestamp() });
                     // Notif untuk DITERIMA atau BATAL
