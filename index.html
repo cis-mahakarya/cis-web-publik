@@ -767,7 +767,7 @@
         <div class='token-card-list' id='listTopUpTokens' style='max-height: 180px; overflow-y: auto; padding-right: 5px; margin-bottom: 15px;'><div style='text-align:center; padding:15px; color:#64748b; font-size:0.85rem;'>Searching Activation Tokens in Wallet...</div></div>
         <input id='selectedTokenCode' type='hidden' value=''/>
         <button class='btn-cyan' data-i18n='btnUseToken' id='btnTopUp' style='margin-top: 15px;'>USE THIS TOKEN</button>
-        <button class='btn-cyan' onclick='document.getElementById("modalTopup").style.display="none"; window.openScreen("screen-p2p");' style='margin-top: 10px; background:transparent; border:1px solid #e84393; color:#e84393;'><i class='fa-solid fa-cart-shopping'></i> BELI TOKEN VIA P2P</button>
+        <button class='btn-cyan' onclick='document.getElementById("modalTopup").style.display="none"; window.bukaModalBeliP2P(); setTimeout(()=>{ let j=document.getElementById("p2pJenisToken"); if(j){j.value="REG"; window.loadHargaP2P();} }, 500);' style='margin-top: 10px; background:transparent; border:1px solid #e84393; color:#e84393;'><i class='fa-solid fa-cart-shopping'></i> ORDER TOKEN AKTIVASI SEKARANG</button>
         <div class='sys-msg' id='msgTopUp'></div>
       </div>
     </div>
@@ -1441,9 +1441,9 @@
         // PINTU DARURAT: Kunci kembali layar jika status akun belum aktif, KECUALI jika yang ditutup adalah modalLegal
         if (id !== 'modalLegal') {
             let isWaktuHabis = (window.REQ_PERPANJANG && typeof expTime !== 'undefined' && expTime < Date.now());
-            if (window.STATUS_AKUN_USER === "INACTIVE" || isWaktuHabis) {
-                document.getElementById('modalTopup').style.display = 'flex';
-            }
+            if (window.STATUS_AKUN_USER === "INACTIVE" || window.STATUS_AKUN_USER === "BLOKIR" || isWaktuHabis) {
+                    document.getElementById('modalTopup').style.display = 'flex';
+                }
         }
     };
     window.openNetworkModal = () => { document.getElementById('modalNetwork').style.display = 'flex'; window.loadNetworkTree(); };
@@ -3420,7 +3420,8 @@
           unsubSnapshot = onSnapshot(doc(db, "Akun_Publik", docId), (docSnap) => {
               if(docSnap.exists()) {
                   let data = docSnap.data();
-                  if(data.status_akun === "BLOKIR") { window.showToast("YOUR ACCOUNT IS BLOCKED BY CENTRAL!"); setTimeout(window.logoutUser, 2000); return; }
+                  // Blokir tidak auto-logout, dialihkan ke layar denda Token Aktivasi
+                  // if(data.status_akun === "BLOKIR") { ... }
                   
                   myUsername = data.username || data.email || "CIS_USER";
                   myEmail = data.email || "no-email@cis.com";
@@ -3468,6 +3469,7 @@
                   // 2. Logika Masa Tenggang & Hukuman Kiamat Aset
                   let isDeviceLocked = (window.CONFIG_DEVICE_LOCK && data.device_id && data.device_id !== myDeviceID);
                   let isWaktuHabisDanTerkunci = (window.REQ_PERPANJANG && expTime < Date.now());
+                  let isPelanggaran = (data.status_akun === "BLOKIR");
                   
                   let hariTenggang = window.HARI_TENGGANG_PUSAT || 3; 
                   let batasMasaTenggang = expTime + (hariTenggang * 86400000);
@@ -3486,7 +3488,7 @@
                       window.showToast("🚨 KIAMAT ASET: Masa tenggang habis! Semua saldo & aset hangus ditarik sistem.");
                   }
 
-                  if(isWaktuHabisDanTerkunci || data.status_akun === "INACTIVE" || isDeviceLocked) {
+                  if(isWaktuHabisDanTerkunci || data.status_akun === "INACTIVE" || isDeviceLocked || isPelanggaran) {
                       
                       // KUNCI TOLERANSI: Jika user sedang transaksi P2P darurat, jangan biarkan gembok menginterupsi layar!
                       if (document.getElementById('modalP2P').style.display === 'flex' || 
@@ -3504,8 +3506,11 @@
 
                       let m = document.getElementById('msgTopUp'); 
                       let lang = document.getElementById('langSelector').value;
-                      if(m) { 
-                          if (isMasaTenggang) {
+                      if(m) { 
+                          if (isPelanggaran) {
+                              m.innerHTML = `🚨 <b>AKUN DIBEKUKAN!</b><br/>Terdeteksi pelanggaran. Silakan bayar denda dengan membeli <b>Token Aktivasi (REG)</b> untuk membuka gembok.`;
+                              m.className = "sys-msg msg-err"; m.style.display = "block";
+                          } else if (isMasaTenggang) {
                               let sisaJam = Math.ceil((batasMasaTenggang - Date.now()) / 3600000);
                               let biayaPajak = data.biaya_aktivasi_current || 10000;
                               m.innerHTML = `⚠️ <b>MASA TENGGANG AKTIF!</b><br/>Speed Anda ${mySpeed} V/s telah dihentikan. Segera buka gembok dengan Token Aktivasi senilai <b>Rp ${biayaPajak.toLocaleString('id-ID')}</b> dalam ${sisaJam} Jam, atau SELURUH SALDO & ASET AKAN HANGUS!`;
