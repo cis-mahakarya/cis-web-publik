@@ -2001,10 +2001,15 @@
                 await updateDoc(userRef, payloadUpdate); 
                 localStorage.setItem('cisLastClaimGame', Date.now());
                 
+                let teksMutasiFinal = isJamBonus ? "Coin Claim (Bonus)" : "Coin Claim";
+                if (apakahDapatEvent && mutasiEventTeks !== "") {
+                    teksMutasiFinal = "🎁 Event: " + mutasiEventTeks;
+                }
+
                 await addDoc(collection(db, "Mutasi_Mining"), { 
                     email: myEmail, 
                     jenis: "IN", 
-                    deskripsi: isJamBonus ? "Coin Claim (Bonus)" : "Coin Claim", 
+                    deskripsi: teksMutasiFinal, 
                     nominal: totalRewardVrsc, 
                     timestamp_local: Date.now() 
                 });
