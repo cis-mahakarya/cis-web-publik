@@ -1555,6 +1555,7 @@
     function msg(id, text, type) { const b = document.getElementById(id); b.innerText = text; b.className = "sys-msg " + (type === "ok" ? "msg-ok" : "msg-err"); b.style.display = "block"; }
 
     let REWARD_CLAIM_PERMAINAN = 50; let BONUS_CLAIM_PERMAINAN = 0; let WAKTU_MULAI_BONUS = "00:00"; let WAKTU_SELESAI_BONUS = "00:00";
+    let EVENT_AKTIF = false; let EVENT_TIPE = "COIN"; let EVENT_COIN = 0; let EVENT_SPEED = 0; let EVENT_HARI = 0; let EVENT_BATAS = 0;
     let PERSENTASE_BONUS_CLAIM = 0; let PERSENTASE_BONUS_TOPUP = 0; let CONFIG_DEVICE_LOCK = false; let currentMultiplier = 1.0; 
     window.IS_FREEMIUM = false; window.STATUS_AKUN_USER = "INACTIVE"; window.BONUS_SPEED_REG = 0;
 
@@ -1591,6 +1592,17 @@
                 WAKTU_MULAI_BONUS = d.jam_mulai || "00:00"; 
                 WAKTU_SELESAI_BONUS = d.jam_selesai || "00:00";
                 window.HARI_TENGGANG_PUSAT = d.masa_tenggang_hari || 3; // Menarik aturan masa tenggang (Default 3 Hari)
+            }
+            // MENARIK DATA EVENT BANNER KLAIM
+            const evtSnap = await getDocs(query(collection(db, "System_Config"), where("tipe", "==", "PENGUMUMAN_KLAIM")));
+            if(!evtSnap.empty) {
+                let eData = evtSnap.docs[0].data();
+                EVENT_AKTIF = eData.is_active || false;
+                EVENT_TIPE = eData.reward_tipe || "COIN";
+                EVENT_COIN = parseFloat(eData.reward_coin) || 0;
+                EVENT_SPEED = parseFloat(eData.reward_speed) || 0;
+                EVENT_HARI = parseInt(eData.reward_hari) || 0;
+                EVENT_BATAS = eData.batas_waktu ? new Date(eData.batas_waktu).getTime() : 0;
             }
             const confSnap = await getDocs(query(collection(db, "System_Config"), where("tipe", "==", "REGISTRATION")));
             if(!confSnap.empty) { let c = confSnap.docs[0].data(); PERSENTASE_BONUS_CLAIM = c.persentase_bonus_claim || 0; PERSENTASE_BONUS_TOPUP = c.persentase_bonus_topup || 0; CONFIG_DEVICE_LOCK = c.device_lock_active !== undefined ? c.device_lock_active : true; window.IS_FREEMIUM = c.is_freemium === true; window.BONUS_SPEED_REG = parseFloat(c.bonus_speed) || 0; }
@@ -1916,11 +1928,77 @@
                     totalRewardVrsc += valBonus; 
                     pesanToast = "CLAIM SUCCESS: +" + formatKripto(totalRewardVrsc) + " VRSC. (Happy Hour Bonus!)"; 
                 }
-                
+
+                // =========================================================
+                // LOGIKA EVENT REWARD DINAMIS DARI MASTER
+                // =========================================================
+                let payloadUpdate = { last_claim_reward: Date.now() };
+                let mutasiEventTeks = "";
+                let apakahDapatEvent = false;
+
+                if(EVENT_AKTIF && (EVENT_BATAS === 0 || Date.now() < EVENT_BATAS)) {
+                    apakahDapatEvent = true;
+                    // 1. Suntik Koin
+                    if(EVENT_TIPE.includes("COIN")) {
+                        totalRewardVrsc += EVENT_COIN;
+                        mutasiEventTeks += `+${EVENT_COIN} VRSC `;
+                    }
+
+                    let garasiMesin = uData.daftar_mesin || [];
+                    let mesinDitemukan = false;
+
+                    // 2. Suntik Speed (Membuat mesin "Event")
+                    if(EVENT_TIPE.includes("SPEED") && EVENT_SPEED > 0) {
+                        garasiMesin.push({
+                            id_mesin: "EVT-" + Math.random().toString(36).substr(2, 5).toUpperCase(),
+                            nominal_beli: 0,
+                            speed_bawaan: EVENT_SPEED,
+                            expired_kontrak: Date.now() + (30 * 86400000) // Default 30 hari untuk mesin hadiah
+                        });
+                        mutasiEventTeks += `& +${EVENT_SPEED} V/s `;
+                        mesinDitemukan = true;
+                    }
+
+                    // 3. Suntik Waktu Aktif (Menambah sisa waktu mesin yang masih hidup)
+                    if(EVENT_TIPE.includes("HARI") && EVENT_HARI > 0) {
+                        let tambahanMs = EVENT_HARI * 86400000;
+                        garasiMesin.forEach(m => {
+                            if(m.expired_kontrak > Date.now()) {
+                                m.expired_kontrak += tambahanMs;
+                                mesinDitemukan = true;
+                            }
+                        });
+                        mutasiEventTeks += `& +${EVENT_HARI} Hari Aktif `;
+                    }
+
+                    // Re-kalkulasi garasi jika ada speed/hari yang disuntikkan
+                    if(mesinDitemukan) {
+                        let reTotalSpeed = 0;
+                        let reExpTerjauh = Date.now();
+                        garasiMesin.forEach(m => {
+                            if (m.expired_kontrak > Date.now()) {
+                                reTotalSpeed += m.speed_bawaan;
+                                if (m.expired_kontrak > reExpTerjauh) reExpTerjauh = m.expired_kontrak;
+                            }
+                        });
+                        mySpeed = reTotalSpeed;
+                        expTime = reExpTerjauh;
+                        payloadUpdate.daftar_mesin = garasiMesin;
+                        payloadUpdate.kecepatan_hash = mySpeed;
+                        payloadUpdate.expired_at = expTime;
+                        localStorage.setItem("cisSpeed", mySpeed);
+                        localStorage.setItem("cisExp", expTime);
+                    }
+                    
+                    pesanToast = "🎁 BONUS EVENT: " + mutasiEventTeks;
+                }
+                // =========================================================
+
                 myVrsc = parseFloat(myVrsc) || 0;
                 myVrsc += totalRewardVrsc;
+                payloadUpdate.saldo_vrsc = myVrsc;
                 
-                await updateDoc(userRef, { saldo_vrsc: myVrsc, last_claim_reward: Date.now() }); 
+                await updateDoc(userRef, payloadUpdate); 
                 localStorage.setItem('cisLastClaimGame', Date.now());
                 
                 await addDoc(collection(db, "Mutasi_Mining"), { 
