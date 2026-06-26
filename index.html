@@ -2199,7 +2199,7 @@
                     let cl = x.jenis==="IN"?"#22c55e":(x.jenis==="OUT"?"#ef4444":"#94a3b8"); 
                     let sign = x.jenis==="IN"?"+":(x.jenis==="OUT"?"-":"");
                     let formatUang = ""; 
-                    let isCrypto = x.deskripsi.toLowerCase().includes("claim") || x.deskripsi.toLowerCase().includes("sponsor") || x.deskripsi.toLowerCase().includes("upgrade") || x.deskripsi.toLowerCase().includes("yield") || x.deskripsi.toLowerCase().includes("coin") || x.deskripsi.toLowerCase().includes("klaim") || x.deskripsi.toLowerCase().includes("koin");
+                    let isCrypto = x.deskripsi.toLowerCase().includes("claim") || x.deskripsi.toLowerCase().includes("sponsor") || x.deskripsi.toLowerCase().includes("upgrade") || x.deskripsi.toLowerCase().includes("yield") || x.deskripsi.toLowerCase().includes("coin") || x.deskripsi.toLowerCase().includes("klaim") || x.deskripsi.toLowerCase().includes("koin") || x.deskripsi.toLowerCase().includes("event");
                     if(isCrypto) { 
                         let nomCrypto = x.nominal || 0; 
                         formatUang = nomCrypto > 0 ? `${formatKripto(nomCrypto)} VRSC` : `0 VRSC`; 
@@ -3663,8 +3663,10 @@
                 
                 let rewardStr = "";
                 if (data.reward_tipe === "COIN") { rewardStr = `+${data.reward_coin} VRSC`; } 
+                else if (data.reward_tipe === "SPEED") { rewardStr = `+${data.reward_speed} V/s Speed`; }
+                else if (data.reward_tipe === "HARI") { rewardStr = `+${data.reward_hari} Hari Masa Aktif`; }
                 else if (data.reward_tipe === "COIN_SPEED") { rewardStr = `+${data.reward_coin} VRSC & +${data.reward_speed} V/s Speed`; } 
-                else if (data.reward_tipe === "COIN_TIME") { rewardStr = `+${data.reward_coin} VRSC (Limit: ${data.reward_limit}x Klaim)`; } 
+                else if (data.reward_tipe === "COIN_HARI") { rewardStr = `+${data.reward_coin} VRSC & +${data.reward_hari} Hari Aktif`; } 
                 else { rewardStr = `+${data.reward_coin || 0} VRSC`; }
                 document.getElementById('annReward').innerHTML = `<i class='fa-solid fa-gift'></i> Extra Reward: <span style='color:#f1c40f;'>${rewardStr}</span>`;
                 
