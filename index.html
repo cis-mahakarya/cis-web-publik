@@ -3785,11 +3785,6 @@ if(!passwordRegex.test(pass)) { msg('msgReg', "Password harus diawali huruf besa
                       let refData = snapRef.docs[0].data(); 
                       let bonusSpeedSponsor = window.PERSENTASE_BONUS_CLAIM > 0 ? 0.0001 : 0.0001;
                       await updateDoc(doc(db, "Akun_Publik", snapRef.docs[0].id), { kecepatan_hash: (refData.kecepatan_hash || 0) + bonusSpeedSponsor });
-                  } else {
-                      // RADAR ANTI-BYPASS: Jika sponsor tidak ada di DB, tolak pendaftaran!
-                      msg('msgReg', "🚨 GAGAL: Sistem mendeteksi manipulasi Sponsor! Pendaftaran ditolak.", "error");
-                      btn.innerText = "REGISTER NOW";
-                      return;
                   }
               }
               
