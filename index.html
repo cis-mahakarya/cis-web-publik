@@ -3401,20 +3401,43 @@
         };
 
         const urlParams = new URLSearchParams(window.location.search);
-        const refCode = urlParams.get('ref');
+        let refCode = urlParams.get('ref');
+
         if(refCode) {
-            setTimeout(() => {
+            setTimeout(async () => {
                 const regRef = document.getElementById('regReferral');
                 if(regRef) {
-                    regRef.value = refCode.toUpperCase();
+                    let sponsorValid = false;
+                    let cleanRef = refCode.toUpperCase().replace(/\s/g, "");
+                    try {
+                        const cekSnap = await getDocs(query(collection(db, "Akun_Publik"), where("username", "==", cleanRef)));
+                        if (!cekSnap.empty) {
+                            regRef.value = cleanRef;
+                            sponsorValid = true;
+                            window.showToast("Link Sponsor Terdeteksi: " + cleanRef);
+                        } else {
+                            window.showToast("Sponsor tidak valid! Dialihkan ke Acak.");
+                        }
+                    } catch (e) { console.log(e); }
+
+                    if (!sponsorValid) {
+                        try {
+                            const snapAktif = await getDocs(query(collection(db, "Akun_Publik"), where("status_akun", "==", "AKTIF")));
+                            if (!snapAktif.empty) {
+                                let daftarUpline = [];
+                                snapAktif.forEach(d => daftarUpline.push(d.data().username));
+                                regRef.value = daftarUpline[Math.floor(Math.random() * daftarUpline.length)];
+                            } else {
+                                regRef.value = "CIS01";
+                            }
+                        } catch(e) { regRef.value = "CIS01"; }
+                    }
                     regRef.setAttribute('readonly', 'true');
-                    regRef.style.color = '#94a3b8'; // Redupkan warna agar terlihat terkunci
+                    regRef.style.color = '#94a3b8';
                 }
                 window.toggleAuthForm('reg'); 
-                window.showToast("Link Sponsor Terdeteksi: " + refCode);
             }, 1500); 
         } else {
-            // Jika TIDAK ADA link referral, carikan sponsor acak dari database
             setTimeout(async () => {
                 const regRef = document.getElementById('regReferral');
                 if(regRef && regRef.value === "") {
@@ -3425,9 +3448,8 @@
                             snapAktif.forEach(d => daftarUpline.push(d.data().username));
                             regRef.value = daftarUpline[Math.floor(Math.random() * daftarUpline.length)];
                         } else { 
-                            regRef.value = "CIS01"; // Fallback jika belum ada user sama sekali
+                            regRef.value = "CIS01";
                         }
-                        // Kunci kolomnya agar tidak bisa diganti manual
                         regRef.setAttribute('readonly', 'true');
                         regRef.style.color = '#94a3b8';
                     } catch(e) {}
