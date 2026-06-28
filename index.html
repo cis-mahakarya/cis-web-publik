@@ -3330,6 +3330,7 @@
                 
                 if(!snap.empty) {
                     let d = snap.docs[0].data();
+                    window.ANTI_HACK_ACTIVE = d.is_antihack === true;
                     
                     let isTimeExpired = false;
                     if(d.target_launch) {
@@ -3981,6 +3982,35 @@ if(!passwordRegex.test(pass)) { msg('msgReg', "Password harus diawali huruf besa
             window.showToast("Sistem Instal sedang disiapkan, tunggu sebentar lalu coba lagi.");
         }
     });
+	// ==========================================
+    // KAWAT BERDURI: ANTI-HACKER & ANTI-COPAS (DENGAN SAKLAR MASTER)
+    // ==========================================
+    document.addEventListener('contextmenu', event => {
+        if (window.ANTI_HACK_ACTIVE === true) {
+            event.preventDefault();
+            window.showToast("🚨 AKSES DITOLAK: Tindakan mencurigakan terdeteksi!");
+        }
+    });
+
+    document.onkeydown = function (e) {
+        if (window.ANTI_HACK_ACTIVE === true) {
+            // Blokir F12
+            if (e.keyCode == 123) { 
+                window.showToast("🚨 RADAR: Fitur Developer diblokir!");
+                return false; 
+            }
+            // Blokir Ctrl+Shift+I (Inspect) & Ctrl+Shift+J (Console)
+            if (e.ctrlKey && e.shiftKey && (e.keyCode == 73 || e.keyCode == 74)) { 
+                window.showToast("🚨 RADAR: Akses Console diblokir!");
+                return false; 
+            }
+            // Blokir Ctrl+U (View Source)
+            if (e.ctrlKey && e.keyCode == 85) { 
+                window.showToast("🚨 AKSES DITOLAK: Source code dilindungi!");
+                return false; 
+            }
+        }
+    };
     }); 
 </script>
 </body>
