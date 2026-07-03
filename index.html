@@ -2428,7 +2428,11 @@
                 }
             }
             
-            localStorage.setItem("cisSpeed", mySpeed); updateUI(); adjustDifficulty(); window.loadMyTokens(); 
+            localStorage.setItem("cisSpeed", mySpeed);
+            localStorage.setItem("cisExpMesin", expTimeMesin); // SIMPAN DURASI MESIN KE PENYIMPANAN LOKAL
+            updateUI(); 
+            adjustDifficulty(); 
+            window.loadMyTokens(); 
             msg('msgBeliHash', `Sukses! Kecepatan bertambah +${formatKripto(speedTambah)} V/s`, "ok"); 
             setTimeout(() => { document.getElementById('msgBeliHash').style.display='none'; document.getElementById('selectedTokenBeliDaya').value = ''; document.getElementById('selectedNominalTokenBeliDaya').value = '0'; window.closeWalletModal('modalBeliDaya'); document.getElementById('pinBeliHashInline').value = ''; }, 2500);
             
