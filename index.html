@@ -2366,14 +2366,24 @@
                 if(tData.status !== "AKTIF") { throw "Token is already used or inactive."; }
                 if(tData.distribusi_ke === 'REG') { throw "Activation Tokens cannot be used to upgrade speed!"; }
                 
+                // Logika AKUMULASI WAKTU MESIN (Sama persis seperti Aktivasi Akun)
                 let finalHariTambah = (tData.durasi_hari && tData.durasi_hari > 0) ? tData.durasi_hari : hariTambah;
                 transaction.update(tDocRef, { status: "TERPAKAI", dipakai_oleh: myEmail, pemilik: myEmail, waktu_dipakai: serverTimestamp() });
                 
                 // =========================================================
-                // LOGIKA BARU: SISTEM GARASI MESIN (MULTI-KONTRAK)
+                // LOGIKA GARASI MESIN DENGAN AKUMULASI WAKTU
                 // =========================================================
                 let garasiMesin = userDoc.data().daftar_mesin || [];
-                let waktuMatiMesinBaru = Date.now() + (finalHariTambah * 86400000);
+                
+                // Cari waktu terjauh dari mesin yang ada
+                let waktuTerjauhSaatIni = Date.now();
+                if (garasiMesin.length > 0) {
+                    waktuTerjauhSaatIni = Math.max(...garasiMesin.map(m => m.expired_kontrak));
+                }
+                
+                // AKUMULASI: Tambahkan waktu ke ujung waktu terjauh saat ini
+                let patokanMulaiMesin = waktuTerjauhSaatIni > Date.now() ? waktuTerjauhSaatIni : Date.now();
+                let waktuMatiMesinBaru = patokanMulaiMesin + (finalHariTambah * 86400000);
                 
                 // 1. Masukkan mesin baru ke dalam daftar garasi
                 garasiMesin.push({
@@ -2383,29 +2393,24 @@
                     expired_kontrak: waktuMatiMesinBaru
                 });
 
-                // 2. Hitung total speed dari seluruh mesin yang MASIH AKTIF saat ini
+                // 2. Hitung total speed dari seluruh mesin yang MASIH AKTIF
                 let totalSpeedAktif = 0;
-                let waktuExpiredTerjauh = Date.now();
+                let waktuExpiredTerjauhBaru = Date.now();
 
                 garasiMesin.forEach(mesin => {
                     if (mesin.expired_kontrak > Date.now()) {
                         totalSpeedAktif += mesin.speed_bawaan;
-                        if (mesin.expired_kontrak > waktuExpiredTerjauh) {
-                            waktuExpiredTerjauh = mesin.expired_kontrak;
+                        if (mesin.expired_kontrak > waktuExpiredTerjauhBaru) {
+                            waktuExpiredTerjauhBaru = mesin.expired_kontrak;
                         }
                     }
                 });
 
-                // Jika semua mesin hangus tapi ada riwayat, waktu mesin pakai yang terakhir mati
-                if (totalSpeedAktif === 0 && garasiMesin.length > 0) {
-                    waktuExpiredTerjauh = Math.max(...garasiMesin.map(m => m.expired_kontrak));
-                }
-
                 mySpeed = totalSpeedAktif;
-                expTimeMesin = waktuExpiredTerjauh; // Variabel mesin dipisah murni
+                expTimeMesin = waktuExpiredTerjauhBaru; 
                 
-                // 3. Tentukan Pajak Progresif Masa Tenggang berdasarkan paket terbaru yang dibeli
-                let biayaAktivasiBerikutnya = 10000; // Default di bawah 500k biaya 10k
+                // 3. Tentukan Pajak Progresif Masa Tenggang
+                let biayaAktivasiBerikutnya = 10000; 
                 if (hargaPaket >= 500000 && hargaPaket < 1000000) { biayaAktivasiBerikutnya = 50000; }
                 else if (hargaPaket >= 1000000 && hargaPaket <= 5000000) { biayaAktivasiBerikutnya = 100000; }
                 else if (hargaPaket > 5000000) { biayaAktivasiBerikutnya = 500000; }
@@ -2433,7 +2438,7 @@
             }
             
             localStorage.setItem("cisSpeed", mySpeed);
-            localStorage.setItem("cisExpMesin", expTimeMesin); // SIMPAN DURASI MESIN KE PENYIMPANAN LOKAL
+            localStorage.setItem("cisExpMesin", expTimeMesin); 
             updateUI(); 
             adjustDifficulty(); 
             window.loadMyTokens(); 
