@@ -1735,8 +1735,12 @@
         let eRp = document.getElementById('displayRupiah'); if(eRp) eRp.innerText = "Rp " + Math.floor((myVrsc||0) * vrscPriceRp).toLocaleString('id-ID');
         
         let targetTime = Date.now(); 
+        
+        // Tarik langsung dari variabel terbaru atau local storage jika variabel kosong
+        let currentExpMesin = expTimeMesin > 0 ? expTimeMesin : (parseInt(localStorage.getItem("cisExpMesin")) || 0);
+
         let sisaAkun = expTime > targetTime ? Math.ceil((expTime - targetTime) / 86400000) : 0;
-        let sisaMesin = expTimeMesin > targetTime ? Math.ceil((expTimeMesin - targetTime) / 86400000) : 0;
+        let sisaMesin = currentExpMesin > targetTime ? Math.ceil((currentExpMesin - targetTime) / 86400000) : 0;
         
         let lSel = document.getElementById('langSelector'); let dayText = (lSel && lSel.value === 'en') ? " Days" : " Hari";
         let eSisaAkun = document.getElementById('displaySisaHariAkun'); if(eSisaAkun) eSisaAkun.innerText = sisaAkun + dayText;
@@ -3507,6 +3511,13 @@
           myVrsc = (d.saldo_vrsc !== undefined) ? Math.max(d.saldo_vrsc, localVrsc) : localVrsc;
           mySpeed = (d.kecepatan_hash !== undefined) ? d.kecepatan_hash : localSpeed;
           expTime = (d.expired_at !== undefined) ? d.expired_at : localExp;
+          
+          // BACA DURASI MESIN DARI DATABASE AWAL
+          expTimeMesin = parseInt(localStorage.getItem("cisExpMesin")) || 0;
+          if (d.daftar_mesin && d.daftar_mesin.length > 0) {
+              expTimeMesin = Math.max(...d.daftar_mesin.map(m => m.expired_kontrak));
+          }
+
           mySaldoRupiah = d.saldo_rupiah || 0; edUser = d.edit_user || 0; edEmail = d.edit_email || 0;
           
           localStorage.setItem("cisMinerDocId", docId); localStorage.setItem("cisMinerEmail", myEmail); localStorage.setItem("cisMinerUser", myUsername); localStorage.setItem("cisVrsc", myVrsc); localStorage.setItem("cisSpeed", mySpeed); localStorage.setItem("cisExp", expTime); localStorage.setItem("cisSaldoRp", mySaldoRupiah);
@@ -3579,8 +3590,9 @@
                   }
 
                   mySpeed = totalSpeedAktif;
-                  expTimeMesin = waktuExpiredMesin;
-
+                  expTimeMesin = waktuExpiredMesin; // Variabel mesin dipisah murni
+                  localStorage.setItem("cisExpMesin", expTimeMesin); // Amankan ke memori HP
+                  
                   // Update paksa ke Firebase jika sistem mendeteksi ada speed yang baru saja hangus
                   if (data.kecepatan_hash !== mySpeed && !docSnap.metadata.hasPendingWrites) {
                       updateDoc(doc(db, "Akun_Publik", docId), { kecepatan_hash: mySpeed });
