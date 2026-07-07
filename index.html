@@ -274,6 +274,13 @@
 
 	.input-label { font-size: 0.75rem; color: #f1c40f; font-weight: 800; text-transform: uppercase; margin-bottom: 5px; display: block; letter-spacing: 1px; text-align: left; }
     .input-group { margin-bottom: 15px; } /* Memberi jarak antar kolom */
+    .switch-wrap { display: flex; align-items: center; justify-content: space-between; background: rgba(0,0,0,0.3); padding: 12px 15px; border-radius: 8px; border: 1px solid #334155; margin-bottom: 15px; }
+    .switch { position: relative; display: inline-block; width: 44px; height: 24px; }
+    .switch input { opacity: 0; width: 0; height: 0; }
+    .slider-tg { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #475569; transition: .4s; border-radius: 34px; }
+    .slider-tg:before { position: absolute; content: ""; height: 18px; width: 18px; left: 3px; bottom: 3px; background-color: white; transition: .4s; border-radius: 50%; }
+    input:checked + .slider-tg { background-color: #2ecc71; }
+    input:checked + .slider-tg:before { transform: translateX(20px); }
 	
 	/* ========================================== */
     /* KODE KUNCI: LAYAR FIT (DASHBOARD) & REFRESH AKTIF */
@@ -835,12 +842,16 @@
                 </div>
                 
                 <label class='prof-label' style='color:#f1c40f;'><i class="fa-solid fa-bell"></i> NADA DERING NOTIFIKASI P2P</label>
-                <div class='input-group' style='margin-bottom:20px;'>
+                <div class='input-group' style='margin-bottom:15px;'>
                     <select class='input-dark no-icon' id='profNadaDering' onchange='window.gantiNadaDering(this.value)' style='border-color:#f1c40f; color:#f1c40f;'>
                         <option value='1'>Nada 1 (Pesan Masuk WA)</option>
                         <option value='2'>Nada 2 (Alarm Digital)</option>
                         <option value='3'>Nada 3 (Tetesan Air)</option>
                     </select>
+                </div>
+                <div class='switch-wrap'>
+                    <div><b style='color:#00f2fe;'><i class='fa-solid fa-volume-high'></i> Alarm Auto-Claim</b><br/><span style='font-size:0.65rem; color:#94a3b8;'>Bunyikan nada saat waktu klaim siap</span></div>
+                    <label class='switch'><input id='profAlarmClaim' type='checkbox' onchange='window.toggleAlarmClaim(this)'><span class='slider-tg'></span></label>
                 </div>
             </div>
 
@@ -1697,6 +1708,8 @@
         let eSpd = document.getElementById('displaySpeed'); if(eSpd) eSpd.innerText = formatKripto(mySpeed || 0); 
     }
 
+    let isClaimAlarmPlayed = false; // Flag mencegah alarm berbunyi berulang kali
+
     function updateClaimTimer() {
         let lastGameClaim = parseInt(localStorage.getItem('cisLastClaimGame')) || 0;
         let timeDiff = Date.now() - lastGameClaim;
@@ -1715,7 +1728,15 @@
                     clearInterval(claimTimerInt);
                     if(btn) btn.style.display = 'block';
                     if(tContainer) tContainer.style.display = 'none';
+                    
+                    // Eksekusi Alarm Klaim saat timer pas menyentuh nol
+                    if(!isClaimAlarmPlayed && localStorage.getItem('cisAlarmClaim') === 'true') {
+                        isClaimAlarmPlayed = true;
+                        mainkanSuaraNotif(); // Memanggil nada dering yang disetting
+                        window.showToast("🔔 Waktu Klaim Koin Sudah Siap!");
+                    }
                 } else {
+                    isClaimAlarmPlayed = false; // Reset flag saat timer sedang berjalan
                     let m = Math.floor((currentRem / 1000) / 60).toString().padStart(2, '0');
                     let s = Math.floor((currentRem / 1000) % 60).toString().padStart(2, '0');
                     if(tText) tText.innerText = `${m} : ${s}`;
@@ -2115,6 +2136,16 @@
         localStorage.setItem("cisNadaDering", val);
         window.showToast("Nada dering disimpan!");
         mainkanSuaraNotif(); // Tes bunyi
+    };
+
+    window.toggleAlarmClaim = (el) => {
+        localStorage.setItem("cisAlarmClaim", el.checked);
+        if(el.checked) {
+            window.showToast("Alarm Waktu Klaim Diaktifkan!");
+            mainkanSuaraNotif(); // Bunyikan sekali sebagai tes
+        } else {
+            window.showToast("Alarm Waktu Klaim Dimatikan.");
+        }
     };
 
     function mainkanSuaraNotif() {
@@ -3161,6 +3192,7 @@
     function setupProfileUI() {
       document.getElementById('profUser').value = localStorage.getItem("cisMinerUser"); document.getElementById('profEmail').value = myEmail; document.getElementById('profNewPass').value = ""; document.getElementById('profConfirmPass').value = "";
       let elNada = document.getElementById('profNadaDering'); if(elNada) elNada.value = localStorage.getItem("cisNadaDering") || "1";
+      let elAlarm = document.getElementById('profAlarmClaim'); if(elAlarm) elAlarm.checked = localStorage.getItem("cisAlarmClaim") === "true";
       
       if(window.myProfileData) {
           let bData = window.myProfileData.bank || "";
