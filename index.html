@@ -1558,7 +1558,7 @@
     function msg(id, text, type) { const b = document.getElementById(id); b.innerText = text; b.className = "sys-msg " + (type === "ok" ? "msg-ok" : "msg-err"); b.style.display = "block"; }
 
     let REWARD_CLAIM_PERMAINAN = 50; let BONUS_CLAIM_PERMAINAN = 0; let WAKTU_MULAI_BONUS = "00:00"; let WAKTU_SELESAI_BONUS = "00:00";
-    let EVENT_AKTIF = false; let EVENT_TIPE = "COIN"; let EVENT_COIN = 0; let EVENT_SPEED = 0; let EVENT_HARI = 0; let EVENT_BATAS = 0;
+    let EVENT_AKTIF = false; let EVENT_TIPE = "COIN"; let EVENT_COIN = 0; let EVENT_SPEED = 0; let EVENT_HARI_AKTIF = 0; let EVENT_HARI_SPEED = 0; let EVENT_BATAS = 0;
     let PERSENTASE_BONUS_CLAIM = 0; let PERSENTASE_BONUS_TOPUP = 0; let CONFIG_DEVICE_LOCK = false; let currentMultiplier = 1.0; 
     window.IS_FREEMIUM = false; window.STATUS_AKUN_USER = "INACTIVE"; window.BONUS_SPEED_REG = 0;
 
@@ -1604,7 +1604,8 @@
                 EVENT_TIPE = eData.reward_tipe || "COIN";
                 EVENT_COIN = parseFloat(eData.reward_coin) || 0;
                 EVENT_SPEED = parseFloat(eData.reward_speed) || 0;
-                EVENT_HARI = parseInt(eData.reward_hari) || 0;
+                EVENT_HARI_AKTIF = parseInt(eData.reward_hari_aktif) || parseInt(eData.reward_hari) || 0; // Kompatibel dengan data lama
+                EVENT_HARI_SPEED = parseInt(eData.reward_hari_speed) || 0;
                 EVENT_BATAS = eData.batas_waktu ? new Date(eData.batas_waktu).getTime() : 0;
             }
             const confSnap = await getDocs(query(collection(db, "System_Config"), where("tipe", "==", "REGISTRATION")));
@@ -1972,16 +1973,26 @@
                         mesinDitemukan = true;
                     }
 
-                    // 3. Suntik Waktu Aktif (Menambah sisa waktu mesin yang masih hidup)
-                    if(EVENT_TIPE.includes("HARI") && EVENT_HARI > 0) {
-                        let tambahanMs = EVENT_HARI * 86400000;
+                    // 3. Suntik Nyawa Speed Mesin (Jika Ada)
+                    if(EVENT_TIPE.includes("HARI") && EVENT_HARI_SPEED > 0) {
+                        let tambahanMs = EVENT_HARI_SPEED * 86400000;
                         garasiMesin.forEach(m => {
                             if(m.expired_kontrak > Date.now()) {
                                 m.expired_kontrak += tambahanMs;
                                 mesinDitemukan = true;
                             }
                         });
-                        mutasiEventTeks += `& +${EVENT_HARI} Hari Aktif `;
+                        mutasiEventTeks += `& +${EVENT_HARI_SPEED} Hari Speed `;
+                    }
+
+                    // 4. Suntik Nyawa Dasar Akun (Tunda Kiamat Akun)
+                    if(EVENT_TIPE.includes("HARI") && EVENT_HARI_AKTIF > 0) {
+                        let patokanMulai = uData.expired_at > Date.now() ? uData.expired_at : Date.now();
+                        let waktuAktifBaru = patokanMulai + (EVENT_HARI_AKTIF * 86400000);
+                        expTime = waktuAktifBaru; // Update variabel lokal
+                        payloadUpdate.expired_at = waktuAktifBaru; // Simpan ke database
+                        localStorage.setItem("cisExp", expTime);
+                        mutasiEventTeks += `& +${EVENT_HARI_AKTIF} Hari Akun `;
                     }
 
                     // Re-kalkulasi garasi jika ada speed/hari yang disuntikkan
