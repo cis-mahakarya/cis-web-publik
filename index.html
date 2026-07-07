@@ -2505,14 +2505,7 @@
 
                 catatMutasi("OUT", `✅ WD Otomatis: Token ${jenisToken}`, targetRp);
 
-                // NOTIFIKASI KE PENERIMA: Jika targetnya adalah teman (bukan diri sendiri)
                 if (targetUser !== myUsername && emailTarget !== myEmail) {
-                    await addDoc(collection(db, "Notifikasi_Personal"), { 
-                        email: emailTarget, 
-                        pesan: `🎁 Seseorang mengirimkan Anda hadiah! Anda menerima Token ${jenisToken} senilai Rp ${targetRp.toLocaleString('id-ID')} dari ${myUsername}. Silakan cek di menu My Token Stock!`, 
-                        timestamp_local: Date.now() 
-                    });
-                }
 
                 alert("✅ WITHDRAW OTOMATIS BERHASIL!\n\nSistem Auto-WD aktif. Token telah dicetak otomatis dan masuk ke menu 'My Token Stock'.");
                 msg('msgWithdraw', "Withdrawal Auto-Approved.", "ok");
