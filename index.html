@@ -1448,16 +1448,16 @@
     };
     
     window.openWalletModal = (id) => { document.getElementById(id).style.display = 'flex'; };
-
-    window.closeWalletModal = (id) => { 
+    window.closeWalletModal = (id) => { 
         document.getElementById(id).style.display = 'none'; 
         if(id === 'modalStokToken') { let f = document.getElementById('formTransferToken'); if(f) f.style.display = 'none'; } 
         
-        // PINTU DARURAT: Hanya kunci layar jika akun INACTIVE atau BLOKIR (Masa Tenggang/Waktu Habis tetap bisa buka P2P)
+        // PINTU DARURAT: Kunci kembali layar jika status akun belum aktif, KECUALI jika yang ditutup adalah modalLegal
         if (id !== 'modalLegal') {
-            if (window.STATUS_AKUN_USER === "INACTIVE" || window.STATUS_AKUN_USER === "BLOKIR") {
-                document.getElementById('modalTopup').style.display = 'flex';
-            }
+            let isWaktuHabis = (window.REQ_PERPANJANG && typeof expTime !== 'undefined' && expTime < Date.now());
+            if (window.STATUS_AKUN_USER === "INACTIVE" || window.STATUS_AKUN_USER === "BLOKIR" || isWaktuHabis) {
+                    document.getElementById('modalTopup').style.display = 'flex';
+                }
         }
     };
     window.openNetworkModal = () => { document.getElementById('modalNetwork').style.display = 'flex'; window.loadNetworkTree(); };
@@ -1733,7 +1733,7 @@
                     if(!isClaimAlarmPlayed && localStorage.getItem('cisAlarmClaim') === 'true') {
                         isClaimAlarmPlayed = true;
                         mainkanSuaraNotif(); // Memanggil nada dering yang disetting
-                        window.showToast("🔔 Waktu Klaim Koin Sudah Siap!");
+                        window.showToast("?? Waktu Klaim Koin Sudah Siap!");
                     }
                 } else {
                     isClaimAlarmPlayed = false; // Reset flag saat timer sedang berjalan
@@ -1839,10 +1839,7 @@
 
     let miningTickCount = 0;
     function startMiningEngine() {
-        if(window.REQ_PERPANJANG && Date.now() > expTime) {
-            window.showToast("🚨 MESIN DIBLOKIR: Masa Aktif Akun Habis!");
-            return;
-        }
+        if(window.REQ_PERPANJANG && Date.now() > expTime) return;
         if(0 >= mySpeed) return;
         
         isMining = true; document.getElementById('btnStart').disabled = true; document.getElementById('btnStop').disabled = false; document.getElementById('btnStop').style.opacity = '1'; 
@@ -1870,7 +1867,7 @@
 
     document.getElementById('btnStart').addEventListener('click', () => {
         if(window.STATUS_AKUN_USER === "INACTIVE" && !window.IS_FREEMIUM) { window.showToast("ACCESS DENIED: Account not activated."); return; }
-        if(window.REQ_PERPANJANG && Date.now() > expTime) { window.showToast("🚨 MESIN DIBLOKIR: Masa Aktif Akun (REG) Habis!"); return; }
+        if(window.REQ_PERPANJANG && Date.now() > expTime) { window.showToast("ACCESS DENIED: Active time expired."); return; }
         if(0 >= mySpeed) { window.showToast("ACCESS DENIED: Speed is 0 V/s."); return; }
         startMiningEngine();
     });
@@ -2154,13 +2151,11 @@
     function mainkanSuaraNotif() {
         try {
             let nada = localStorage.getItem("cisNadaDering") || "1";
-            // Menggunakan format .MP3 High-Resolution agar support di iPhone & Android
-            let audioUrl = "https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3"; // 1: Nada Ting (Pesan Jernih)
-            if (nada === "2") audioUrl = "https://assets.mixkit.co/active_storage/sfx/995/995-preview.mp3"; // 2: Alarm Digital Keras
-            if (nada === "3") audioUrl = "https://assets.mixkit.co/active_storage/sfx/2573/2573-preview.mp3"; // 3: Tetesan Air / Bubble
+            let audioUrl = "https://actions.google.com/sounds/v1/communications/incoming_message.ogg"; // 1: Nada Pesan Biasa
+            if (nada === "2") audioUrl = "https://actions.google.com/sounds/v1/alarms/digital_watch_alarm_long.ogg"; // 2: Alarm Digital
+            if (nada === "3") audioUrl = "https://actions.google.com/sounds/v1/water/water_drop.ogg"; // 3: Tetesan Air
 
             let player = new Audio(audioUrl);
-            player.volume = 1.0; // Memaksa volume sistem meledak di angka maksimal (100%)
             player.play().catch(e => console.log("Auto-play diblokir browser"));
         } catch(err) {}
     }
@@ -2280,7 +2275,6 @@
     };
 
     window.tukarVrscKeRupiah = async () => {
-        if(window.REQ_PERPANJANG && expTime < Date.now()) return window.showToast("🚨 AKSES DITOLAK: Masa Aktif Akun (REG) Habis!");
         let maxRp = Math.floor(myVrsc * vrscPriceRp);
         let inputEl = document.getElementById('inputNominalTukar');
         let targetRp = parseInt(inputEl.value);
@@ -2498,7 +2492,6 @@
     });
 
     wdBtnReal.addEventListener('click', async () => {
-        if(window.REQ_PERPANJANG && expTime < Date.now()) return window.showToast("🚨 AKSES DITOLAK: Masa Aktif Akun (REG) Habis!");
         const jenisToken = document.getElementById('jenisTokenWd').value; 
         const targetUser = document.getElementById('targetUserWd').value.trim(); 
         const targetRp = Number(document.getElementById('inputWithdraw').value); 
@@ -2548,7 +2541,7 @@
                     // 1. Kirim Notifikasi Pop-up ke Layar Penerima
                     await addDoc(collection(db, "Notifikasi_Personal"), { 
                         email: emailTarget, 
-                        pesan: `🎁 Seseorang mengirimkan Anda hadiah! Anda menerima Token ${jenisToken} senilai Rp ${targetRp.toLocaleString('id-ID')} dari ${myUsername}. Silakan cek di menu My Token Stock!`, 
+                        pesan: `?? Seseorang mengirimkan Anda hadiah! Anda menerima Token ${jenisToken} senilai Rp ${targetRp.toLocaleString('id-ID')} dari ${myUsername}. Silakan cek di menu My Token Stock!`, 
                         timestamp_local: Date.now() 
                     });
                     
@@ -2556,7 +2549,7 @@
                     await addDoc(collection(db, "Mutasi_Mining"), {
                         email: emailTarget,
                         jenis: "IN",
-                        deskripsi: `🎁 Terima Swap Token ${jenisToken} dari ${myUsername}`,
+                        deskripsi: `?? Terima Swap Token ${jenisToken} dari ${myUsername}`,
                         nominal: targetRp,
                         timestamp_local: Date.now()
                     });
@@ -3178,7 +3171,6 @@
         let html = ""; let rank = 1;
         snap.forEach(doc => {
             let u = doc.data();
-            if (window.REQ_PERPANJANG && (u.expired_at || 0) < Date.now()) return; // Tendang dari daftar jika nyawa akun habis
             let rankClass = rank === 1 ? 'rank-1' : (rank === 2 ? 'rank-2' : (rank === 3 ? 'rank-3' : ''));
             html += `
             <div class='leaderboard-item ${rankClass}'>
@@ -3686,7 +3678,7 @@
                       window.showToast("?? KIAMAT ASET: Masa tenggang habis! Semua saldo & aset hangus ditarik sistem.");
                   }
 
-                  if(data.status_akun === "INACTIVE" || isDeviceLocked || isPelanggaran) {
+                  if(isWaktuHabisDanTerkunci || data.status_akun === "INACTIVE" || isDeviceLocked || isPelanggaran) {
                       
                       // KUNCI TOLERANSI: Jika user sedang transaksi P2P darurat, jangan biarkan gembok menginterupsi layar!
                       if (document.getElementById('modalP2P').style.display === 'flex' || 
