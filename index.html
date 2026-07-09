@@ -1452,11 +1452,12 @@
         document.getElementById(id).style.display = 'none'; 
         if(id === 'modalStokToken') { let f = document.getElementById('formTransferToken'); if(f) f.style.display = 'none'; } 
         
-        // PINTU DARURAT: Hanya kunci layar jika akun INACTIVE atau BLOKIR
+        // PINTU DARURAT: Kunci kembali layar jika status akun belum aktif, KECUALI jika yang ditutup adalah modalLegal
         if (id !== 'modalLegal') {
-            if (window.STATUS_AKUN_USER === "INACTIVE" || window.STATUS_AKUN_USER === "BLOKIR") {
-                document.getElementById('modalTopup').style.display = 'flex';
-            }
+            let isWaktuHabis = (window.REQ_PERPANJANG && typeof expTime !== 'undefined' && expTime < Date.now());
+            if (window.STATUS_AKUN_USER === "INACTIVE" || window.STATUS_AKUN_USER === "BLOKIR" || isWaktuHabis) {
+                    document.getElementById('modalTopup').style.display = 'flex';
+                }
         }
     };
     window.openNetworkModal = () => { document.getElementById('modalNetwork').style.display = 'flex'; window.loadNetworkTree(); };
@@ -1836,49 +1837,9 @@
         }
     };
 
-    // =========================================================
-    // SYSTEM WATCHER: PENGAMAT WAKTU EXPIRED REAL-TIME
-    // =========================================================
-    setInterval(() => {
-        if (!docId) return;
-        let now = Date.now();
-
-        // 1. CEK KEMATIAN MESIN
-        if (expTimeMesin > 0 && now > expTimeMesin && mySpeed > 0) {
-            mySpeed = 0; 
-            if (isMining) document.getElementById('btnStop').click();
-            window.showToast("⚠️ Durasi Mesin Habis! Mesin berhenti beroperasi.");
-            updateDoc(doc(db, "Akun_Publik", docId), { kecepatan_hash: mySpeed });
-            expTimeMesin = 0; 
-            updateUI();
-        }
-
-        // 2. CEK KEMATIAN AKUN (MASA AKTIF REG)
-        if (window.REQ_PERPANJANG && expTime > 0 && now > expTime && window.STATUS_AKUN_USER === "AKTIF") {
-            if (isMining) document.getElementById('btnStop').click();
-            window.STATUS_AKUN_USER = "INACTIVE"; 
-            
-            document.querySelectorAll('.app-screen').forEach(s => s.style.display = 'none');
-            const topupScreen = document.getElementById('modalTopup'); 
-            if(topupScreen) topupScreen.style.display = 'flex';
-            
-            const tNav = document.getElementById('topNav'); if(tNav) tNav.style.display = 'none';
-            const topupCloseBtn = document.querySelector('#modalTopup .btn-close-modal'); 
-            if(topupCloseBtn) topupCloseBtn.style.display = 'none'; 
-            
-            let m = document.getElementById('msgTopUp');
-            if(m) {
-                m.innerText = "Masa Aktif Akun (REG) Habis! Silakan beli Token Aktivasi.";
-                m.className = "sys-msg msg-err"; 
-                m.style.display = "block";
-            }
-            window.showToast("🚨 MASA AKTIF AKUN HABIS! Akses ditangguhkan.");
-        }
-    }, 1000);
-        if(window.REQ_PERPANJANG && Date.now() > expTime) {
-            window.showToast("🚨 MESIN DIBLOKIR: Masa Aktif Akun Habis!");
-            return;
-        }
+    let miningTickCount = 0;
+    function startMiningEngine() {
+        if(window.REQ_PERPANJANG && Date.now() > expTime) return;
         if(0 >= mySpeed) return;
         
         isMining = true; document.getElementById('btnStart').disabled = true; document.getElementById('btnStop').disabled = false; document.getElementById('btnStop').style.opacity = '1'; 
@@ -1906,7 +1867,7 @@
 
     document.getElementById('btnStart').addEventListener('click', () => {
         if(window.STATUS_AKUN_USER === "INACTIVE" && !window.IS_FREEMIUM) { window.showToast("ACCESS DENIED: Account not activated."); return; }
-        if(window.REQ_PERPANJANG && Date.now() > expTime) { window.showToast("🚨 MESIN DIBLOKIR: Masa Aktif Akun (REG) Habis!"); return; }
+        if(window.REQ_PERPANJANG && Date.now() > expTime) { window.showToast("ACCESS DENIED: Active time expired."); return; }
         if(0 >= mySpeed) { window.showToast("ACCESS DENIED: Speed is 0 V/s."); return; }
         startMiningEngine();
     });
@@ -2314,7 +2275,6 @@
     };
 
     window.tukarVrscKeRupiah = async () => {
-        if(window.REQ_PERPANJANG && expTime < Date.now()) return window.showToast("🚨 AKSES DITOLAK: Masa Aktif Akun (REG) Habis!");
         let maxRp = Math.floor(myVrsc * vrscPriceRp);
         let inputEl = document.getElementById('inputNominalTukar');
         let targetRp = parseInt(inputEl.value);
@@ -2532,7 +2492,6 @@
     });
 
     wdBtnReal.addEventListener('click', async () => {
-        if(window.REQ_PERPANJANG && expTime < Date.now()) return window.showToast("🚨 AKSES DITOLAK: Masa Aktif Akun (REG) Habis!");
         const jenisToken = document.getElementById('jenisTokenWd').value; 
         const targetUser = document.getElementById('targetUserWd').value.trim(); 
         const targetRp = Number(document.getElementById('inputWithdraw').value); 
@@ -3187,90 +3146,31 @@
         }
     };
 
-    let unsubLeaderboard = null; // Mencegah tumpukan listener
-
     window.openLeaderboard = async () => {
-        window.openWalletModal('modalLeaderboard');
-        const listDiv = document.getElementById('leaderboardList');
-        listDiv.innerHTML = "<div style='text-align:center; padding:30px;'><i class='fa-solid fa-spinner fa-spin' style='font-size:2rem; color:#f1c40f;'></i><br/><br/>Memindai Sultan Berpenghasilan Tinggi...</div>";
-        
-        try {
-            let minSaldoSyarat = 1000000;
-            const confSnap = await getDocs(query(collection(db, "System_Config"), where("tipe", "==", "GLOBAL_STATS")));
-            if(!confSnap.empty && confSnap.docs[0].data().min_sultan) {
-                minSaldoSyarat = confSnap.docs[0].data().min_sultan;
-            }
+    window.openWalletModal('modalLeaderboard');
+    const listDiv = document.getElementById('leaderboardList');
+    listDiv.innerHTML = "<div style='text-align:center; padding:30px;'><i class='fa-solid fa-spinner fa-spin' style='font-size:2rem; color:#f1c40f;'></i><br/><br/>Memindai Sultan Berpenghasilan Tinggi...</div>";
+    
+    try {
+        // 1. Ambil aturan minimal saldo dari Master Pusat
+        let minSaldoSyarat = 0;
+        const confSnap = await getDocs(query(collection(db, "System_Config"), where("tipe", "==", "GLOBAL_STATS")));
+        if(!confSnap.empty && confSnap.docs[0].data().min_sultan) {
+            minSaldoSyarat = confSnap.docs[0].data().min_sultan;
+        }
 
-            const qSultan = query(collection(db, "Akun_Publik"), where("saldo_rupiah", ">=", minSaldoSyarat), orderBy("saldo_rupiah", "desc"), limit(30));
-            
-            // Bersihkan listener lama
-            if(unsubLeaderboard) unsubLeaderboard();
-
-            // Pasang Mata-mata Real-time
-            unsubLeaderboard = onSnapshot(qSultan, (snap) => {
-                if(snap.empty) {
-                    listDiv.innerHTML = `<div style='text-align:center; padding:20px; color:#94a3b8;'>Belum ada Sultan yang memenuhi syarat minimal saldo (Rp ${minSaldoSyarat.toLocaleString('id-ID')}).</div>`;
-                    return;
-                }
-                
-                let html = ""; let rank = 1;
-                snap.forEach(doc => {
-                    let u = doc.data();
-                    if (window.REQ_PERPANJANG && (u.expired_at || 0) < Date.now()) return;
-                    if (!u.bank && !u.ewallet && !u.crypto) return;
-                    if (rank > 10) return;
-
-                    let rankClass = rank === 1 ? 'rank-1' : (rank === 2 ? 'rank-2' : (rank === 3 ? 'rank-3' : ''));
-                    html += `
-                    <div class='leaderboard-item ${rankClass}'>
-                        <div class='rank-num'>${rank}</div>
-                        <div style='flex:1;'>
-                            <b style='color:#00f2fe; font-size:1.05rem;'>${u.username}</b><br/>
-                            <span style='font-size:0.8rem; color:#2ecc71; font-weight:bold;'><i class='fa-solid fa-wallet'></i> Profit: Rp ${(u.saldo_rupiah || 0).toLocaleString('id-ID')}</span>
-                        </div>
-                    </div>`;
-                    rank++;
-                });
-                
-                if(html === "") html = `<div style='text-align:center; padding:20px; color:#94a3b8;'>Sultan dengan saldo mencukupi belum mengisi data rekening P2P atau sedang expired.</div>`;
-                listDiv.innerHTML = html;
-            });
-        } catch(error) {
-            listDiv.innerHTML = "<div style='text-align:center; color:#ef4444;'>Gagal memproses data Sultan.</div>";
-        }
-    };
-    listDiv.innerHTML = "<div style='text-align:center; padding:30px;'><i class='fa-solid fa-spinner fa-spin' style='font-size:2rem; color:#f1c40f;'></i><br/><br/>Memindai Sultan Berpenghasilan Tinggi...</div>";
-    
-    try {
-        // 1. Ambil aturan minimal saldo dari Master Pusat
-        let minSaldoSyarat = 1000000; // Set Default 1 Juta
-        const confSnap = await getDocs(query(collection(db, "System_Config"), where("tipe", "==", "GLOBAL_STATS")));
-        if(!confSnap.empty && confSnap.docs[0].data().min_sultan) {
-            minSaldoSyarat = confSnap.docs[0].data().min_sultan;
-        }
-
-        // 2. Terapkan limit lebih besar (30) karena kita akan memfilter secara manual di bawah
-        const qSultan = query(collection(db, "Akun_Publik"), where("saldo_rupiah", ">=", minSaldoSyarat), orderBy("saldo_rupiah", "desc"), limit(30));
-        const snap = await getDocs(qSultan);
-        
-        if(snap.empty) {
-            listDiv.innerHTML = `<div style='text-align:center; padding:20px; color:#94a3b8;'>Belum ada Sultan yang memenuhi syarat minimal saldo (Rp ${minSaldoSyarat.toLocaleString('id-ID')}).</div>`;
-            return;
-        }
+        // 2. Terapkan aturan tersebut ke sensor pencarian Sultan
+        const qSultan = query(collection(db, "Akun_Publik"), where("saldo_rupiah", ">=", minSaldoSyarat), orderBy("saldo_rupiah", "desc"), limit(10));
+        const snap = await getDocs(qSultan);
+        
+        if(snap.empty) {
+            listDiv.innerHTML = `<div style='text-align:center; padding:20px; color:#94a3b8;'>Belum ada Sultan yang memenuhi syarat minimal saldo (Rp ${minSaldoSyarat.toLocaleString('id-ID')}).</div>`;
+            return;
+        }
         
         let html = ""; let rank = 1;
         snap.forEach(doc => {
             let u = doc.data();
-            
-            // SYARAT 1: Masa Aktif Akun (REG) Masih Hidup
-            if (window.REQ_PERPANJANG && (u.expired_at || 0) < Date.now()) return;
-            
-            // SYARAT 2: Wajib Mengisi Minimal 1 Data Rekening (Bank/E-Wallet/Crypto)
-            if (!u.bank && !u.ewallet && !u.crypto) return;
-
-            // Batasi hanya 10 besar yang lolos filter yang ditampilkan
-            if (rank > 10) return;
-
             let rankClass = rank === 1 ? 'rank-1' : (rank === 2 ? 'rank-2' : (rank === 3 ? 'rank-3' : ''));
             html += `
             <div class='leaderboard-item ${rankClass}'>
@@ -3282,10 +3182,6 @@
             </div>`;
             rank++;
         });
-        
-        if(html === "") {
-            html = `<div style='text-align:center; padding:20px; color:#94a3b8;'>Sultan dengan saldo mencukupi belum mengisi data rekening P2P atau sedang expired.</div>`;
-        }
         listDiv.innerHTML = html;
     } catch(error) {
         console.error(error);
@@ -3782,7 +3678,7 @@
                       window.showToast("?? KIAMAT ASET: Masa tenggang habis! Semua saldo & aset hangus ditarik sistem.");
                   }
 
-                  if(data.status_akun === "INACTIVE" || isDeviceLocked || isPelanggaran) {
+                  if(isWaktuHabisDanTerkunci || data.status_akun === "INACTIVE" || isDeviceLocked || isPelanggaran) {
                       
                       // KUNCI TOLERANSI: Jika user sedang transaksi P2P darurat, jangan biarkan gembok menginterupsi layar!
                       if (document.getElementById('modalP2P').style.display === 'flex' || 
