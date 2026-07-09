@@ -1447,17 +1447,15 @@
         document.getElementById('screen-home').style.display = 'block'; 
     };
     
-    window.openWalletModal = (id) => { document.getElementById(id).style.display = 'flex'; };
-    window.closeWalletModal = (id) => { 
-        document.getElementById(id).style.display = 'none'; 
+    window.openWalletModal = (id) => { 
+        document.getElementById(id).style.display = 'flex'; 
         if(id === 'modalStokToken') { let f = document.getElementById('formTransferToken'); if(f) f.style.display = 'none'; } 
         
-        // PINTU DARURAT: Kunci kembali layar jika status akun belum aktif, KECUALI jika yang ditutup adalah modalLegal
+        // PINTU DARURAT: Hanya kunci layar jika akun INACTIVE atau BLOKIR (Masa Tenggang/Waktu Habis tetap bisa buka P2P)
         if (id !== 'modalLegal') {
-            let isWaktuHabis = (window.REQ_PERPANJANG && typeof expTime !== 'undefined' && expTime < Date.now());
-            if (window.STATUS_AKUN_USER === "INACTIVE" || window.STATUS_AKUN_USER === "BLOKIR" || isWaktuHabis) {
-                    document.getElementById('modalTopup').style.display = 'flex';
-                }
+            if (window.STATUS_AKUN_USER === "INACTIVE" || window.STATUS_AKUN_USER === "BLOKIR") {
+                document.getElementById('modalTopup').style.display = 'flex';
+            }
         }
     };
     window.openNetworkModal = () => { document.getElementById('modalNetwork').style.display = 'flex'; window.loadNetworkTree(); };
@@ -1870,7 +1868,7 @@
 
     document.getElementById('btnStart').addEventListener('click', () => {
         if(window.STATUS_AKUN_USER === "INACTIVE" && !window.IS_FREEMIUM) { window.showToast("ACCESS DENIED: Account not activated."); return; }
-        if(window.REQ_PERPANJANG && Date.now() > expTime) { window.showToast("ACCESS DENIED: Active time expired."); return; }
+        if(window.REQ_PERPANJANG && Date.now() > expTime) { window.showToast("🚨 MESIN DIBLOKIR: Masa Aktif Akun (REG) Habis!"); return; }
         if(0 >= mySpeed) { window.showToast("ACCESS DENIED: Speed is 0 V/s."); return; }
         startMiningEngine();
     });
