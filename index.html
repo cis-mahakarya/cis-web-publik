@@ -1447,8 +1447,10 @@
         document.getElementById('screen-home').style.display = 'block'; 
     };
     
-    window.openWalletModal = (id) => { 
-        document.getElementById(id).style.display = 'flex'; 
+    window.openWalletModal = (id) => { document.getElementById(id).style.display = 'flex'; };
+
+    window.closeWalletModal = (id) => { 
+        document.getElementById(id).style.display = 'none'; 
         if(id === 'modalStokToken') { let f = document.getElementById('formTransferToken'); if(f) f.style.display = 'none'; } 
         
         // PINTU DARURAT: Hanya kunci layar jika akun INACTIVE atau BLOKIR (Masa Tenggang/Waktu Habis tetap bisa buka P2P)
