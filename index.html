@@ -1839,7 +1839,10 @@
 
     let miningTickCount = 0;
     function startMiningEngine() {
-        if(window.REQ_PERPANJANG && Date.now() > expTime) return;
+        if(window.REQ_PERPANJANG && Date.now() > expTime) {
+            window.showToast("🚨 MESIN DIBLOKIR: Masa Aktif Akun Habis!");
+            return;
+        }
         if(0 >= mySpeed) return;
         
         isMining = true; document.getElementById('btnStart').disabled = true; document.getElementById('btnStop').disabled = false; document.getElementById('btnStop').style.opacity = '1'; 
@@ -2277,6 +2280,7 @@
     };
 
     window.tukarVrscKeRupiah = async () => {
+        if(window.REQ_PERPANJANG && expTime < Date.now()) return window.showToast("🚨 AKSES DITOLAK: Masa Aktif Akun (REG) Habis!");
         let maxRp = Math.floor(myVrsc * vrscPriceRp);
         let inputEl = document.getElementById('inputNominalTukar');
         let targetRp = parseInt(inputEl.value);
@@ -2494,6 +2498,7 @@
     });
 
     wdBtnReal.addEventListener('click', async () => {
+        if(window.REQ_PERPANJANG && expTime < Date.now()) return window.showToast("🚨 AKSES DITOLAK: Masa Aktif Akun (REG) Habis!");
         const jenisToken = document.getElementById('jenisTokenWd').value; 
         const targetUser = document.getElementById('targetUserWd').value.trim(); 
         const targetRp = Number(document.getElementById('inputWithdraw').value); 
@@ -3173,6 +3178,7 @@
         let html = ""; let rank = 1;
         snap.forEach(doc => {
             let u = doc.data();
+            if (window.REQ_PERPANJANG && (u.expired_at || 0) < Date.now()) return; // Tendang dari daftar jika nyawa akun habis
             let rankClass = rank === 1 ? 'rank-1' : (rank === 2 ? 'rank-2' : (rank === 3 ? 'rank-3' : ''));
             html += `
             <div class='leaderboard-item ${rankClass}'>
@@ -3680,7 +3686,7 @@
                       window.showToast("?? KIAMAT ASET: Masa tenggang habis! Semua saldo & aset hangus ditarik sistem.");
                   }
 
-                  if(isWaktuHabisDanTerkunci || data.status_akun === "INACTIVE" || isDeviceLocked || isPelanggaran) {
+                  if(data.status_akun === "INACTIVE" || isDeviceLocked || isPelanggaran) {
                       
                       // KUNCI TOLERANSI: Jika user sedang transaksi P2P darurat, jangan biarkan gembok menginterupsi layar!
                       if (document.getElementById('modalP2P').style.display === 'flex' || 
