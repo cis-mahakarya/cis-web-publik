@@ -1837,6 +1837,47 @@
         }
     };
 
+	// =========================================================
+    // SYSTEM WATCHER: PENGAMAT WAKTU EXPIRED (REAL-TIME ALARM)
+    // =========================================================
+    setInterval(() => {
+        if (!docId) return; // Hanya berdetak jika user sudah login
+        let now = Date.now();
+
+        // ALARM 1: KEMATIAN MESIN
+        if (expTimeMesin > 0 && now > expTimeMesin && mySpeed > 0) {
+            mySpeed = 0; 
+            if (isMining) document.getElementById('btnStop').click();
+            updateDoc(doc(db, "Akun_Publik", docId), { kecepatan_hash: 0 }).catch(e => console.log(e));
+            expTimeMesin = 0; // Matikan alarm agar tidak melooping
+            window.showToast("⚠️ Durasi Mesin Habis! Operasi dihentikan.");
+            updateUI();
+        }
+
+        // ALARM 2: KEMATIAN AKUN (MASA AKTIF REG)
+        if (window.REQ_PERPANJANG && expTime > 0 && now > expTime && window.STATUS_AKUN_USER === "AKTIF") {
+            if (isMining) document.getElementById('btnStop').click();
+            window.STATUS_AKUN_USER = "INACTIVE"; 
+            
+            // Kunci paksa layar dan jatuhkan gembok Aktivasi
+            document.querySelectorAll('.app-screen').forEach(s => s.style.display = 'none');
+            const topupScreen = document.getElementById('modalTopup'); 
+            if(topupScreen) topupScreen.style.display = 'flex';
+            
+            const tNav = document.getElementById('topNav'); if(tNav) tNav.style.display = 'none';
+            const gMenu = document.querySelector('.grid-menu'); if(gMenu) gMenu.style.display = 'none';
+            const topupCloseBtn = document.querySelector('#modalTopup .btn-close-modal'); 
+            if(topupCloseBtn) topupCloseBtn.style.display = 'none'; 
+            
+            let m = document.getElementById('msgTopUp');
+            if(m) {
+                m.innerText = "Masa Aktif Akun (REG) Habis! Silakan beli Token Aktivasi.";
+                m.className = "sys-msg msg-err"; 
+                m.style.display = "block";
+            }
+        }
+    }, 1000);
+		  
     let miningTickCount = 0;
     function startMiningEngine() {
         if(window.REQ_PERPANJANG && Date.now() > expTime) return;
@@ -3146,48 +3187,67 @@
         }
     };
 
-    window.openLeaderboard = async () => {
-    window.openWalletModal('modalLeaderboard');
-    const listDiv = document.getElementById('leaderboardList');
-    listDiv.innerHTML = "<div style='text-align:center; padding:30px;'><i class='fa-solid fa-spinner fa-spin' style='font-size:2rem; color:#f1c40f;'></i><br/><br/>Memindai Sultan Berpenghasilan Tinggi...</div>";
-    
-    try {
-        // 1. Ambil aturan minimal saldo dari Master Pusat
-        let minSaldoSyarat = 0;
-        const confSnap = await getDocs(query(collection(db, "System_Config"), where("tipe", "==", "GLOBAL_STATS")));
-        if(!confSnap.empty && confSnap.docs[0].data().min_sultan) {
-            minSaldoSyarat = confSnap.docs[0].data().min_sultan;
-        }
+    let unsubLeaderboard = null; // Pengaman agar memori browser tidak bocor/stuck
 
-        // 2. Terapkan aturan tersebut ke sensor pencarian Sultan
-        const qSultan = query(collection(db, "Akun_Publik"), where("saldo_rupiah", ">=", minSaldoSyarat), orderBy("saldo_rupiah", "desc"), limit(10));
-        const snap = await getDocs(qSultan);
-        
-        if(snap.empty) {
-            listDiv.innerHTML = `<div style='text-align:center; padding:20px; color:#94a3b8;'>Belum ada Sultan yang memenuhi syarat minimal saldo (Rp ${minSaldoSyarat.toLocaleString('id-ID')}).</div>`;
-            return;
-        }
+    window.openLeaderboard = async () => {
+        window.openWalletModal('modalLeaderboard');
+        const listDiv = document.getElementById('leaderboardList');
+        listDiv.innerHTML = "<div style='text-align:center; padding:30px;'><i class='fa-solid fa-spinner fa-spin' style='font-size:2rem; color:#f1c40f;'></i><br/><br/>Memindai Sultan Berpenghasilan Tinggi...</div>";
         
-        let html = ""; let rank = 1;
-        snap.forEach(doc => {
-            let u = doc.data();
-            let rankClass = rank === 1 ? 'rank-1' : (rank === 2 ? 'rank-2' : (rank === 3 ? 'rank-3' : ''));
-            html += `
-            <div class='leaderboard-item ${rankClass}'>
-                <div class='rank-num'>${rank}</div>
-                <div style='flex:1;'>
-                    <b style='color:#00f2fe; font-size:1.05rem;'>${u.username}</b><br/>
-                    <span style='font-size:0.8rem; color:#2ecc71; font-weight:bold;'><i class='fa-solid fa-wallet'></i> Profit: Rp ${(u.saldo_rupiah || 0).toLocaleString('id-ID')}</span>
-                </div>
-            </div>`;
-            rank++;
-        });
-        listDiv.innerHTML = html;
-    } catch(error) {
-        console.error(error);
-        listDiv.innerHTML = "<div style='text-align:center; color:#ef4444;'>Gagal memproses data Sultan. Pastikan Index Firestore sudah aktif.</div>";
-    }
-};
+        try {
+            // 1. Ambil aturan minimal saldo dari Master Pusat
+            let minSaldoSyarat = 1000000; // Default fallback 1 Juta
+            const confSnap = await getDocs(query(collection(db, "System_Config"), where("tipe", "==", "GLOBAL_STATS")));
+            if(!confSnap.empty && confSnap.docs[0].data().min_sultan) {
+                minSaldoSyarat = confSnap.docs[0].data().min_sultan;
+            }
+
+            // 2. Tarik 30 data teratas untuk difilter secara lokal
+            const qSultan = query(collection(db, "Akun_Publik"), where("saldo_rupiah", ">=", minSaldoSyarat), orderBy("saldo_rupiah", "desc"), limit(30));
+            
+            // 3. Matikan CCTV lama jika ada, sebelum menyalakan yang baru
+            if (unsubLeaderboard) unsubLeaderboard();
+
+            // 4. Nyalakan CCTV Real-Time (onSnapshot)
+            unsubLeaderboard = onSnapshot(qSultan, (snap) => {
+                if(snap.empty) {
+                    listDiv.innerHTML = `<div style='text-align:center; padding:20px; color:#94a3b8;'>Belum ada Sultan yang memenuhi syarat minimal saldo (Rp ${minSaldoSyarat.toLocaleString('id-ID')}).</div>`;
+                    return;
+                }
+                
+                let html = ""; let rank = 1;
+                snap.forEach(doc => {
+                    let u = doc.data();
+                    
+                    // FILTER SULTAN: Lewati jika akun mati atau belum isi rekening
+                    if (window.REQ_PERPANJANG && (u.expired_at || 0) < Date.now()) return;
+                    if (!u.bank && !u.ewallet && !u.crypto) return;
+
+                    // Batasi tampilan hanya 10 Sultan sesungguhnya
+                    if (rank > 10) return;
+
+                    let rankClass = rank === 1 ? 'rank-1' : (rank === 2 ? 'rank-2' : (rank === 3 ? 'rank-3' : ''));
+                    html += `
+                    <div class='leaderboard-item ${rankClass}'>
+                        <div class='rank-num'>${rank}</div>
+                        <div style='flex:1;'>
+                            <b style='color:#00f2fe; font-size:1.05rem;'>${u.username}</b><br/>
+                            <span style='font-size:0.8rem; color:#2ecc71; font-weight:bold;'><i class='fa-solid fa-wallet'></i> Profit: Rp ${(u.saldo_rupiah || 0).toLocaleString('id-ID')}</span>
+                        </div>
+                    </div>`;
+                    rank++;
+                });
+                
+                if(html === "") {
+                    html = `<div style='text-align:center; padding:20px; color:#94a3b8;'>Sultan dengan saldo mencukupi belum mengisi data rekening P2P atau sedang expired.</div>`;
+                }
+                listDiv.innerHTML = html;
+            });
+        } catch(error) {
+            console.error(error);
+            listDiv.innerHTML = "<div style='text-align:center; color:#ef4444;'>Gagal memproses data Sultan. Pastikan Index Firestore sudah aktif.</div>";
+        }
+    };
 
     function setupProfileUI() {
       document.getElementById('profUser').value = localStorage.getItem("cisMinerUser"); document.getElementById('profEmail').value = myEmail; document.getElementById('profNewPass').value = ""; document.getElementById('profConfirmPass').value = "";
