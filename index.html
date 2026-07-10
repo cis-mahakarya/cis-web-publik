@@ -2322,7 +2322,14 @@
         });
     };
 
-    window.tukarVrscKeRupiah = async () => {
+   window.tukarVrscKeRupiah = async () => {
+        // --- LOGIKA KUNCI ---
+        if (isAccountLocked || Date.now() > expTime) {
+            alert("Akses Exchange diblokir. Silakan order token aktivasi akun untuk melanjutkan!");
+            return false; 
+        }
+        // --------------------
+
         let maxRp = Math.floor(myVrsc * vrscPriceRp);
         let inputEl = document.getElementById('inputNominalTukar');
         let targetRp = parseInt(inputEl.value);
