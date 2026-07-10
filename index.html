@@ -1857,19 +1857,7 @@
         // 2. ALARM AKUN MATI (MASA AKTIF REG)
         if (window.REQ_PERPANJANG && expTime > 0 && now > expTime && window.STATUS_AKUN_USER === "AKTIF") {
             if (isMining) document.getElementById('btnStop').click();
-            window.STATUS_AKUN_USER = "INACTIVE"; 
-            
-            // Jatuhkan gembok layar aktivasi
-            document.querySelectorAll('.app-screen').forEach(s => s.style.display = 'none');
-            const topupScreen = document.getElementById('modalTopup'); 
-            if(topupScreen) topupScreen.style.display = 'flex';
-            
-            let m = document.getElementById('msgTopUp');
-            if(m) {
-                m.innerText = "Masa Aktif Akun (REG) Habis! Silakan beli Token Aktivasi.";
-                m.className = "sys-msg msg-err"; 
-                m.style.display = "block";
-            }
+            window.STATUS_AKUN_USER = "EXPIRED"; // Ubah jadi EXPIRED, bukan INACTIVE
         }
     }, 1000);
 		  
@@ -3187,63 +3175,6 @@
     let unsubLeaderboard = null; // Pengaman CCTV agar memori tidak bocor
 
     window.openLeaderboard = async () => {
-        window.openWalletModal('modalLeaderboard');
-        const listDiv = document.getElementById('leaderboardList');
-        listDiv.innerHTML = "<div style='text-align:center; padding:30px;'><i class='fa-solid fa-spinner fa-spin' style='font-size:2rem; color:#f1c40f;'></i><br/><br/>Memindai Sultan Berpenghasilan Tinggi...</div>";
-        
-        try {
-            let minSaldoSyarat = 1000000; // Default 1 Juta jika gagal ambil data pusat
-            const confSnap = await getDocs(query(collection(db, "System_Config"), where("tipe", "==", "GLOBAL_STATS")));
-            if(!confSnap.empty && confSnap.docs[0].data().min_sultan) {
-                minSaldoSyarat = confSnap.docs[0].data().min_sultan;
-            }
-
-            // Tarik 30 data teratas untuk memastikan kita cukup bahan walau ada yang ditendang oleh filter lokal
-            const qSultan = query(collection(db, "Akun_Publik"), where("saldo_rupiah", ">=", minSaldoSyarat), orderBy("saldo_rupiah", "desc"), limit(30));
-            
-            if (unsubLeaderboard) unsubLeaderboard();
-
-            unsubLeaderboard = onSnapshot(qSultan, (snap) => {
-                if(snap.empty) {
-                    listDiv.innerHTML = `<div style='text-align:center; padding:20px; color:#94a3b8;'>Belum ada Sultan yang memenuhi syarat minimal saldo (Rp ${minSaldoSyarat.toLocaleString('id-ID')}).</div>`;
-                    return;
-                }
-                
-                let html = ""; let rank = 1;
-                snap.forEach(doc => {
-                    let u = doc.data();
-                    
-                    // SYARAT MUTLAK 1: MASA AKTIF AKUN HARUS HIDUP
-                    if (window.REQ_PERPANJANG && (u.expired_at || 0) < Date.now()) return;
-                    
-                    // SYARAT MUTLAK 2: WAJIB ADA REKENING TERISI
-                    if (!u.bank && !u.ewallet && !u.crypto) return;
-
-                    // Batasi tampilan hanya 10 Sultan valid
-                    if (rank > 10) return;
-
-                    let rankClass = rank === 1 ? 'rank-1' : (rank === 2 ? 'rank-2' : (rank === 3 ? 'rank-3' : ''));
-                    html += `
-                    <div class='leaderboard-item ${rankClass}'>
-                        <div class='rank-num'>${rank}</div>
-                        <div style='flex:1;'>
-                            <b style='color:#00f2fe; font-size:1.05rem;'>${u.username}</b><br/>
-                            <span style='font-size:0.8rem; color:#2ecc71; font-weight:bold;'><i class='fa-solid fa-wallet'></i> Profit: Rp ${(u.saldo_rupiah || 0).toLocaleString('id-ID')}</span>
-                        </div>
-                    </div>`;
-                    rank++;
-                });
-                
-                if(html === "") {
-                    html = `<div style='text-align:center; padding:20px; color:#94a3b8;'>Belum ada Sultan Valid (Saldo mencukupi, aktif, dan memiliki data Rekening P2P).</div>`;
-                }
-                listDiv.innerHTML = html;
-            });
-        } catch(error) {
-            console.error(error);
-            listDiv.innerHTML = "<div style='text-align:center; color:#ef4444;'>Gagal memproses data Sultan. Pastikan Index Firestore sudah aktif.</div>";
-        }
-    };
 
     function setupProfileUI() {
       document.getElementById('profUser').value = localStorage.getItem("cisMinerUser"); document.getElementById('profEmail').value = myEmail; document.getElementById('profNewPass').value = ""; document.getElementById('profConfirmPass').value = "";
@@ -3734,7 +3665,7 @@
                       window.showToast("?? KIAMAT ASET: Masa tenggang habis! Semua saldo & aset hangus ditarik sistem.");
                   }
 
-                  if(isWaktuHabisDanTerkunci || data.status_akun === "INACTIVE" || isDeviceLocked || isPelanggaran) {
+                  if(data.status_akun === "INACTIVE" || isDeviceLocked || isPelanggaran) {
                       
                       // KUNCI TOLERANSI: Jika user sedang transaksi P2P darurat, jangan biarkan gembok menginterupsi layar!
                       if (document.getElementById('modalP2P').style.display === 'flex' || 
