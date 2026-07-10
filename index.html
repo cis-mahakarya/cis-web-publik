@@ -4161,6 +4161,27 @@ if(!passwordRegex.test(pass)) { msg('msgReg', "Password harus diawali huruf besa
         }
     };
     }); 
+
+// ==========================================
+// SYSTEM WATCHER: Pengecekan Expired Real-Time
+// ==========================================
+let isAccountLocked = false; 
+
+setInterval(function() {
+    // Pastikan variabel expTime sudah terdefinisi di global scope Anda
+    if (typeof expTime !== 'undefined' && Date.now() > expTime) {
+        if (!isAccountLocked) {
+            isAccountLocked = true;
+            console.warn("SYSTEM: Waktu Aktif Akun (REG) telah lewat. Fitur dikunci.");
+            
+            // Opsi tambahan: Anda bisa menambahkan visual feedback di sini
+            // misalnya: document.getElementById('btnStartMining').disabled = true;
+        }
+    } else {
+        isAccountLocked = false;
+    }
+}, 1000); // Berjalan setiap 1 detik
+		  
 </script>
 </body>
 </html>
