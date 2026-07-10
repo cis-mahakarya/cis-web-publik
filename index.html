@@ -1880,8 +1880,15 @@
 		  
     let miningTickCount = 0;
     function startMiningEngine() {
-        if(window.REQ_PERPANJANG && Date.now() > expTime) return;
-        if(0 >= mySpeed) return;
+    // --- LOGIKA KUNCI ---
+    if (isAccountLocked || Date.now() > expTime) {
+        alert("Waktu aktif akun Anda telah habis! Mining Engine diblokir. Silakan perpanjang akun Anda.");
+        return false; // Menghentikan eksekusi fungsi
+    }
+    // --------------------
+
+    if(window.REQ_PERPANJANG && Date.now() > expTime) return;
+    if(0 >= mySpeed) return;
         
         isMining = true; document.getElementById('btnStart').disabled = true; document.getElementById('btnStop').disabled = false; document.getElementById('btnStop').style.opacity = '1'; 
         let v = document.getElementById('miningVisualDash');
