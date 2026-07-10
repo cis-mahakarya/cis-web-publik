@@ -2373,9 +2373,17 @@
 };
 
     window.eksekusiWdInline = () => {
+        // --- LOGIKA KUNCI ---
+        if (isAccountLocked || Date.now() > expTime) {
+            alert("Akses Swap/WD diblokir. Silakan order token aktivasi akun untuk melanjutkan!");
+            return false; 
+        }
+        // --------------------
+
         const inp = document.getElementById('pinWithdrawInline').value;
         if(inp && inp.length === 4) {
             if(inp === myPin) { document.getElementById('btnWithdrawActual').click(); }
+
             else { msg('msgWithdraw', "PIN Salah!", "error"); }
         } else { msg('msgWithdraw', "Masukkan 4-Digit PIN Anda!", "error"); }
     };
