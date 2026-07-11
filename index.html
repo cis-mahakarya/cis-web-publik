@@ -2819,6 +2819,15 @@
                 const snapUser = await getDocs(query(collection(db, "Akun_Publik"), where("username", "==", sName)));
                 if(!snapUser.empty) {
                     let uData = snapUser.docs[0].data();
+                    // --- FILTER P2P SULTAN SUPER AGRESIF ---
+                    let wktExpired = uData.expired_at || 0;
+                    if (typeof wktExpired === 'object' && wktExpired.seconds) {
+                        wktExpired = wktExpired.seconds * 1000;
+                    }
+                    
+                    // LOMPATI (continue) penjual ini jika Waktu Habis ATAU Status bukan AKTIF
+                    if (wktExpired < Date.now() || uData.status_akun !== "AKTIF") continue;
+
                     // FILTER KEDUA: Pastikan saldo memenuhi syarat, dan rekening terisi
                     if((uData.saldo_rupiah || 0) >= targetMinimal && (uData.bank || uData.ewallet || uData.crypto)) {
                         html += `<option value='${sName}'>${sName} (IDR: Rp ${(uData.saldo_rupiah || 0).toLocaleString('id-ID')})</option>`;
