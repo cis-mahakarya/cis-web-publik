@@ -2199,13 +2199,66 @@
     function mainkanSuaraNotif() {
         try {
             let nada = localStorage.getItem("cisNadaDering") || "1";
-            let audioUrl = "https://actions.google.com/sounds/v1/communications/incoming_message.ogg"; // 1: Nada Pesan Biasa
-            if (nada === "2") audioUrl = "https://actions.google.com/sounds/v1/alarms/digital_watch_alarm_long.ogg"; // 2: Alarm Digital
-            if (nada === "3") audioUrl = "https://actions.google.com/sounds/v1/water/water_drop.ogg"; // 3: Tetesan Air
-
-            let player = new Audio(audioUrl);
-            player.play().catch(e => console.log("Auto-play diblokir browser"));
-        } catch(err) {}
+            
+            // Web Audio API (Murni tanpa link eksternal, anti-lemot, volume maksimal)
+            const AudioContext = window.AudioContext || window.webkitAudioContext;
+            if (!AudioContext) return;
+            const ctx = new AudioContext();
+            
+            const osc = ctx.createOscillator();
+            const gain = ctx.createGain();
+            
+            osc.connect(gain);
+            gain.connect(ctx.destination);
+            
+            let t = ctx.currentTime;
+            
+            if (nada === "1") {
+                // Nada 1: Pesan Masuk (Ting - Ting)
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(800, t);
+                gain.gain.setValueAtTime(1, t);
+                gain.gain.exponentialRampToValueAtTime(0.01, t + 0.2);
+                
+                const osc2 = ctx.createOscillator();
+                const gain2 = ctx.createGain();
+                osc2.type = 'sine';
+                osc2.frequency.setValueAtTime(1200, t + 0.15);
+                osc2.connect(gain2);
+                gain2.connect(ctx.destination);
+                gain2.gain.setValueAtTime(0, t);
+                gain2.gain.setValueAtTime(1, t + 0.15);
+                gain2.gain.exponentialRampToValueAtTime(0.01, t + 0.5);
+                
+                osc.start(t); osc.stop(t + 0.2);
+                osc2.start(t + 0.15); osc2.stop(t + 0.5);
+                
+            } else if (nada === "2") {
+                // Nada 2: Alarm Digital (Tit Tit Tit Tit)
+                osc.type = 'square';
+                osc.frequency.setValueAtTime(1000, t);
+                gain.gain.setValueAtTime(0, t);
+                
+                for(let i=0; i<4; i++) {
+                    gain.gain.setValueAtTime(1, t + (i*0.15));
+                    gain.gain.setValueAtTime(0, t + (i*0.15) + 0.08);
+                }
+                osc.start(t);
+                osc.stop(t + 0.6);
+                
+            } else if (nada === "3") {
+                // Nada 3: Tetesan Air (Bloop)
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(300, t);
+                osc.frequency.exponentialRampToValueAtTime(600, t + 0.1);
+                gain.gain.setValueAtTime(1, t);
+                gain.gain.exponentialRampToValueAtTime(0.01, t + 0.15);
+                osc.start(t);
+                osc.stop(t + 0.15);
+            }
+        } catch(err) {
+            console.log("Audio diblokir browser");
+        }
     }
 
     window.renderNotifikasi = () => {
