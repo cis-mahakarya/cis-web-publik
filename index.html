@@ -3891,7 +3891,15 @@ if (!u.bank && !u.ewallet && !u.crypto) return;
                       if(topupCloseBtn) topupCloseBtn.style.display = 'block'; 
                   }
 
-                  if(!docSnap.metadata.hasPendingWrites) { let sVrsc = data.saldo_vrsc || 0; if (sVrsc === 0) { myVrsc = 0; } else if (sVrsc > myVrsc) { myVrsc = sVrsc; } }
+                  if(!docSnap.metadata.hasPendingWrites) { 
+    let sVrsc = data.saldo_vrsc || 0; 
+    // Jika Admin mengurangi/menambah saldo secara signifikan (selisih > 0.0001)
+    if (sVrsc === 0 || Math.abs(sVrsc - myVrsc) > 0.0001) { 
+        myVrsc = sVrsc; 
+    } else if (sVrsc > myVrsc) { 
+        myVrsc = sVrsc; 
+    } 
+}
                   if(isMining && ((window.REQ_PERPANJANG && Date.now() > expTime) || mySpeed <= 0)) { document.getElementById('btnStop').click(); }
                   
                   let boxBonus = document.getElementById('displayBonusSponsor'); if(boxBonus) boxBonus.innerText = formatKripto(data.total_bonus_sponsor_vrsc || 0) + " VRSC";
