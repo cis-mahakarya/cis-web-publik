@@ -2196,68 +2196,96 @@
         }
     };
 
+    // Variabel global pengontrol durasi looping suara
+    let cisAudioInterval = null;
+
+    window.hentikanSuaraNotif = () => {
+        if (cisAudioInterval) {
+            clearInterval(cisAudioInterval);
+            cisAudioInterval = null;
+            console.log("SYSTEM: Suara alarm dihentikan karena user merespon layar.");
+        }
+    };
+
+    // SAKLAR OTOMATIS: Begitu user mengklik/menyentuh bagian mana saja di layar, suara langsung MATI
+    document.addEventListener('click', () => {
+        window.hentikanSuaraNotif();
+    });
+
     function mainkanSuaraNotif() {
         try {
+            // Bersihkan sisa interval lama jika ada suara yang belum mati
+            window.hentikanSuaraNotif();
+
             let nada = localStorage.getItem("cisNadaDering") || "1";
-            
-            // Web Audio API (Murni tanpa link eksternal, anti-lemot, volume maksimal)
             const AudioContext = window.AudioContext || window.webkitAudioContext;
             if (!AudioContext) return;
-            const ctx = new AudioContext();
             
-            const osc = ctx.createOscillator();
-            const gain = ctx.createGain();
-            
-            osc.connect(gain);
-            gain.connect(ctx.destination);
-            
-            let t = ctx.currentTime;
-            
-            if (nada === "1") {
-                // Nada 1: Pesan Masuk (Ting - Ting)
-                osc.type = 'sine';
-                osc.frequency.setValueAtTime(800, t);
-                gain.gain.setValueAtTime(1, t);
-                gain.gain.exponentialRampToValueAtTime(0.01, t + 0.2);
+            // Mesin pembuat ketukan suara tunggal
+            const eksekusiSatuKetukanSuara = () => {
+                const ctx = new AudioContext();
+                const osc = ctx.createOscillator();
+                const gain = ctx.createGain();
                 
-                const osc2 = ctx.createOscillator();
-                const gain2 = ctx.createGain();
-                osc2.type = 'sine';
-                osc2.frequency.setValueAtTime(1200, t + 0.15);
-                osc2.connect(gain2);
-                gain2.connect(ctx.destination);
-                gain2.gain.setValueAtTime(0, t);
-                gain2.gain.setValueAtTime(1, t + 0.15);
-                gain2.gain.exponentialRampToValueAtTime(0.01, t + 0.5);
-                
-                osc.start(t); osc.stop(t + 0.2);
-                osc2.start(t + 0.15); osc2.stop(t + 0.5);
-                
-            } else if (nada === "2") {
-                // Nada 2: Alarm Digital (Tit Tit Tit Tit)
-                osc.type = 'square';
-                osc.frequency.setValueAtTime(1000, t);
-                gain.gain.setValueAtTime(0, t);
-                
-                for(let i=0; i<4; i++) {
-                    gain.gain.setValueAtTime(1, t + (i*0.15));
-                    gain.gain.setValueAtTime(0, t + (i*0.15) + 0.08);
+                osc.connect(gain);
+                gain.connect(ctx.destination);
+                let t = ctx.currentTime;
+
+                if (nada === "1") {
+                    // Nada 1: Ting - Ting (Berulang)
+                    osc.type = 'sine';
+                    osc.frequency.setValueAtTime(800, t);
+                    gain.gain.setValueAtTime(1, t);
+                    gain.gain.exponentialRampToValueAtTime(0.01, t + 0.2);
+                    
+                    const osc2 = ctx.createOscillator();
+                    const gain2 = ctx.createGain();
+                    osc2.type = 'sine';
+                    osc2.frequency.setValueAtTime(1200, t + 0.15);
+                    osc2.connect(gain2);
+                    gain2.connect(ctx.destination);
+                    gain2.gain.setValueAtTime(0, t);
+                    gain2.gain.setValueAtTime(1, t + 0.15);
+                    gain2.gain.exponentialRampToValueAtTime(0.01, t + 0.5);
+                    
+                    osc.start(t); osc.stop(t + 0.2);
+                    osc2.start(t + 0.15); osc2.stop(t + 0.5);
+                    
+                } else if (nada === "2") {
+                    // Nada 2: Alarm Digital (Tit Tit Tit Tit Berulang)
+                    osc.type = 'square';
+                    osc.frequency.setValueAtTime(1000, t);
+                    gain.gain.setValueAtTime(0, t);
+                    
+                    for(let i=0; i<4; i++) {
+                        gain.gain.setValueAtTime(1, t + (i*0.15));
+                        gain.gain.setValueAtTime(0, t + (i*0.15) + 0.08);
+                    }
+                    osc.start(t); osc.stop(t + 0.6);
+                    
+                } else if (nada === "3") {
+                    // Nada 3: Tetesan Air Bloop (Berulang)
+                    osc.type = 'sine';
+                    osc.frequency.setValueAtTime(300, t);
+                    osc.frequency.exponentialRampToValueAtTime(600, t + 0.1);
+                    gain.gain.setValueAtTime(1, t);
+                    gain.gain.exponentialRampToValueAtTime(0.01, t + 0.15);
+                    osc.start(t); osc.stop(t + 0.15);
                 }
-                osc.start(t);
-                osc.stop(t + 0.6);
-                
-            } else if (nada === "3") {
-                // Nada 3: Tetesan Air (Bloop)
-                osc.type = 'sine';
-                osc.frequency.setValueAtTime(300, t);
-                osc.frequency.exponentialRampToValueAtTime(600, t + 0.1);
-                gain.gain.setValueAtTime(1, t);
-                gain.gain.exponentialRampToValueAtTime(0.01, t + 0.15);
-                osc.start(t);
-                osc.stop(t + 0.15);
-            }
+            };
+
+            // Bunyikan pertama kali secara instan tanpa delay
+            eksekusiSatuKetukanSuara();
+
+            // Set waktu jeda perulangan berdasarkan karakter suara masing-masing koin/notif
+            let jedaPerulangan = 1800; // Nada 1 & 3 berulang setiap 1.8 detik
+            if (nada === "2") jedaPerulangan = 2200; // Nada 2 (Alarm panjang) berulang setiap 2.2 detik
+
+            // Mulai loop penyerangan suara sampai saklar dimatikan oleh klik user
+            cisAudioInterval = setInterval(eksekusiSatuKetukanSuara, jedaPerulangan);
+
         } catch(err) {
-            console.log("Audio diblokir browser");
+            console.log("Audio context diblokir kebijakan browser sebelum interaksi.");
         }
     }
 
