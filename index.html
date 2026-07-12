@@ -1917,18 +1917,24 @@
     document.getElementById('btnStart').addEventListener('click', () => {
         if(window.STATUS_AKUN_USER === "INACTIVE" && !window.IS_FREEMIUM) { window.showToast("ACCESS DENIED: Account not activated."); return; }
         
-        // --- FILTER WAKTU SUPER KETAT UNTUK TOMBOL START ---
+        // --- GERBANG PENJAGA TOMBOL START (ANTI-BOBOL) ---
         let wktExpired = expTime || 0;
+        // Konversi otomatis jika Firebase mengirimkan format Object
         if (typeof wktExpired === 'object' && wktExpired.seconds) {
             wktExpired = wktExpired.seconds * 1000;
         }
         
-        if(window.REQ_PERPANJANG && Date.now() > wktExpired) { 
+        // Putuskan akses jika waktu aktif sudah habis atau status akun tidak aktif
+        if((window.REQ_PERPANJANG && Date.now() > wktExpired) || window.STATUS_AKUN_USER === "INACTIVE") { 
             window.showToast("AKSES DITOLAK: Masa Aktif Akun (REG) Habis!"); 
             return; 
         }
-        // ---------------------------------------------------
-        
+        if(window.STATUS_AKUN_USER === "BLOKIR") {
+            window.showToast("AKSES DITOLAK: Akun Anda sedang dibekukan!");
+            return;
+        }
+        // -------------------------------------------------
+
         if(0 >= mySpeed) { window.showToast("ACCESS DENIED: Speed is 0 V/s."); return; }
         startMiningEngine();
     });
