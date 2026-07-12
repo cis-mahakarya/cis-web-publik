@@ -1880,13 +1880,19 @@
 		  
     let miningTickCount = 0;
     function startMiningEngine() {
-    // --- LOGIKA KUNCI ---
-    if (window.REQ_PERPANJANG && expTime > 0 && Date.now() > expTime) {
-        window.showToast("Waktu aktif akun Anda telah habis! Mining Engine diblokir.");
-        document.getElementById('btnStop').click(); // Paksa tombol stop agar mesin tidak jalan
+    // --- LOGIKA KUNCI INTERNAL MESIN ---
+    let wktExpired = expTime || 0;
+    if (typeof wktExpired === 'object' && wktExpired.seconds) {
+        wktExpired = wktExpired.seconds * 1000;
+    }
+    
+    if (window.REQ_PERPANJANG && wktExpired > 0 && Date.now() > wktExpired) {
+        window.showToast("Waktu aktif akun habis! Mesin diblokir.");
+        let btnStop = document.getElementById('btnStop');
+        if (btnStop) btnStop.click(); // Paksa mati
         return false; 
     }
-    // --------------------
+    // -----------------------------------
 
     if(window.REQ_PERPANJANG && Date.now() > expTime) return;
     if(0 >= mySpeed) return;
@@ -1917,23 +1923,17 @@
     document.getElementById('btnStart').addEventListener('click', () => {
         if(window.STATUS_AKUN_USER === "INACTIVE" && !window.IS_FREEMIUM) { window.showToast("ACCESS DENIED: Account not activated."); return; }
         
-        // --- GERBANG PENJAGA TOMBOL START (ANTI-BOBOL) ---
+        // --- GERBANG PENJAGA TOMBOL START ---
         let wktExpired = expTime || 0;
-        // Konversi otomatis jika Firebase mengirimkan format Object
         if (typeof wktExpired === 'object' && wktExpired.seconds) {
             wktExpired = wktExpired.seconds * 1000;
         }
         
-        // Putuskan akses jika waktu aktif sudah habis atau status akun tidak aktif
-        if((window.REQ_PERPANJANG && Date.now() > wktExpired) || window.STATUS_AKUN_USER === "INACTIVE") { 
+        if(window.REQ_PERPANJANG && wktExpired > 0 && Date.now() > wktExpired) { 
             window.showToast("AKSES DITOLAK: Masa Aktif Akun (REG) Habis!"); 
             return; 
         }
-        if(window.STATUS_AKUN_USER === "BLOKIR") {
-            window.showToast("AKSES DITOLAK: Akun Anda sedang dibekukan!");
-            return;
-        }
-        // -------------------------------------------------
+        // ------------------------------------
 
         if(0 >= mySpeed) { window.showToast("ACCESS DENIED: Speed is 0 V/s."); return; }
         startMiningEngine();
