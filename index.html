@@ -1850,7 +1850,7 @@
             if (isMining) document.getElementById('btnStop').click();
             updateDoc(doc(db, "Akun_Publik", docId), { kecepatan_hash: 0 }).catch(e => console.log(e));
             expTimeMesin = 0; // Matikan alarm agar tidak melooping
-            window.showToast("⚠️ Durasi Mesin Habis! Operasi dihentikan.");
+            window.showToast("?? Durasi Mesin Habis! Operasi dihentikan.");
             updateUI();
         }
 
@@ -1880,22 +1880,14 @@
 		  
     let miningTickCount = 0;
     function startMiningEngine() {
-    // --- LOGIKA KUNCI INTERNAL MESIN ---
-    let wktExpired = expTime || 0;
-    if (typeof wktExpired === 'object' && wktExpired.seconds) {
-        wktExpired = wktExpired.seconds * 1000;
+    // --- LOGIKA KUNCI ---
+    if (isAccountLocked || Date.now() > expTime) {
+        alert("Waktu aktif akun Anda telah habis! Mining Engine diblokir. Silakan perpanjang akun Anda.");
+        return false; // Menghentikan eksekusi fungsi
     }
+    // --------------------
 
-    if (window.REQ_PERPANJANG && Date.now() > wktExpired) {
-        window.showToast("Waktu aktif akun habis! Mesin diblokir.");
-        let btnStop = document.getElementById('btnStop');
-        if (btnStop) btnStop.click(); // Paksa mati
-        document.getElementById('btnStart').disabled = true; // KUNCI PERMANEN
-        return false;
-    }
-    // -----------------------------------
-
-    
+    if(window.REQ_PERPANJANG && Date.now() > expTime) return;
     if(0 >= mySpeed) return;
         
         isMining = true; document.getElementById('btnStart').disabled = true; document.getElementById('btnStop').disabled = false; document.getElementById('btnStop').style.opacity = '1'; 
@@ -1923,20 +1915,7 @@
 
     document.getElementById('btnStart').addEventListener('click', () => {
         if(window.STATUS_AKUN_USER === "INACTIVE" && !window.IS_FREEMIUM) { window.showToast("ACCESS DENIED: Account not activated."); return; }
-
-        // --- GERBANG PENJAGA TOMBOL START ---
-        let wktExpired = expTime || 0;
-        if (typeof wktExpired === 'object' && wktExpired.seconds) {
-            wktExpired = wktExpired.seconds * 1000;
-        }
-
-        if(window.REQ_PERPANJANG && Date.now() > wktExpired) {
-            window.showToast("AKSES DITOLAK: Masa Aktif Akun (REG) Habis!");
-            document.getElementById('btnStart').disabled = true; // KUNCI PERMANEN
-            return false;
-        }
-        // ------------------------------------
-
+        if(window.REQ_PERPANJANG && Date.now() > expTime) { window.showToast("ACCESS DENIED: Active time expired."); return; }
         if(0 >= mySpeed) { window.showToast("ACCESS DENIED: Speed is 0 V/s."); return; }
         startMiningEngine();
     });
@@ -2217,97 +2196,16 @@
         }
     };
 
-    // Variabel global pengontrol durasi looping suara
-    let cisAudioInterval = null;
-
-    window.hentikanSuaraNotif = () => {
-        if (cisAudioInterval) {
-            clearInterval(cisAudioInterval);
-            cisAudioInterval = null;
-            console.log("SYSTEM: Suara alarm dihentikan karena user merespon layar.");
-        }
-    };
-
-    // SAKLAR OTOMATIS: Begitu user mengklik/menyentuh bagian mana saja di layar, suara langsung MATI
-    document.addEventListener('click', () => {
-        window.hentikanSuaraNotif();
-    });
-
     function mainkanSuaraNotif() {
         try {
-            // Bersihkan sisa interval lama jika ada suara yang belum mati
-            window.hentikanSuaraNotif();
-
             let nada = localStorage.getItem("cisNadaDering") || "1";
-            const AudioContext = window.AudioContext || window.webkitAudioContext;
-            if (!AudioContext) return;
-            
-            // Mesin pembuat ketukan suara tunggal
-            const eksekusiSatuKetukanSuara = () => {
-                const ctx = new AudioContext();
-                const osc = ctx.createOscillator();
-                const gain = ctx.createGain();
-                
-                osc.connect(gain);
-                gain.connect(ctx.destination);
-                let t = ctx.currentTime;
+            let audioUrl = "https://actions.google.com/sounds/v1/communications/incoming_message.ogg"; // 1: Nada Pesan Biasa
+            if (nada === "2") audioUrl = "https://actions.google.com/sounds/v1/alarms/digital_watch_alarm_long.ogg"; // 2: Alarm Digital
+            if (nada === "3") audioUrl = "https://actions.google.com/sounds/v1/water/water_drop.ogg"; // 3: Tetesan Air
 
-                if (nada === "1") {
-                    // Nada 1: Ting - Ting (Berulang)
-                    osc.type = 'sine';
-                    osc.frequency.setValueAtTime(800, t);
-                    gain.gain.setValueAtTime(1, t);
-                    gain.gain.exponentialRampToValueAtTime(0.01, t + 0.2);
-                    
-                    const osc2 = ctx.createOscillator();
-                    const gain2 = ctx.createGain();
-                    osc2.type = 'sine';
-                    osc2.frequency.setValueAtTime(1200, t + 0.15);
-                    osc2.connect(gain2);
-                    gain2.connect(ctx.destination);
-                    gain2.gain.setValueAtTime(0, t);
-                    gain2.gain.setValueAtTime(1, t + 0.15);
-                    gain2.gain.exponentialRampToValueAtTime(0.01, t + 0.5);
-                    
-                    osc.start(t); osc.stop(t + 0.2);
-                    osc2.start(t + 0.15); osc2.stop(t + 0.5);
-                    
-                } else if (nada === "2") {
-                    // Nada 2: Alarm Digital (Tit Tit Tit Tit Berulang)
-                    osc.type = 'square';
-                    osc.frequency.setValueAtTime(1000, t);
-                    gain.gain.setValueAtTime(0, t);
-                    
-                    for(let i=0; i<4; i++) {
-                        gain.gain.setValueAtTime(1, t + (i*0.15));
-                        gain.gain.setValueAtTime(0, t + (i*0.15) + 0.08);
-                    }
-                    osc.start(t); osc.stop(t + 0.6);
-                    
-                } else if (nada === "3") {
-                    // Nada 3: Tetesan Air Bloop (Berulang)
-                    osc.type = 'sine';
-                    osc.frequency.setValueAtTime(300, t);
-                    osc.frequency.exponentialRampToValueAtTime(600, t + 0.1);
-                    gain.gain.setValueAtTime(1, t);
-                    gain.gain.exponentialRampToValueAtTime(0.01, t + 0.15);
-                    osc.start(t); osc.stop(t + 0.15);
-                }
-            };
-
-            // Bunyikan pertama kali secara instan tanpa delay
-            eksekusiSatuKetukanSuara();
-
-            // Set waktu jeda perulangan berdasarkan karakter suara masing-masing koin/notif
-            let jedaPerulangan = 1800; // Nada 1 & 3 berulang setiap 1.8 detik
-            if (nada === "2") jedaPerulangan = 2200; // Nada 2 (Alarm panjang) berulang setiap 2.2 detik
-
-            // Mulai loop penyerangan suara sampai saklar dimatikan oleh klik user
-            cisAudioInterval = setInterval(eksekusiSatuKetukanSuara, jedaPerulangan);
-
-        } catch(err) {
-            console.log("Audio context diblokir kebijakan browser sebelum interaksi.");
-        }
+            let player = new Audio(audioUrl);
+            player.play().catch(e => console.log("Auto-play diblokir browser"));
+        } catch(err) {}
     }
 
     window.renderNotifikasi = () => {
@@ -2425,15 +2323,12 @@
     };
 
    window.tukarVrscKeRupiah = async () => {
-        // --- PENGAMAN EXCHANGE ---
-        let wktExpired = expTime || 0;
-        if (typeof wktExpired === 'object' && wktExpired.seconds) wktExpired = wktExpired.seconds * 1000;
-        
-        if (window.REQ_PERPANJANG && wktExpired > 0 && Date.now() > wktExpired) {
-            window.showToast("Akses Exchange diblokir. Masa Aktif Akun (REG) Habis!");
+        // --- LOGIKA KUNCI ---
+        if (isAccountLocked || Date.now() > expTime) {
+            alert("Akses Exchange diblokir. Silakan order token aktivasi akun untuk melanjutkan!");
             return false; 
         }
-        // -------------------------
+        // --------------------
 
         let maxRp = Math.floor(myVrsc * vrscPriceRp);
         let inputEl = document.getElementById('inputNominalTukar');
@@ -2924,15 +2819,6 @@
                 const snapUser = await getDocs(query(collection(db, "Akun_Publik"), where("username", "==", sName)));
                 if(!snapUser.empty) {
                     let uData = snapUser.docs[0].data();
-                    // --- FILTER P2P SULTAN SUPER AGRESIF ---
-                    let wktExpired = uData.expired_at || 0;
-                    if (typeof wktExpired === 'object' && wktExpired.seconds) {
-                        wktExpired = wktExpired.seconds * 1000;
-                    }
-                    
-                    // LOMPATI (continue) penjual ini jika Waktu Habis ATAU Status bukan AKTIF
-                    if (wktExpired < Date.now() || uData.status_akun !== "AKTIF") continue;
-
                     // FILTER KEDUA: Pastikan saldo memenuhi syarat, dan rekening terisi
                     if((uData.saldo_rupiah || 0) >= targetMinimal && (uData.bank || uData.ewallet || uData.crypto)) {
                         html += `<option value='${sName}'>${sName} (IDR: Rp ${(uData.saldo_rupiah || 0).toLocaleString('id-ID')})</option>`;
@@ -3915,15 +3801,7 @@ if (!u.bank && !u.ewallet && !u.crypto) return;
                       if(topupCloseBtn) topupCloseBtn.style.display = 'block'; 
                   }
 
-                  if(!docSnap.metadata.hasPendingWrites) { 
-    let sVrsc = data.saldo_vrsc || 0; 
-    // Jika Admin mengurangi/menambah saldo secara signifikan (selisih > 0.0001)
-    if (sVrsc === 0 || Math.abs(sVrsc - myVrsc) > 0.0001) { 
-        myVrsc = sVrsc; 
-    } else if (sVrsc > myVrsc) { 
-        myVrsc = sVrsc; 
-    } 
-}
+                  if(!docSnap.metadata.hasPendingWrites) { let sVrsc = data.saldo_vrsc || 0; if (sVrsc === 0) { myVrsc = 0; } else if (sVrsc > myVrsc) { myVrsc = sVrsc; } }
                   if(isMining && ((window.REQ_PERPANJANG && Date.now() > expTime) || mySpeed <= 0)) { document.getElementById('btnStop').click(); }
                   
                   let boxBonus = document.getElementById('displayBonusSponsor'); if(boxBonus) boxBonus.innerText = formatKripto(data.total_bonus_sponsor_vrsc || 0) + " VRSC";
@@ -4310,22 +4188,23 @@ if(!passwordRegex.test(pass)) { msg('msgReg', "Password harus diawali huruf besa
 // ==========================================
 // SYSTEM WATCHER: Pengecekan Expired Real-Time
 // ==========================================
-setInterval(function() {
-    let wktExpired = expTime || 0;
-    if (typeof wktExpired === 'object' && wktExpired.seconds) {
-        wktExpired = wktExpired.seconds * 1000;
-    }
+let isAccountLocked = false; 
 
-    if (window.REQ_PERPANJANG && Date.now() > wktExpired) {
-        let btnStop = document.getElementById('btnStop');
-        if (btnStop && typeof isMining !== 'undefined' && isMining) {
-            console.warn("SYSTEM: Waktu Aktif Akun (REG) telah lewat. Mesin dipaksa mati.");
-            btnStop.click(); // Otomatis menekan tombol stop
+setInterval(function() {
+    if (typeof expTime !== 'undefined' && Date.now() > expTime) {
+        if (!isAccountLocked) {
+            isAccountLocked = true;
+            console.warn("SYSTEM: Waktu Aktif Akun (REG) telah lewat. Fitur dikunci.");
+            
+            // --- LOGIKA BARU: PAKSA STOP MESIN ---
+            let btnStop = document.getElementById('btnStop');
+            if (btnStop && typeof isMining !== 'undefined' && isMining) {
+                btnStop.click(); // Otomatis menekan tombol stop
+            }
+            // -------------------------------------
         }
-        
-        // KUNCI PAKSA TOMBOL START AGAR TIDAK BISA DIKLIK SAMA SEKALI
-        let btnStart = document.getElementById('btnStart');
-        if (btnStart) btnStart.disabled = true;
+    } else {
+        isAccountLocked = false;
     }
 }, 1000);
 		  
