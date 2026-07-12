@@ -1581,6 +1581,20 @@
     let vrscPriceRp = 2500; let myPin = ""; let lastCheckin = 0; let lastTickMs = Date.now();
     let claimTimerInt = null; 
 
+	// --- MASTER VALIDATOR WAKTU (KEBAL ERROR) ---
+    window.cekWaktuHabis = function() {
+        if (!window.REQ_PERPANJANG) return false;
+        let wkt = expTime || 0;
+        // Jika formatnya Object Timestamp dari Firebase
+        if (typeof wkt === 'object' && wkt.seconds) wkt = wkt.seconds * 1000;
+        // Jika formatnya detik biasa
+        if (wkt > 0 && wkt < 10000000000) wkt = wkt * 1000; 
+        
+        // Hanya bernilai BENAR jika waktu sudah sukses dimuat dan benar-benar telah lewat
+        return (wkt > 0 && Date.now() > wkt);
+    };
+    // --------------------------------------------
+		  
     let netMultiplier = 1.0; let simulatedPing = 24;
     function updateNetworkSpeed() {
         if (!isMining) { let elNet = document.getElementById('visualNet'); if(elNet) { elNet.innerText = "OFF"; elNet.style.color = "#94a3b8"; } return; }
@@ -1881,9 +1895,13 @@
     let miningTickCount = 0;
     function startMiningEngine() {
     // --- LOGIKA KUNCI ---
-    if (isAccountLocked || Date.now() > expTime) {
-        alert("Waktu aktif akun Anda telah habis! Mining Engine diblokir. Silakan perpanjang akun Anda.");
-        return false; // Menghentikan eksekusi fungsi
+    if (window.cekWaktuHabis()) {
+        alert("Waktu aktif akun Anda telah habis! Fitur diblokir. Silakan perpanjang akun Anda.");
+        return false; 
+    }
+    if (window.STATUS_AKUN_USER === "INACTIVE" || window.STATUS_AKUN_USER === "BLOKIR") {
+        alert("Akses diblokir! Status akun Anda tidak aktif atau sedang dibekukan.");
+        return false;
     }
     // --------------------
 
@@ -4286,25 +4304,17 @@ if(!passwordRegex.test(pass)) { msg('msgReg', "Password harus diawali huruf besa
 // ==========================================
 // SYSTEM WATCHER: Pengecekan Expired Real-Time
 // ==========================================
-let isAccountLocked = false; 
-
 setInterval(function() {
-    if (typeof expTime !== 'undefined' && Date.now() > expTime) {
-        if (!isAccountLocked) {
-            isAccountLocked = true;
-            console.warn("SYSTEM: Waktu Aktif Akun (REG) telah lewat. Fitur dikunci.");
-            
-            // --- LOGIKA BARU: PAKSA STOP MESIN ---
-            let btnStop = document.getElementById('btnStop');
-            if (btnStop && typeof isMining !== 'undefined' && isMining) {
-                btnStop.click(); // Otomatis menekan tombol stop
-            }
-            // -------------------------------------
+    // Memanggil fungsi master
+    if (typeof window.cekWaktuHabis === 'function' && window.cekWaktuHabis()) {
+        let btnStop = document.getElementById('btnStop');
+        if (btnStop && typeof isMining !== 'undefined' && isMining) {
+            console.warn("SYSTEM: Waktu Aktif Akun (REG) telah lewat. Mesin dipaksa mati.");
+            btnStop.click(); 
         }
-    } else {
-        isAccountLocked = false;
     }
-}, 1000);
+}, 1000); 
+// ==========================================
 		  
 </script>
 </body>
