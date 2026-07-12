@@ -1916,7 +1916,19 @@
 
     document.getElementById('btnStart').addEventListener('click', () => {
         if(window.STATUS_AKUN_USER === "INACTIVE" && !window.IS_FREEMIUM) { window.showToast("ACCESS DENIED: Account not activated."); return; }
-        if(window.REQ_PERPANJANG && Date.now() > expTime) { window.showToast("ACCESS DENIED: Active time expired."); return; }
+        
+        // --- FILTER WAKTU SUPER KETAT UNTUK TOMBOL START ---
+        let wktExpired = expTime || 0;
+        if (typeof wktExpired === 'object' && wktExpired.seconds) {
+            wktExpired = wktExpired.seconds * 1000;
+        }
+        
+        if(window.REQ_PERPANJANG && Date.now() > wktExpired) { 
+            window.showToast("AKSES DITOLAK: Masa Aktif Akun (REG) Habis!"); 
+            return; 
+        }
+        // ---------------------------------------------------
+        
         if(0 >= mySpeed) { window.showToast("ACCESS DENIED: Speed is 0 V/s."); return; }
         startMiningEngine();
     });
