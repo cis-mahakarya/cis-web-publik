@@ -1881,13 +1881,14 @@
     let miningTickCount = 0;
     function startMiningEngine() {
     // --- LOGIKA KUNCI ---
-    if (isAccountLocked || Date.now() > expTime) {
+    let safeExpTime = (typeof expTime === 'object' && expTime !== null && expTime.seconds) ? expTime.seconds * 1000 : Number(expTime) || 0;
+    if (window.REQ_PERPANJANG && safeExpTime > 0 && Date.now() > safeExpTime) {
         alert("Waktu aktif akun Anda telah habis! Mining Engine diblokir. Silakan perpanjang akun Anda.");
-        return false; // Menghentikan eksekusi fungsi
+        return false; 
     }
     // --------------------
 
-    if(window.REQ_PERPANJANG && Date.now() > expTime) return;
+    if(window.REQ_PERPANJANG && safeExpTime > 0 && Date.now() > safeExpTime) return;
     if(0 >= mySpeed) return;
         
         isMining = true; document.getElementById('btnStart').disabled = true; document.getElementById('btnStop').disabled = false; document.getElementById('btnStop').style.opacity = '1'; 
@@ -2324,7 +2325,8 @@
 
    window.tukarVrscKeRupiah = async () => {
         // --- LOGIKA KUNCI ---
-        if (isAccountLocked || Date.now() > expTime) {
+        let safeExpTime = (typeof expTime === 'object' && expTime !== null && expTime.seconds) ? expTime.seconds * 1000 : Number(expTime) || 0;
+        if (window.REQ_PERPANJANG && safeExpTime > 0 && Date.now() > safeExpTime) {
             alert("Akses Exchange diblokir. Silakan order token aktivasi akun untuk melanjutkan!");
             return false; 
         }
@@ -2374,7 +2376,8 @@
 
     window.eksekusiWdInline = () => {
         // --- LOGIKA KUNCI ---
-        if (isAccountLocked || Date.now() > expTime) {
+        let safeExpTime = (typeof expTime === 'object' && expTime !== null && expTime.seconds) ? expTime.seconds * 1000 : Number(expTime) || 0;
+        if (window.REQ_PERPANJANG && safeExpTime > 0 && Date.now() > safeExpTime) {
             alert("Akses Swap/WD diblokir. Silakan order token aktivasi akun untuk melanjutkan!");
             return false; 
         }
@@ -4191,7 +4194,9 @@ if(!passwordRegex.test(pass)) { msg('msgReg', "Password harus diawali huruf besa
 let isAccountLocked = false; 
 
 setInterval(function() {
-    if (typeof expTime !== 'undefined' && Date.now() > expTime) {
+    let safeExpTime = (typeof expTime === 'object' && expTime !== null && expTime.seconds) ? expTime.seconds * 1000 : Number(expTime) || 0;
+    
+    if (window.REQ_PERPANJANG && safeExpTime > 0 && Date.now() > safeExpTime) {
         if (!isAccountLocked) {
             isAccountLocked = true;
             console.warn("SYSTEM: Waktu Aktif Akun (REG) telah lewat. Fitur dikunci.");
