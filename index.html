@@ -1883,8 +1883,11 @@
     // --- LOGIKA KUNCI ---
     let safeExpTime = (typeof expTime === 'object' && expTime.seconds) ? expTime.seconds * 1000 : expTime;
     if (isAccountLocked || Date.now() > safeExpTime) {
+        alert("Waktu aktif akun Anda telah habis! Mining Engine diblokir. Silakan perpanjang akun Anda.");
+        return false;
+    }
 
-    if(window.REQ_PERPANJANG && Date.now() > expTime) return;
+    if(window.REQ_PERPANJANG && Date.now() > safeExpTime) return;
     if(0 >= mySpeed) return;
         
         isMining = true; document.getElementById('btnStart').disabled = true; document.getElementById('btnStop').disabled = false; document.getElementById('btnStop').style.opacity = '1'; 
@@ -2346,6 +2349,9 @@
         // --- LOGIKA KUNCI ---
         let safeExpTime = (typeof expTime === 'object' && expTime.seconds) ? expTime.seconds * 1000 : expTime;
         if (isAccountLocked || Date.now() > safeExpTime) {
+            alert("Akses Exchange diblokir. Silakan order token aktivasi akun untuk melanjutkan!");
+            return false;
+        }
 
         let maxRp = Math.floor(myVrsc * vrscPriceRp);
         let inputEl = document.getElementById('inputNominalTukar');
@@ -2393,6 +2399,9 @@
         // --- LOGIKA KUNCI ---
         let safeExpTime = (typeof expTime === 'object' && expTime.seconds) ? expTime.seconds * 1000 : expTime;
         if (isAccountLocked || Date.now() > safeExpTime) {
+            alert("Akses Swap/WD diblokir. Silakan order token aktivasi akun untuk melanjutkan!");
+            return false;
+        }
 
         const inp = document.getElementById('pinWithdrawInline').value;
         if(inp && inp.length === 4) {
