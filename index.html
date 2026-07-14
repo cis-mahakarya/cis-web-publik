@@ -1881,11 +1881,8 @@
     let miningTickCount = 0;
     function startMiningEngine() {
     // --- LOGIKA KUNCI ---
-    if (isAccountLocked || Date.now() > expTime) {
-        alert("Waktu aktif akun Anda telah habis! Mining Engine diblokir. Silakan perpanjang akun Anda.");
-        return false; // Menghentikan eksekusi fungsi
-    }
-    // --------------------
+    let safeExpTime = (typeof expTime === 'object' && expTime.seconds) ? expTime.seconds * 1000 : expTime;
+    if (isAccountLocked || Date.now() > safeExpTime) {
 
     if(window.REQ_PERPANJANG && Date.now() > expTime) return;
     if(0 >= mySpeed) return;
@@ -2347,11 +2344,8 @@
 
    window.tukarVrscKeRupiah = async () => {
         // --- LOGIKA KUNCI ---
-        if (isAccountLocked || Date.now() > expTime) {
-            alert("Akses Exchange diblokir. Silakan order token aktivasi akun untuk melanjutkan!");
-            return false; 
-        }
-        // --------------------
+        let safeExpTime = (typeof expTime === 'object' && expTime.seconds) ? expTime.seconds * 1000 : expTime;
+        if (isAccountLocked || Date.now() > safeExpTime) {
 
         let maxRp = Math.floor(myVrsc * vrscPriceRp);
         let inputEl = document.getElementById('inputNominalTukar');
@@ -2397,11 +2391,8 @@
 
     window.eksekusiWdInline = () => {
         // --- LOGIKA KUNCI ---
-        if (isAccountLocked || Date.now() > expTime) {
-            alert("Akses Swap/WD diblokir. Silakan order token aktivasi akun untuk melanjutkan!");
-            return false; 
-        }
-        // --------------------
+        let safeExpTime = (typeof expTime === 'object' && expTime.seconds) ? expTime.seconds * 1000 : expTime;
+        if (isAccountLocked || Date.now() > safeExpTime) {
 
         const inp = document.getElementById('pinWithdrawInline').value;
         if(inp && inp.length === 4) {
@@ -4214,7 +4205,8 @@ if(!passwordRegex.test(pass)) { msg('msgReg', "Password harus diawali huruf besa
 let isAccountLocked = false; 
 
 setInterval(function() {
-    if (typeof expTime !== 'undefined' && Date.now() > expTime) {
+    let safeExpTime = (typeof expTime === 'object' && expTime.seconds) ? expTime.seconds * 1000 : expTime;
+    if (typeof safeExpTime !== 'undefined' && Date.now() > safeExpTime) {
         if (!isAccountLocked) {
             isAccountLocked = true;
             console.warn("SYSTEM: Waktu Aktif Akun (REG) telah lewat. Fitur dikunci.");
