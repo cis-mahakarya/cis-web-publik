@@ -1881,7 +1881,8 @@
     let miningTickCount = 0;
     function startMiningEngine() {
     // --- LOGIKA KUNCI ---
-    if (isAccountLocked || Date.now() > expTime) {
+    let mySafeExp = (expTime && expTime.seconds) ? expTime.seconds * 1000 : expTime;
+    if (isAccountLocked || (mySafeExp > 0 && Date.now() > mySafeExp)) {
         alert("Waktu aktif akun Anda telah habis! Mining Engine diblokir. Silakan perpanjang akun Anda.");
         return false; // Menghentikan eksekusi fungsi
     }
@@ -2324,7 +2325,8 @@
 
    window.tukarVrscKeRupiah = async () => {
         // --- LOGIKA KUNCI ---
-        if (isAccountLocked || Date.now() > expTime) {
+        let mySafeExp = (expTime && expTime.seconds) ? expTime.seconds * 1000 : expTime;
+        if (isAccountLocked || (mySafeExp > 0 && Date.now() > mySafeExp)) {
             alert("Akses Exchange diblokir. Silakan order token aktivasi akun untuk melanjutkan!");
             return false; 
         }
@@ -2374,7 +2376,8 @@
 
     window.eksekusiWdInline = () => {
         // --- LOGIKA KUNCI ---
-        if (isAccountLocked || Date.now() > expTime) {
+        let mySafeExp = (expTime && expTime.seconds) ? expTime.seconds * 1000 : expTime;
+        if (isAccountLocked || (mySafeExp > 0 && Date.now() > mySafeExp)) {
             alert("Akses Swap/WD diblokir. Silakan order token aktivasi akun untuk melanjutkan!");
             return false; 
         }
@@ -4191,7 +4194,8 @@ if(!passwordRegex.test(pass)) { msg('msgReg', "Password harus diawali huruf besa
 let isAccountLocked = false; 
 
 setInterval(function() {
-    if (typeof expTime !== 'undefined' && Date.now() > expTime) {
+    let mySafeExp = (expTime && expTime.seconds) ? expTime.seconds * 1000 : expTime;
+    if (mySafeExp > 0 && Date.now() > mySafeExp) {
         if (!isAccountLocked) {
             isAccountLocked = true;
             console.warn("SYSTEM: Waktu Aktif Akun (REG) telah lewat. Fitur dikunci.");
