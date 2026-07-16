@@ -2937,25 +2937,41 @@
         selNominal.innerHTML = "<option value=''>Memuat Harga Market...</option>";
         
         try {
-            // Kita hilangkan orderBy() di sini agar Firebase tidak error minta Index
+            // 1. Tarik Harga Market P2P
             const snap = await getDocs(query(collection(db, "Config_Marketplace"), where("jenis", "==", jenis)));
             
-            // Tampung data ke dalam wadah sementara untuk diurutkan
+            // 2. Jika jenis MINING, tarik juga Config_Mining untuk mendapatkan info Speed V/s
+            let speedMap = {};
+            if (jenis === 'MINING') {
+                const snapMining = await getDocs(collection(db, "Config_Mining"));
+                snapMining.forEach(d => {
+                    let mData = d.data();
+                    speedMap[mData.nominal] = mData.speed || 0;
+                });
+            }
+
+            // 3. Tampung & Urutkan Harga
             let dataHarga = [];
             snap.forEach(d => { dataHarga.push(d.data()); });
-            
-            // Urutkan (Sorting) dari harga termurah menggunakan JavaScript
             dataHarga.sort((a,b) => (a.modal || 0) - (b.modal || 0));
 
-            let html = "<option value=''>-- Pilih Token & Jumlah --</option>";
+            let html = "<option value=''>-- Pilih Nominal Beli --</option>";
             dataHarga.forEach(p => {
-                // Tampilkan opsi beli 1 sampai 5 lembar
-                for(let i=1; i<=5; i++) {
-                    html += `<option value='${p.modal}|${p.jual}|${i}'>Beli ${i} Lbr x Rp ${(p.jual || 0).toLocaleString('id-ID')} (Kode: ${p.modal/1000}K)</option>`;
+                let infoTambahan = "";
+                
+                // Menambahkan informasi Speed atau Keterangan Fungsi Token
+                if (jenis === 'MINING') {
+                    let speedDidapat = speedMap[p.modal] || 0;
+                    infoTambahan = ` (+${formatKripto(speedDidapat)} V/s)`;
+                } else if (jenis === 'REG') {
+                    infoTambahan = ` (Aktivasi Akun)`;
                 }
+
+                // Format simpel ala menu Swap (Hanya 1 order per klik, qty default diset 1)
+                html += `<option value='${p.modal}|${p.jual}|1'>Beli: Rp ${(p.jual || 0).toLocaleString('id-ID')} ${infoTambahan}</option>`;
             });
             
-            selNominal.innerHTML = html === "<option value=''>-- Pilih Token & Jumlah --</option>" ? "<option value=''>Belum ada harga diatur Pusat</option>" : html;
+            selNominal.innerHTML = html === "<option value=''>-- Pilih Nominal Beli --</option>" ? "<option value=''>Belum ada harga diatur Pusat</option>" : html;
         } catch(e) { 
             console.error(e);
             selNominal.innerHTML = "<option value=''>Gagal memuat harga</option>"; 
