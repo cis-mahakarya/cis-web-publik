@@ -2659,7 +2659,64 @@
 
     window.bukaTransfer = (id, kode, nom) => { document.getElementById('inpTokenIdTransfer').value = id; document.getElementById('inpTokenCodeTransfer').value = kode; document.getElementById('inpTokenNominalTransfer').value = nom; document.getElementById('lblTokenTransfer').innerText = "Rp " + nom.toLocaleString('en-US'); document.getElementById('formTransferToken').style.display = 'block'; document.getElementById('inpTargetUser').focus(); };
     window.batalTransfer = () => { document.getElementById('formTransferToken').style.display = 'none'; document.getElementById('inpTargetUser').value = ''; document.getElementById('msgTransfer').style.display = 'none'; };
+	sendBtnReal.addEventListener('click', async () => {
+        const tokenId = document.getElementById('inpTokenIdTransfer').value;
+        const targetUser = document.getElementById('inpTargetUser').value.trim().toUpperCase();
+        const tokenCode = document.getElementById('inpTokenCodeTransfer').value;
+        const tokenNominal = parseInt(document.getElementById('inpTokenNominalTransfer').value) || 0;
+        const btnBox = document.querySelector('#formTransferToken .btn-cyan');
+        
+        if(!targetUser) return msg('msgTransfer', "Masukkan username tujuan!", "error");
+        if(targetUser === myUsername) return msg('msgTransfer', "Tidak bisa mengirim ke akun sendiri!", "error");
 
+        let oriText = btnBox ? btnBox.innerHTML : "SEND";
+        if(btnBox) { btnBox.disabled = true; btnBox.innerHTML = "MENGIRIM..."; }
+        
+        try {
+            // 1. Cari data teman yang dituju
+            const targetSnap = await getDocs(query(collection(db, "Akun_Publik"), where("username", "==", targetUser)));
+            if(targetSnap.empty) throw "GAGAL: Username tujuan tidak ditemukan!";
+            const targetEmail = targetSnap.docs[0].data().email;
+
+            // 2. Eksekusi Transfer dengan Proteksi Transaksi
+            await runTransaction(db, async (transaction) => {
+                const tokenRef = doc(db, "Database_Token", tokenId);
+                const tDoc = await transaction.get(tokenRef);
+                
+                if(!tDoc.exists() || tDoc.data().status !== "AKTIF" || tDoc.data().pemilik !== myEmail) {
+                    throw "Token tidak valid atau sudah terpakai.";
+                }
+                
+                let jenisToken = tDoc.data().distribusi_ke || "TOKEN";
+
+                // Pindah kepemilikan token ke Teman
+                transaction.update(tokenRef, {
+                    pemilik: targetEmail,
+                    pemilik_username: targetUser,
+                    pengirim: myUsername,
+                    waktu_transfer: serverTimestamp()
+                });
+
+                // PENCATATAN MUTASI (AUDIT TRAIL) 2 ARAH
+                transaction.set(doc(collection(db, "Mutasi_Mining")), { email: myEmail, jenis: "OUT", deskripsi: `Kirim Token ${jenisToken} ke ${targetUser}`, nominal: tokenNominal, timestamp_local: Date.now() });
+                transaction.set(doc(collection(db, "Mutasi_Mining")), { email: targetEmail, jenis: "IN", deskripsi: `Terima Token ${jenisToken} dari ${myUsername}`, nominal: tokenNominal, timestamp_local: Date.now() });
+
+                // Tembak Notifikasi ke Penerima
+                transaction.set(doc(collection(db, "Notifikasi_Personal")), { email: targetEmail, pesan: `🎁 SURPRISE! Anda menerima kiriman Token ${jenisToken} dari ${myUsername}. Silakan cek stok Anda!`, timestamp_local: Date.now() });
+            });
+
+            window.showToast("Token Berhasil Dikirim!");
+            window.batalTransfer();
+            window.loadMyTokens();
+            window.muatMutasiLokal();
+            
+        } catch(e) {
+            msg('msgTransfer', typeof e === "string" ? e : "Terjadi kesalahan sistem.", "error");
+        }
+        
+        if(btnBox) { btnBox.disabled = false; btnBox.innerHTML = oriText; }
+    });
+		  
     window.loadMyTokens = async function() {
         const tbodyReg = document.getElementById('tblMyTokensReg');
         const tbodyMining = document.getElementById('tblMyTokensMining');
