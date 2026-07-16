@@ -1161,7 +1161,8 @@
           <div style='background:rgba(243, 156, 18, 0.1); border:1px dashed #f39c12; padding:10px; border-radius:8px; margin-bottom:15px; text-align:center;'>
               <span data-i18n='lblAvBal' style='font-size:0.75rem; color:#f39c12; font-weight:bold;'>AVAILABLE BALANCE</span><br/><span id='infoSaldoCetak' style='font-family:Orbitron; font-size:1.3rem; font-weight:900; color:#fff;'>Rp 0</span>
           </div>
-          <select class='input-dark no-icon' id='jenisTokenWd' style='margin-bottom:10px;'>
+          <select class='input-dark no-icon' id='jenisTokenWd' style='margin-bottom:10px;' onchange='window.loadHargaSwap()'>
+              <option value=''>-- Pilih Jenis Token --</option>
               <option value='MINING'>Mint Speed Upgrade Token</option>
               <option value='REG'>Mint Account Activation Token</option>
           </select>
@@ -1169,12 +1170,7 @@
           <input class='input-dark no-icon' id='targetUserWd' placeholder='Target Username (Your Friend)' style='margin-bottom:10px;' type='text' oninput='this.value = this.value.toUpperCase().replace(/\s/g, "")'/>
           
           <select class='input-dark no-icon' id='inputWithdraw' style='color:#f39c12; font-weight:bold; margin-bottom:15px;'>
-              <option value='10000'>Swap: Rp 10.000</option>
-              <option value='20000'>Swap: Rp 20.000</option>
-              <option value='50000'>Swap: Rp 50.000</option>
-              <option value='100000'>Swap: Rp 100.000</option>
-              <option value='500000'>Swap: Rp 500.000</option>
-              <option value='1000000'>Swap: Rp 1.000.000</option>
+              <option value=''>-- Pilih Jenis Token Dulu --</option>
           </select>
 
           <div class='input-group' style='margin-bottom:15px;'>
@@ -2930,6 +2926,34 @@
         } catch(e) { box.innerHTML = "Gagal memuat rekening."; }
     };
 
+	window.loadHargaSwap = async () => {
+        const jenis = document.getElementById('jenisTokenWd').value;
+        const selNominal = document.getElementById('inputWithdraw');
+        if(!jenis) { selNominal.innerHTML = "<option value=''>-- Pilih Jenis Token Dulu --</option>"; return; }
+        selNominal.innerHTML = "<option value=''>Memuat Paket dari Pusat...</option>";
+        
+        try {
+            // Tarik data langsung dari Daftar Paket Aktif di Database Master
+            const snap = await getDocs(query(collection(db, "Config_Marketplace"), where("jenis", "==", jenis)));
+            
+            let dataHarga = [];
+            snap.forEach(d => { dataHarga.push(d.data()); });
+            
+            // Urutkan dari nominal terkecil ke terbesar
+            dataHarga.sort((a,b) => (a.modal || 0) - (b.modal || 0));
+
+            let html = "<option value=''>-- Pilih Nominal Swap --</option>";
+            dataHarga.forEach(p => {
+                html += `<option value='${p.modal}'>Swap: Rp ${(p.modal || 0).toLocaleString('id-ID')}</option>`;
+            });
+            
+            selNominal.innerHTML = html === "<option value=''>-- Pilih Nominal Swap --</option>" ? "<option value=''>Daftar Paket Kosong</option>" : html;
+        } catch(e) { 
+            console.error(e);
+            selNominal.innerHTML = "<option value=''>Gagal memuat paket</option>"; 
+        }
+    };
+		  
     window.loadHargaP2P = async () => {
         const jenis = document.getElementById('p2pJenisToken').value;
         const selNominal = document.getElementById('p2pNominalToken');
