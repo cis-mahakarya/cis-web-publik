@@ -3166,14 +3166,19 @@
                     transaction.set(doc(collection(db, "Notifikasi_Personal")), { email: oData.pembeli, pesan: `?? P2P: Sultan telah MENGIRIM Token. Segera konfirmasi terima di menu P2P!`, timestamp_local: Date.now() });
                 } 
                 else if (aksi === "SELESAI") {
-                    if(!oData.token_dikirim || oData.token_dikirim.length === 0) throw "Error: Token belum dilampirkan penjual.";
-                    for(let tId of oData.token_dikirim) {
-                        transaction.update(doc(db, "Database_Token", tId), { status: "AKTIF", pemilik: myEmail, pemilik_username: myUsername, pengirim: oData.penjual_user, waktu_transfer: serverTimestamp() });
-                    }
-                    transaction.update(orderRef, { status: "SELESAI", waktu_update: serverTimestamp() });
+                    if(!oData.token_dikirim || oData.token_dikirim.length === 0) throw "Error: Token belum dilampirkan penjual.";
+                    for(let tId of oData.token_dikirim) {
+                        transaction.update(doc(db, "Database_Token", tId), { status: "AKTIF", pemilik: myEmail, pemilik_username: myUsername, pengirim: oData.penjual_user, waktu_transfer: serverTimestamp() });
+                    }
+                    transaction.update(orderRef, { status: "SELESAI", waktu_update: serverTimestamp() });
+                    
                     // Notif ke Sultan bahwa transaksi sukses
-                    transaction.set(doc(collection(db, "Notifikasi_Personal")), { email: oData.penjual, pesan: `? P2P SELESAI: Pembeli (${oData.pembeli_user}) telah mengkonfirmasi penerimaan Token. Transaksi Sukses!`, timestamp_local: Date.now() });
-                }
+                    transaction.set(doc(collection(db, "Notifikasi_Personal")), { email: oData.penjual, pesan: `✅ P2P SELESAI: Pembeli (${oData.pembeli_user}) telah mengkonfirmasi penerimaan Token. Transaksi Sukses!`, timestamp_local: Date.now() });
+                    
+                    // PENCATATAN MUTASI (AUDIT TRAIL) UNTUK PEMBELI & PENJUAL
+                    transaction.set(doc(collection(db, "Mutasi_Mining")), { email: myEmail, jenis: "IN", deskripsi: `P2P: Terima ${oData.qty}x Token ${oData.jenis_token} dari ${oData.penjual_user}`, nominal: oData.total_harga, timestamp_local: Date.now() });
+                    transaction.set(doc(collection(db, "Mutasi_Mining")), { email: oData.penjual, jenis: "OUT", deskripsi: `P2P: Jual ${oData.qty}x Token ${oData.jenis_token} ke ${oData.pembeli_user}`, nominal: oData.total_harga, timestamp_local: Date.now() });
+                }
                 else if (aksi === "LAPOR") {
                     transaction.update(orderRef, { status: "SENGKETA", waktu_update: serverTimestamp() });
                     let targetBlokir = currentP2PTab === "beli" ? oData.penjual : oData.pembeli;
