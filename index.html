@@ -962,9 +962,9 @@
 
             <!-- BLOK BIRU: HASIL KOIN -->
             <div style='background:rgba(56, 189, 248, 0.1); border:1px solid #38bdf8; padding:12px; border-radius:8px; margin-bottom:10px;'>
-                <div style='font-size:0.7rem; color:#bae6fd;'>TOTAL KOIN DITAMBANG & BONUS</div>
+                <div style='font-size:0.7rem; color:#bae6fd;'>TOTAL ESTIMASI ASET (AKUMULASI)</div>
                 <div id='raporKoin' style='font-family:Orbitron; font-size:1.2rem; color:#38bdf8; font-weight:bold;'>+ 0.000000 VRSC</div>
-                <div style='font-size:0.65rem; color:#94a3b8; margin-top:3px;'>Murni hasil kinerja mesin & jaringan</div>
+                <div style='font-size:0.65rem; color:#94a3b8; margin-top:3px;'>Koin hasil claim, mining, bonus + sudah di-exchange</div>
             </div>
 
             <!-- BLOK HIJAU: UANG CAIR -->
@@ -1520,25 +1520,36 @@
             const snapBeli = await getDocs(query(collection(db, "P2P_Order"), where("pembeli", "==", myEmail), where("status", "==", "SELESAI")));
             snapBeli.forEach(d => { totalModal += d.data().total_harga || 0; });
 
-            // 2. Hitung Total Uang Cair (Jual Token di P2P yang sudah SELESAI)
+            // 2A. Hitung Total Uang Cair (Jual Token di P2P yang sudah SELESAI)
             const snapJual = await getDocs(query(collection(db, "P2P_Order"), where("penjual", "==", myEmail), where("status", "==", "SELESAI")));
             snapJual.forEach(d => { totalCair += d.data().total_harga || 0; });
 
-			// 2B. Hitung juga Total Uang Cair dari menu SWAP (Withdraw yang disetujui)
-            // Karena Swap digunakan untuk mentransfer token ke pembeli setelah menerima uang tunai
+            // 2B. Hitung juga Total Uang Cair dari menu SWAP (Withdraw yang disetujui)
             const snapSwap = await getDocs(query(collection(db, "Request_Withdraw"), where("email_pemohon", "==", myEmail), where("status", "==", "DISETUJUI")));
             snapSwap.forEach(d => { totalCair += d.data().nominal_rupiah || 0; });
 
-            // 3. Hitung Total Koin Murni Ditambang & Bonus
-            const snapMutasi = await getDocs(query(collection(db, "Mutasi_Mining"), where("email", "==", myEmail), where("jenis", "==", "IN")));
-            snapMutasi.forEach(d => {
+            // 3. Hitung Total Estimasi Asset (Akumulasi Seluruh Koin)
+            let currentSaldoVrsc = 0;
+            let totalKoinTukar = 0;
+
+            // 3A. Tarik Saldo VRSC Aktif (Sinkron dengan Dashboard)
+            const snapUser = await getDocs(query(collection(db, "Akun_Publik"), where("email", "==", myEmail)));
+            if (!snapUser.empty) {
+                currentSaldoVrsc = snapUser.docs[0].data().saldo_vrsc || 0;
+            }
+
+            // 3B. Tarik Riwayat Koin yang Sudah Di-Exchange (Ditukar ke IDR)
+            const snapMutasiKoin = await getDocs(query(collection(db, "Mutasi_Mining"), where("email", "==", myEmail), where("jenis", "==", "OUT")));
+            snapMutasiKoin.forEach(d => {
                 let m = d.data();
-                let deskripsi = m.deskripsi.toLowerCase();
-                // Hanya jumlahkan mutasi koin VRSC (Claim, Bonus, Sponsor, dll), Abaikan mutasi IDR
-                if(deskripsi.includes("claim") || deskripsi.includes("bonus") || deskripsi.includes("reward") || deskripsi.includes("sponsor") || deskripsi.includes("event")) {
-                    totalKoin += m.nominal || 0;
+                let desc = m.deskripsi.toLowerCase();
+                if(desc.includes("exchange") || desc.includes("tukar") || desc.includes("jual") || desc.includes("swap")) {
+                    totalKoinTukar += m.nominal || 0;
                 }
             });
+
+            // TOTAL ASET = Saldo Saat Ini + Koin yang Sudah Pernah Di-Exchange
+            totalKoin = currentSaldoVrsc + totalKoinTukar;
 
             // Update Angka di Layar
             document.getElementById('raporModal').innerText = "Rp " + totalModal.toLocaleString('id-ID');
@@ -1568,7 +1579,7 @@
                     teksStatus.style.color = "#22c55e"; bar.style.width = "100%"; bar.style.background = "#22c55e";
                 }
             }
-        } catch (e) { console.error(e); window.showToast("Gagal menghitung Rapor Profit."); }
+        } catch (e) { console.error(e); window.showToast("Gagal menghitung Mutasi Profit."); }
     };
 
     window.shareRaporWA = () => {
@@ -1577,7 +1588,7 @@
         let tCair = document.getElementById('raporCair').innerText;
         let tStatus = document.getElementById('raporStatusTeks').innerText;
         
-        let text = `*MUTASI PROFIT CIS VERUS*\n_Miner ID: ${myUsername}_\n\n🔴 *Total Modal Beli Token:*\n${tModal}\n\n...🔵 *Koin Ditambang & Bonus:*\n${tKoin}\n\n🟢 *Total Uang Cair ke Rekening:*\n${tCair}\n\n📊 *Status Saat Ini:*\n*${tStatus}*\n\n🔥 _Sistem Transparan, Uang 100% Masuk Rekening Sendiri!_\n\n👉 Gabung sekarang: ${window.location.origin + window.location.pathname}?ref=${myUsername}`;
+        let text = `*MUTASI PROFIT CIS VERUS*\n_Miner ID: ${myUsername}_\n\n🔴 *Total Modal Beli Token:*\n${tModal}\n\n🔵 *Total Estimasi Aset Koin:*\n${tKoin}\n\n🟢 *Total Uang Cair ke Rekening:*\n${tCair}\n\n📊 *Status Saat Ini:*\n*${tStatus}*\n\n🔥 _Sistem Transparan, Uang 100% Masuk Rekening Sendiri!_\n\n👉 Gabung sekarang: ${window.location.origin + window.location.pathname}?ref=${myUsername}`;
         
         let url = `https://wa.me/?text=${encodeURIComponent(text)}`;
         window.open(url, '_blank');
