@@ -753,7 +753,7 @@
             <div class='menu-box' onclick='window.openLeaderboard()' style='border-color:#f1c40f;'><i class='fa-solid fa-trophy' style='color:#f1c40f;'></i><span data-i18n='menuTopSultan'>Top 10 Sultan</span></div>
             <div class='menu-box' onclick='window.openNetworkModal()' style='border-color:#3498db;'><i class='fa-solid fa-sitemap' style='color:#3498db;'></i><span data-i18n='menuNetwork'>Network Tree</span></div>
             <div class='menu-box' onclick='window.openModalDonasi()' style='border-color:#1abc9c;'><i class='fa-solid fa-hand-holding-heart' style='color:#1abc9c;'></i><span>CIS Charity</span></div>
-            <div class='menu-box' onclick='window.bukaRaporProfit()' style='border-color:#a855f7;'><i class='fa-solid fa-chart-simple' style='color:#a855f7;'></i><span>Rapor Profit</span></div>
+            <div class='menu-box' onclick='window.bukaRaporProfit()' style='border-color:#a855f7;'><i class='fa-solid fa-chart-simple' style='color:#a855f7;'></i><span>Mutasi Profit</span></div>
           </div>
 
           <div class='global-stats-container'>
@@ -945,7 +945,7 @@
     <div class='modal-overlay' id='modalRaporProfit'>
       <div class='modal-card' style='max-width: 400px; border-color: #a855f7;'>
         <button class='btn-close-modal' onclick='window.closeWalletModal("modalRaporProfit")' style='position:absolute; right:15px; top:15px; background:none; border:none; color:#ef4444; font-size:1.2rem; cursor:pointer;'><i class='fa-solid fa-xmark'></i></button>
-        <h3 style='color:#fff; margin:0 0 15px 0; font-family:Orbitron; text-align:center;'><i class='fa-solid fa-chart-simple' style='color:#a855f7;'></i> RAPOR BUKTI HASIL</h3>
+        <h3 style='color:#fff; margin:0 0 15px 0; font-family:Orbitron; text-align:center;'><i class='fa-solid fa-chart-simple' style='color:#a855f7;'></i> MUTASI PROFIT</h3>
         
         <div style='background:#0b0f19; padding:15px; border-radius:10px; border:1px solid #334155;'>
             <div style='text-align:center; margin-bottom:15px;'>
@@ -1572,7 +1572,7 @@
         let tCair = document.getElementById('raporCair').innerText;
         let tStatus = document.getElementById('raporStatusTeks').innerText;
         
-        let text = `*RAPOR PROFIT CIS MINING*\n_Miner ID: ${myUsername}_\n\n🔴 *Total Modal Beli Token:*\n${tModal}\n\n🔵 *Koin Ditambang & Bonus:*\n${tKoin}\n\n🟢 *Total Uang Cair ke Rekening:*\n${tCair}\n\n📊 *Status Saat Ini:*\n*${tStatus}*\n\n🔥 _Sistem Transparan, Uang 100% Masuk Rekening Sendiri!_\n\n👉 Gabung sekarang: ${window.location.origin + window.location.pathname}?ref=${myUsername}`;
+        let text = `*MUTASI PROFIT CIS VERUS*\n_Miner ID: ${myUsername}_\n\n🔴 *Total Modal Beli Token:*\n${tModal}\n\n...🔵 *Koin Ditambang & Bonus:*\n${tKoin}\n\n🟢 *Total Uang Cair ke Rekening:*\n${tCair}\n\n📊 *Status Saat Ini:*\n*${tStatus}*\n\n🔥 _Sistem Transparan, Uang 100% Masuk Rekening Sendiri!_\n\n👉 Gabung sekarang: ${window.location.origin + window.location.pathname}?ref=${myUsername}`;
         
         let url = `https://wa.me/?text=${encodeURIComponent(text)}`;
         window.open(url, '_blank');
