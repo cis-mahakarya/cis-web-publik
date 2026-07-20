@@ -1551,10 +1551,22 @@
             // Akumulasi Koin
             totalKoin = currentSaldoVrsc + totalKoinTukar;
 
-            // --- KONVERSI HARGA REALTIME (IDR & USDT) ---
-            // Menggunakan variabel globalVrscPriceIdr & globalVrscPriceUsdt yang sudah ada di web
-            let hargaIdr = (typeof globalVrscPriceIdr !== 'undefined' && globalVrscPriceIdr > 0) ? globalVrscPriceIdr : 1600; 
-            let hargaUsdt = (typeof globalVrscPriceUsdt !== 'undefined' && globalVrscPriceUsdt > 0) ? globalVrscPriceUsdt : 0.10;
+            // --- KONVERSI HARGA REALTIME (IDR & USDT) TERBARU ---
+            let hargaIdr = 0;
+            let hargaUsdt = 0;
+            
+            try {
+                // Menarik harga live langsung dari server CoinGecko secara independen
+                const res = await fetch('https://api.coingecko.com/api/v3/simple/price?ids=verus-coin&vs_currencies=idr,usd');
+                const data = await res.json();
+                hargaIdr = data['verus-coin'].idr;
+                hargaUsdt = data['verus-coin'].usd;
+            } catch (err) {
+                // Jika server API sibuk, gunakan harga patokan standar yang mendekati
+                console.error("Gagal menarik harga live API", err);
+                hargaIdr = 11000; 
+                hargaUsdt = 0.70;
+            }
 
             let estimasiIdr = totalKoin * hargaIdr;
             let estimasiUsdt = totalKoin * hargaUsdt;
