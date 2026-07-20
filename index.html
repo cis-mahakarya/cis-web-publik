@@ -1524,6 +1524,11 @@
             const snapJual = await getDocs(query(collection(db, "P2P_Order"), where("penjual", "==", myEmail), where("status", "==", "SELESAI")));
             snapJual.forEach(d => { totalCair += d.data().total_harga || 0; });
 
+			// 2B. Hitung juga Total Uang Cair dari menu SWAP (Withdraw yang disetujui)
+            // Karena Swap digunakan untuk mentransfer token ke pembeli setelah menerima uang tunai
+            const snapSwap = await getDocs(query(collection(db, "Request_Withdraw"), where("email_pemohon", "==", myEmail), where("status", "==", "DISETUJUI")));
+            snapSwap.forEach(d => { totalCair += d.data().nominal_rupiah || 0; });
+
             // 3. Hitung Total Koin Murni Ditambang & Bonus
             const snapMutasi = await getDocs(query(collection(db, "Mutasi_Mining"), where("email", "==", myEmail), where("jenis", "==", "IN")));
             snapMutasi.forEach(d => {
