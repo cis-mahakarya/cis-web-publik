@@ -963,8 +963,9 @@
             <!-- BLOK BIRU: HASIL KOIN -->
             <div style='background:rgba(56, 189, 248, 0.1); border:1px solid #38bdf8; padding:12px; border-radius:8px; margin-bottom:10px;'>
                 <div style='font-size:0.7rem; color:#bae6fd;'>TOTAL ESTIMASI ASET (AKUMULASI)</div>
-                <div id='raporKoin' style='font-family:Orbitron; font-size:1.2rem; color:#38bdf8; font-weight:bold;'>+ 0.000000 VRSC</div>
-                <div style='font-size:0.65rem; color:#94a3b8; margin-top:3px;'>Koin hasil claim, mining, bonus + sudah di-exchange</div>
+                <div id='raporKoinIdr' style='font-family:Orbitron; font-size:1.2rem; color:#38bdf8; font-weight:bold;'>Rp 0</div>
+                <div id='raporKoinUsdt' style='font-size:0.85rem; color:#f1c40f; font-weight:bold; margin-top:3px;'>$ 0.00 USDT</div>
+                <div style='font-size:0.65rem; color:#94a3b8; margin-top:5px;'>Nilai aset berdasarkan harga pasar (Live)</div>
             </div>
 
             <!-- BLOK HIJAU: UANG CAIR -->
@@ -1513,7 +1514,8 @@
 
         document.getElementById('raporModal').innerText = "Menghitung...";
         document.getElementById('raporCair').innerText = "Menghitung...";
-        document.getElementById('raporKoin').innerText = "Menghitung...";
+        document.getElementById('raporKoinIdr').innerText = "Menghitung...";
+        document.getElementById('raporKoinUsdt').innerText = "...";
 
         try {
             // 1. Hitung Total Modal (Beli Token di P2P yang sudah SELESAI)
@@ -1532,13 +1534,11 @@
             let currentSaldoVrsc = 0;
             let totalKoinTukar = 0;
 
-            // 3A. Tarik Saldo VRSC Aktif (Sinkron dengan Dashboard)
             const snapUser = await getDocs(query(collection(db, "Akun_Publik"), where("email", "==", myEmail)));
             if (!snapUser.empty) {
                 currentSaldoVrsc = snapUser.docs[0].data().saldo_vrsc || 0;
             }
 
-            // 3B. Tarik Riwayat Koin yang Sudah Di-Exchange (Ditukar ke IDR)
             const snapMutasiKoin = await getDocs(query(collection(db, "Mutasi_Mining"), where("email", "==", myEmail), where("jenis", "==", "OUT")));
             snapMutasiKoin.forEach(d => {
                 let m = d.data();
@@ -1548,13 +1548,24 @@
                 }
             });
 
-            // TOTAL ASET = Saldo Saat Ini + Koin yang Sudah Pernah Di-Exchange
+            // Akumulasi Koin
             totalKoin = currentSaldoVrsc + totalKoinTukar;
+
+            // --- KONVERSI HARGA REALTIME (IDR & USDT) ---
+            // Menggunakan variabel globalVrscPriceIdr & globalVrscPriceUsdt yang sudah ada di web
+            let hargaIdr = (typeof globalVrscPriceIdr !== 'undefined' && globalVrscPriceIdr > 0) ? globalVrscPriceIdr : 1600; 
+            let hargaUsdt = (typeof globalVrscPriceUsdt !== 'undefined' && globalVrscPriceUsdt > 0) ? globalVrscPriceUsdt : 0.10;
+
+            let estimasiIdr = totalKoin * hargaIdr;
+            let estimasiUsdt = totalKoin * hargaUsdt;
 
             // Update Angka di Layar
             document.getElementById('raporModal').innerText = "Rp " + totalModal.toLocaleString('id-ID');
             document.getElementById('raporCair').innerText = "Rp " + totalCair.toLocaleString('id-ID');
-            document.getElementById('raporKoin').innerText = "+ " + formatKripto(totalKoin) + " VRSC";
+            
+            // Masukkan konversi Rupiah dan USDT (Tanpa menampilkan VRSC)
+            document.getElementById('raporKoinIdr').innerText = "Rp " + Math.floor(estimasiIdr).toLocaleString('id-ID');
+            document.getElementById('raporKoinUsdt').innerText = "$ " + estimasiUsdt.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2}) + " USDT";
 
             // Hitung Bar Indikator (ROI)
             let bar = document.getElementById('raporProgressBar');
@@ -1584,11 +1595,12 @@
 
     window.shareRaporWA = () => {
         let tModal = document.getElementById('raporModal').innerText;
-        let tKoin = document.getElementById('raporKoin').innerText;
+        let tAsetIdr = document.getElementById('raporKoinIdr').innerText;
+        let tAsetUsdt = document.getElementById('raporKoinUsdt').innerText;
         let tCair = document.getElementById('raporCair').innerText;
         let tStatus = document.getElementById('raporStatusTeks').innerText;
         
-        let text = `*MUTASI PROFIT CIS VERUS*\n_Miner ID: ${myUsername}_\n\n🔴 *Total Modal Beli Token:*\n${tModal}\n\n🔵 *Total Estimasi Aset Koin:*\n${tKoin}\n\n🟢 *Total Uang Cair ke Rekening:*\n${tCair}\n\n📊 *Status Saat Ini:*\n*${tStatus}*\n\n🔥 _Sistem Transparan, Uang 100% Masuk Rekening Sendiri!_\n\n👉 Gabung sekarang: ${window.location.origin + window.location.pathname}?ref=${myUsername}`;
+        let text = `*MUTASI PROFIT CIS VERUS*\n_Miner ID: ${myUsername}_\n\n🔴 *Total Modal Beli Token:*\n${tModal}\n\n🔵 *Total Estimasi Aset:*\n${tAsetIdr}\n(${tAsetUsdt})\n\n🟢 *Total Uang Cair ke Rekening:*\n${tCair}\n\n📊 *Status Saat Ini:*\n*${tStatus}*\n\n🔥 _Sistem Transparan, Uang 100% Masuk Rekening Sendiri!_\n\n👉 Gabung sekarang: ${window.location.origin + window.location.pathname}?ref=${myUsername}`;
         
         let url = `https://wa.me/?text=${encodeURIComponent(text)}`;
         window.open(url, '_blank');
