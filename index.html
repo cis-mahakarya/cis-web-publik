@@ -2656,7 +2656,7 @@
 
                 garasiMesin.forEach(mesin => {
                     if (mesin.expired_kontrak > Date.now()) {
-                        totalSpeedAktif += mesin.speed_bawaan;
+                        totalSpeedAktif += Number(mesin.speed_bawaan || 0); // KUNCI: Paksa konversi ke angka murni
                         if (mesin.expired_kontrak > waktuExpiredTerjauhBaru) {
                             waktuExpiredTerjauhBaru = mesin.expired_kontrak;
                         }
@@ -4022,7 +4022,7 @@ if (!u.bank && !u.ewallet && !u.crypto) return;
                   if (garasiMesin.length > 0) {
                       garasiMesin.forEach(mesin => {
                           if (mesin.expired_kontrak > Date.now()) {
-                              totalSpeedAktif += mesin.speed_bawaan;
+                              totalSpeedAktif += Number(mesin.speed_bawaan || 0); // KUNCI: Paksa konversi ke angka murni
                               if (mesin.expired_kontrak > waktuExpiredMesin) {
                                   waktuExpiredMesin = mesin.expired_kontrak;
                               }
