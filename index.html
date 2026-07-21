@@ -1049,7 +1049,13 @@
           <div class='input-group' style='margin-bottom: 5px;'>
               <select class='input-dark no-icon' id='p2pTargetSultan' onchange='window.tampilkanRekeningSultan()'><option value=''>Memuat Data...</option></select>
           </div>
-          <!-- CHECKBOX DARURAT P2P -->
+                   
+          <!-- INPUT PENJUAL MANUAL (BARU) -->
+          <div class='input-group' id='boxManualPenjual' style='display:none; margin-bottom: 5px;'>
+              <input class='input-dark no-icon' id='p2pPenjualManual' placeholder='Ketik Username Penjual...' type='text' style='border-color:#00f2fe; color:#00f2fe; font-weight:bold;' oninput='this.value = this.value.toUpperCase().replace(/\s/g, "")' onchange='window.tampilkanRekeningManual()'/>
+          </div>
+	
+		  <!-- CHECKBOX DARURAT P2P -->
           <div id='boxPengepulMini' style='display:none; margin-bottom:15px; padding:8px; background:rgba(241,196,15,0.1); border:1px dashed #f1c40f; border-radius:8px;'>
               <label style='font-size:0.7rem; color:#f1c40f; cursor:pointer; display:flex; align-items:center; gap:8px;'>
                   <input type='checkbox' id='chkPengepulMini' onchange='window.bukaModalBeliP2P()' style='accent-color:#f1c40f; width:16px; height:16px;'/>
@@ -3058,6 +3064,10 @@
             if(!adaPenjual) {
                 html = `<option value=''>Maaf, belum ada penjual dengan saldo minimal Rp ${targetMinimal.toLocaleString('id-ID')}.</option>`;
             }
+            
+            // TAMBAHAN MENU MANUAL (Jalur Pribadi)
+            html += `<option value='MANUAL' style='color:#00f2fe; font-weight:bold;'>👉 KETIK USERNAME PENJUAL (MANUAL)...</option>`;
+            
             selSultan.innerHTML = html;
         } catch(e) { 
             selSultan.innerHTML = "<option value=''>Gagal memuat data penjual.</option>"; 
@@ -3065,19 +3075,6 @@
     };
 
     window.tampilkanRekeningSultan = async () => {
-        const sultan = document.getElementById('p2pTargetSultan').value;
-        const box = document.getElementById('infoRekeningSultan');
-        if(!sultan) { box.style.display = 'none'; return; }
-        box.style.display = 'block'; box.innerHTML = "Memuat rekening...";
-        try {
-            const snap = await getDocs(query(collection(db, "Akun_Publik"), where("username", "==", sultan)));
-            if(!snap.empty) {
-                let d = snap.docs[0].data();
-                box.innerHTML = `<b style='color:#e84393;'>?? Info Rekening Penjual:</b><br/>Bank: <b style='color:#fff;'>${d.bank || '-'}</b><br/>E-Wallet: <b style='color:#fff;'>${d.ewallet || '-'}</b><br/>Crypto: <b style='color:#fff;'>${d.crypto || '-'}</b>`;
-                box.setAttribute('data-email', d.email);
-            }
-        } catch(e) { box.innerHTML = "Gagal memuat rekening."; }
-    };
 
 	window.loadHargaSwap = async () => {
         const jenis = document.getElementById('jenisTokenWd').value;
@@ -3182,9 +3179,16 @@
     };
 
     window.buatPesananP2P = async () => {
-        const sultan = document.getElementById('p2pTargetSultan').value;
-        const emailSultan = document.getElementById('infoRekeningSultan').getAttribute('data-email');
-        const jenis = document.getElementById('p2pJenisToken').value;
+        let sultan = document.getElementById('p2pTargetSultan').value;
+        
+        // Deteksi jika pembeli menggunakan jalur input manual
+        if (sultan === 'MANUAL') {
+            sultan = document.getElementById('infoRekeningSultan').getAttribute('data-sultan-manual');
+            if(!sultan) return window.showToast("Username Penjual Manual tidak valid / belum dicek!");
+        }
+
+        const emailSultan = document.getElementById('infoRekeningSultan').getAttribute('data-email');
+        const jenis = document.getElementById('p2pJenisToken').value;
         const nomData = document.getElementById('p2pNominalToken').value;
         const btn = document.getElementById('btnKirimPesananP2P');
 
