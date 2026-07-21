@@ -1530,46 +1530,39 @@
             const snapSwap = await getDocs(query(collection(db, "Request_Withdraw"), where("email_pemohon", "==", myEmail), where("status", "==", "DISETUJUI")));
             snapSwap.forEach(d => { totalCair += d.data().nominal_rupiah || 0; });
 
-            // 3. Hitung Total Estimasi Asset (Akumulasi Seluruh Koin)
+            // 3. Tarik Saldo Member Saat Ini
             let currentSaldoVrsc = 0;
-            let totalKoinTukar = 0;
+            let currentSaldoRupiah = 0;
 
             const snapUser = await getDocs(query(collection(db, "Akun_Publik"), where("email", "==", myEmail)));
             if (!snapUser.empty) {
                 currentSaldoVrsc = snapUser.docs[0].data().saldo_vrsc || 0;
+                currentSaldoRupiah = snapUser.docs[0].data().saldo_rupiah || 0; // Tarik sisa saldo Rupiah
             }
-
-            const snapMutasiKoin = await getDocs(query(collection(db, "Mutasi_Mining"), where("email", "==", myEmail), where("jenis", "==", "OUT")));
-            snapMutasiKoin.forEach(d => {
-                let m = d.data();
-                let desc = m.deskripsi.toLowerCase();
-                if(desc.includes("exchange") || desc.includes("tukar") || desc.includes("jual") || desc.includes("swap")) {
-                    totalKoinTukar += m.nominal || 0;
-                }
-            });
-
-            // Akumulasi Koin
-            totalKoin = currentSaldoVrsc + totalKoinTukar;
 
             // --- KONVERSI HARGA REALTIME (IDR & USDT) TERBARU ---
             let hargaIdr = 0;
             let hargaUsdt = 0;
             
             try {
-                // Menarik harga live langsung dari server CoinGecko secara independen
                 const res = await fetch('https://api.coingecko.com/api/v3/simple/price?ids=verus-coin&vs_currencies=idr,usd');
                 const data = await res.json();
                 hargaIdr = data['verus-coin'].idr;
                 hargaUsdt = data['verus-coin'].usd;
             } catch (err) {
-                // Jika server API sibuk, gunakan harga patokan standar yang mendekati
-                console.error("Gagal menarik harga live API", err);
+                console.error("Gagal menarik harga live", err);
                 hargaIdr = 11000; 
                 hargaUsdt = 0.70;
             }
 
-            let estimasiIdr = totalKoin * hargaIdr;
-            let estimasiUsdt = totalKoin * hargaUsdt;
+            // RUMUS AKUNTANSI YANG BENAR
+            // Total Aset = (Nilai Koin saat ini) + Sisa Saldo Rupiah di web + Uang yang sudah sukses cair ke rekening
+            let nilaiKoin = currentSaldoVrsc * hargaIdr;
+            let estimasiIdr = nilaiKoin + currentSaldoRupiah + totalCair;
+            
+            // Konversi ke USDT menggunakan rasio kurs (misal Rp 15.700 / USD)
+            let rasioKursUsd = hargaIdr / hargaUsdt; 
+            let estimasiUsdt = estimasiIdr / rasioKursUsd;
 
             // Update Angka di Layar
             document.getElementById('raporModal').innerText = "Rp " + totalModal.toLocaleString('id-ID');
