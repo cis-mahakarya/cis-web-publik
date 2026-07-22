@@ -4023,7 +4023,7 @@ if (!u.bank && !u.ewallet && !u.crypto) return;
           
           let localVrsc = parseFloat(localStorage.getItem("cisVrsc")) || 0; let localSpeed = parseFloat(localStorage.getItem("cisSpeed")) || 0; let localExp = parseInt(localStorage.getItem("cisExp")) || 0;
 
-          myVrsc = (d.saldo_vrsc !== undefined) ? Math.max(d.saldo_vrsc, localVrsc) : localVrsc;
+          myVrsc = (d.saldo_vrsc !== undefined) ? d.saldo_vrsc : localVrsc;
           mySpeed = (d.kecepatan_hash !== undefined) ? d.kecepatan_hash : localSpeed;
           expTime = (d.expired_at !== undefined) ? d.expired_at : localExp;
           
