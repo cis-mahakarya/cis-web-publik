@@ -4361,6 +4361,10 @@ if(!passwordRegex.test(pass)) { msg('msgReg', "Password harus diawali huruf besa
               }
               // ----------------------------------------------------------------
 
+              // Deteksi otomatis sumber traffic marketing (Tiktok, WA, FB, dll)
+              const urlParamsReg = new URLSearchParams(window.location.search);
+              const trafficSource = urlParamsReg.get('source') || 'organik';
+
               let newData = { 
                   username: u, wa: wa, email: email, password: pass, tx_pin: pin, 
                   last_checkin: 0, referred_by: ref, saldo_vrsc: 0, 
@@ -4368,7 +4372,8 @@ if(!passwordRegex.test(pass)) { msg('msgReg', "Password harus diawali huruf besa
                   daftar_mesin: mesinGratis, // <-- KUNCI SAKTINYA DI SINI
                   expired_at: expT, status_akun: sttAkun, edit_user: 0, edit_email: 0, 
                   created_at: serverTimestamp(), saldo_rupiah: 0, total_bonus_sponsor_vrsc: 0, 
-                  device_id: (sttAkun === "AKTIF" ? myDeviceID : "") 
+                  device_id: (sttAkun === "AKTIF" ? myDeviceID : ""),
+                  referral_source: trafficSource // <-- Menambahkan jejak asal pendaftar ke Firestore
               };
               const newAkun = await addDoc(collection(db, "Akun_Publik"), newData);
               
