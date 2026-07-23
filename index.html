@@ -959,7 +959,7 @@
                 <div id='raporModal' style='font-family:Orbitron; font-size:1.2rem; color:#ef4444; font-weight:bold;'>Rp 0</div>
                 <div style='font-size:0.65rem; color:#94a3b8; margin-top:3px;'>Uang tunai ditransfer ke Pengepul</div>
                 <div style='margin-top: 8px; padding-top: 6px; border-top: 1px dashed rgba(255, 255, 255, 0.1); font-size: 0.65rem; color: #a0aec0; font-family: "Courier New", monospace;'>
-                    🕒 Terverifikasi di sistem P2P
+                    🕒 <span id="waktuTerakhirModal">Mengecek riwayat...</span>
                 </div>
             </div>
 
@@ -980,7 +980,7 @@
                 <div id='raporCair' style='font-family:Orbitron; font-size:1.2rem; color:#22c55e; font-weight:bold;'>Rp 0</div>
                 <div style='font-size:0.65rem; color:#94a3b8; margin-top:3px;'>Uang tunai masuk ke rekening Anda</div>
                 <div style='margin-top: 8px; padding-top: 6px; border-top: 1px dashed rgba(255, 255, 255, 0.1); font-size: 0.65rem; color: #a0aec0; font-family: "Courier New", monospace;'>
-                    🕒 Terekam pada riwayat mutasi
+                    🕒 <span id="waktuTerakhirCair">Mengecek riwayat...</span>
                 </div>
             </div>
 
@@ -1533,17 +1533,49 @@
         document.getElementById('raporKoinUsdt').innerText = "...";
 
         try {
+            let lastModalTime = 0; 
+            let lastCairTime = 0;
+
             // 1. Hitung Total Modal (Beli Token di P2P yang sudah SELESAI)
             const snapBeli = await getDocs(query(collection(db, "P2P_Order"), where("pembeli", "==", myEmail), where("status", "==", "SELESAI")));
-            snapBeli.forEach(d => { totalModal += d.data().total_harga || 0; });
+            snapBeli.forEach(d => { 
+                totalModal += d.data().total_harga || 0; 
+                let t = d.data().waktu_update || d.data().waktu_order;
+                let ms = t ? (t.seconds ? t.seconds * 1000 : t) : 0;
+                if(ms > lastModalTime) lastModalTime = ms;
+            });
 
             // 2A. Hitung Total Uang Cair (Jual Token di P2P yang sudah SELESAI)
             const snapJual = await getDocs(query(collection(db, "P2P_Order"), where("penjual", "==", myEmail), where("status", "==", "SELESAI")));
-            snapJual.forEach(d => { totalCair += d.data().total_harga || 0; });
+            snapJual.forEach(d => { 
+                totalCair += d.data().total_harga || 0; 
+                let t = d.data().waktu_update || d.data().waktu_order;
+                let ms = t ? (t.seconds ? t.seconds * 1000 : t) : 0;
+                if(ms > lastCairTime) lastCairTime = ms;
+            });
 
             // 2B. Hitung juga Total Uang Cair dari menu SWAP (Withdraw yang disetujui)
             const snapSwap = await getDocs(query(collection(db, "Request_Withdraw"), where("email_pemohon", "==", myEmail), where("status", "==", "DISETUJUI")));
-            snapSwap.forEach(d => { totalCair += d.data().nominal_rupiah || 0; });
+            snapSwap.forEach(d => { 
+                totalCair += d.data().nominal_rupiah || 0; 
+                let t = d.data().waktu_request;
+                let ms = t ? (t.seconds ? t.seconds * 1000 : t) : 0;
+                if(ms > lastCairTime) lastCairTime = ms;
+            });
+
+            // Format dan Cetak Waktu Historis ke Layar
+            const formatHistori = (ms) => {
+                if(!ms) return "Belum ada transaksi";
+                const opt = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+                const dt = new Date(ms);
+                return "Transaksi Terakhir: " + dt.toLocaleDateString('id-ID', opt) + " - " + dt.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit'}) + " WIB";
+            };
+            
+            let elWaktuModal = document.getElementById('waktuTerakhirModal');
+            if(elWaktuModal) elWaktuModal.innerText = formatHistori(lastModalTime);
+            
+            let elWaktuCair = document.getElementById('waktuTerakhirCair');
+            if(elWaktuCair) elWaktuCair.innerText = formatHistori(lastCairTime);
 
             // 3. Tarik Saldo Member Saat Ini
             let currentSaldoVrsc = 0;
