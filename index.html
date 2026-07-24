@@ -3616,26 +3616,53 @@
                     transaction.update(orderRef, { status: aksi, waktu_update: serverTimestamp() });
                     // Notif untuk DITERIMA atau BATAL
                     if (aksi === "DITERIMA") {
-                        // Tarik data Rekening milik Sultan (Penjual) saat ini
-                        let rekTeks = "";
-                        let bData = window.myProfileData.bank || "";
-                        let eData = window.myProfileData.ewallet || "";
-                        let cData = window.myProfileData.crypto || "";
-                        
-                        // Pengaman tanda kutip
-                        let safeString = (str) => str.replace(/'/g, "").replace(/"/g, "");
-                        
-                        // Rakit tombol Copy untuk masing-masing rekening yang diisi
-                        if(bData) rekTeks += `<div style='margin-bottom:5px; padding:5px 8px; background:rgba(0,0,0,0.4); border:1px solid #334155; border-radius:5px; display:flex; justify-content:space-between; align-items:center;'><span><i class='fa-solid fa-building-columns' style='color:#38bdf8;'></i> ${bData}</span> <button style='background:#38bdf8; color:#000; border:none; padding:3px 10px; border-radius:4px; font-size:0.7rem; font-weight:bold; cursor:pointer;' onclick='window.salinTeksP2P("${safeString(bData)}")'><i class='fa-solid fa-copy'></i> Copy</button></div>`;
-                        
-                        if(eData) rekTeks += `<div style='margin-bottom:5px; padding:5px 8px; background:rgba(0,0,0,0.4); border:1px solid #334155; border-radius:5px; display:flex; justify-content:space-between; align-items:center;'><span><i class='fa-solid fa-wallet' style='color:#e84393;'></i> ${eData}</span> <button style='background:#e84393; color:#fff; border:none; padding:3px 10px; border-radius:4px; font-size:0.7rem; font-weight:bold; cursor:pointer;' onclick='window.salinTeksP2P("${safeString(eData)}")'><i class='fa-solid fa-copy'></i> Copy</button></div>`;
-                        
-                        if(cData) rekTeks += `<div style='margin-bottom:5px; padding:5px 8px; background:rgba(0,0,0,0.4); border:1px solid #334155; border-radius:5px; display:flex; justify-content:space-between; align-items:center;'><span><i class='fa-brands fa-usdt' style='color:#2ecc71;'></i> ${cData}</span> <button style='background:#2ecc71; color:#000; border:none; padding:3px 10px; border-radius:4px; font-size:0.7rem; font-weight:bold; cursor:pointer;' onclick='window.salinTeksP2P("${safeString(cData)}")'><i class='fa-solid fa-copy'></i> Copy</button></div>`;
-                        
-                        // Teks notifikasi cantik yang digabung dengan rincian rekening & tagihan
-                        let pesanNotif = `<b style='color:#f1c40f;'>P2P: Sultan (${oData.penjual_user}) telah MENERIMA pesanan Anda.</b><br/><br/>Nominal Tagihan: <b style='color:#2ecc71; font-size:1.1rem;'>Rp ${(oData.total_harga||0).toLocaleString('id-ID')}</b><br/><br/><span style='font-size:0.75rem; color:#94a3b8;'>Silakan transfer ke salah satu rekening berikut:</span><br/>${rekTeks}<br/><span style='color:#00f2fe; font-size:0.8rem;'><i class='fa-solid fa-circle-exclamation'></i> Segera UPLOAD BUKTI TF setelah transfer!</span>`;
+                        let pesanNotif = "";
+                        try {
+                            // Tarik data Rekening
+                            let rekTeks = "";
+                            let pData = window.myProfileData || {};
+                            let bData = pData.bank || "";
+                            let eData = pData.ewallet || "";
+                            let cData = pData.crypto || "";
+                            
+                            // Ekstraktor Angka Super Ringan
+                            let extractNum = (str) => {
+                                let s = str ? String(str) : "";
+                                let nums = s.match(/\d+/g);
+                                if(nums) {
+                                    let longest = nums.reduce((a, b) => a.length > b.length ? a : b);
+                                    if(longest.length >= 6) return longest;
+                                }
+                                return s.replace(/['"]/g, "");
+                            };
+
+                            // Ekstraktor USDT (Alphanumeric)
+                            let extractCrypto = (str) => {
+                                let s = str ? String(str) : "";
+                                let parts = s.split(" ");
+                                let last = parts[parts.length - 1];
+                                if(last && last.length > 15) return last.replace(/['"]/g, "");
+                                return s.replace(/['"]/g, "");
+                            };
+
+                            // Merakit HTML tanpa backtick (`) agar tidak bentrok dengan parser browser lama
+                            if(bData) rekTeks += "<div style='margin-bottom:5px; padding:5px 8px; background:rgba(0,0,0,0.4); border:1px solid #334155; border-radius:5px; display:flex; justify-content:space-between; align-items:center;'><span><i class='fa-solid fa-building-columns' style='color:#38bdf8;'></i> " + bData + "</span> <button style='background:#38bdf8; color:#000; border:none; padding:3px 10px; border-radius:4px; font-size:0.7rem; font-weight:bold; cursor:pointer;' onclick='window.salinTeksP2P(\"" + extractNum(bData) + "\")'><i class='fa-solid fa-copy'></i> Copy</button></div>";
+                            
+                            if(eData) rekTeks += "<div style='margin-bottom:5px; padding:5px 8px; background:rgba(0,0,0,0.4); border:1px solid #334155; border-radius:5px; display:flex; justify-content:space-between; align-items:center;'><span><i class='fa-solid fa-wallet' style='color:#e84393;'></i> " + eData + "</span> <button style='background:#e84393; color:#fff; border:none; padding:3px 10px; border-radius:4px; font-size:0.7rem; font-weight:bold; cursor:pointer;' onclick='window.salinTeksP2P(\"" + extractNum(eData) + "\")'><i class='fa-solid fa-copy'></i> Copy</button></div>";
+                            
+                            if(cData) rekTeks += "<div style='margin-bottom:5px; padding:5px 8px; background:rgba(0,0,0,0.4); border:1px solid #334155; border-radius:5px; display:flex; justify-content:space-between; align-items:center;'><span><i class='fa-brands fa-usdt' style='color:#2ecc71;'></i> " + cData + "</span> <button style='background:#2ecc71; color:#000; border:none; padding:3px 10px; border-radius:4px; font-size:0.7rem; font-weight:bold; cursor:pointer;' onclick='window.salinTeksP2P(\"" + extractCrypto(cData) + "\")'><i class='fa-solid fa-copy'></i> Copy</button></div>";
+                            
+                            // Pesan Notifikasi Lengkap
+                            pesanNotif = "<b style='color:#f1c40f;'>P2P: Sultan (" + oData.penjual_user + ") telah MENERIMA pesanan Anda.</b><br/><br/>Nominal Tagihan: <b style='color:#2ecc71; font-size:1.1rem;'>Rp " + (oData.total_harga||0).toLocaleString('id-ID') + "</b><br/><br/><span style='font-size:0.75rem; color:#94a3b8;'>Silakan transfer ke salah satu rekening berikut:</span><br/>" + rekTeks + "<br/><span style='color:#00f2fe; font-size:0.8rem;'><i class='fa-solid fa-circle-exclamation'></i> Segera UPLOAD BUKTI TF setelah transfer!</span>";
+
+                        } catch(err) {
+                            // 🛡️ ROMPI ANTI-PELURU: Jika fitur ini error di HP/PC tertentu, sistem tidak akan STUCK!
+                            // Melainkan langsung kembali menggunakan pesan notifikasi standar Anda.
+                            pesanNotif = `?? P2P: Sultan (${oData.penjual_user}) telah MENERIMA pesanan Anda. Segera lakukan Pembayaran & Upload Bukti!`;
+                        }
                         
                         transaction.set(doc(collection(db, "Notifikasi_Personal")), { email: oData.pembeli, pesan: pesanNotif, timestamp_local: Date.now() });
+                    }
                         
                     } else if (aksi === "BATAL") {
                         let targetEmail = currentP2PTab === "beli" ? oData.penjual : oData.pembeli;
