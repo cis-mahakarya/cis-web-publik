@@ -1404,12 +1404,27 @@
     window.togglePassMaster = (id, icon) => { const inp = document.getElementById(id); if (inp.type === 'password') { inp.type = 'text'; icon.classList.remove('fa-eye'); icon.classList.add('fa-eye-slash'); } else { inp.type = 'password'; icon.classList.remove('fa-eye-slash'); icon.classList.add('fa-eye'); } };
     window.showToast = (msg) => { const box = document.getElementById('toastBox'); document.getElementById('toastMsg').innerText = msg; box.style.opacity = 1; box.style.visibility = 'visible'; box.style.top = '50px'; setTimeout(() => { box.style.opacity = 0; box.style.visibility = 'hidden'; box.style.top = '20px'; }, 3000); };
     
-    // TAMBAHAN FUNGSI SALIN TEKS REKENING (P2P)
+    // TAMBAHAN FUNGSI SALIN TEKS REKENING (CERDAS & FILTER ANGKA)
     window.salinTeksP2P = (teks) => {
-        navigator.clipboard.writeText(teks).then(() => {
-            window.showToast("✅ Berhasil disalin: " + teks);
+        let str = String(teks);
+        let textToCopy = str; // Default
+
+        // Mesin Pencari Khusus:
+        let matchCrypto = str.match(/[a-zA-Z0-9]{20,}/); // Cari alamat Crypto (Alphanumeric panjang)
+        let matchAngka = str.match(/\d{6,}/); // Cari Nomor Rekening/HP (Minimal 6 angka berderet)
+
+        // Filter Keputusan:
+        if (matchCrypto) {
+            textToCopy = matchCrypto[0];
+        } else if (matchAngka) {
+            textToCopy = matchAngka[0];
+        }
+
+        // Eksekusi Salin ke Clipboard
+        navigator.clipboard.writeText(textToCopy).then(() => {
+            window.showToast("✅ Rekening disalin: " + textToCopy);
         }).catch(() => {
-            window.showToast("❌ Gagal menyalin teks.");
+            window.showToast("❌ Gagal menyalin rekening.");
         });
     };
 
@@ -3616,26 +3631,22 @@
                     transaction.update(orderRef, { status: aksi, waktu_update: serverTimestamp() });
                     // Notif untuk DITERIMA atau BATAL
                     if (aksi === "DITERIMA") {
-                        // Tarik data Rekening milik Sultan (Penjual) saat ini
-                        let rekTeks = "";
                         let bData = window.myProfileData.bank || "";
                         let eData = window.myProfileData.ewallet || "";
                         let cData = window.myProfileData.crypto || "";
+                        let rekTeks = "";
                         
-                        // Pengaman tanda kutip
-                        let safeString = (str) => str.replace(/'/g, "").replace(/"/g, "");
+                        // Merakit HTML murni (String utuh dikirim langsung ke fungsi salinTeksP2P)
+                        if(bData) rekTeks += "<div style='margin-bottom:5px; padding:5px 8px; background:rgba(0,0,0,0.4); border:1px solid #334155; border-radius:5px; display:flex; justify-content:space-between; align-items:center;'><span><i class='fa-solid fa-building-columns' style='color:#38bdf8;'></i> " + bData + "</span> <button style='background:#38bdf8; color:#000; border:none; padding:3px 10px; border-radius:4px; font-size:0.7rem; font-weight:bold; cursor:pointer;' onclick='window.salinTeksP2P(\"" + bData + "\")'><i class='fa-solid fa-copy'></i> Copy</button></div>";
                         
-                        // Rakit tombol Copy untuk masing-masing rekening yang diisi
-                        if(bData) rekTeks += `<div style='margin-bottom:5px; padding:5px 8px; background:rgba(0,0,0,0.4); border:1px solid #334155; border-radius:5px; display:flex; justify-content:space-between; align-items:center;'><span><i class='fa-solid fa-building-columns' style='color:#38bdf8;'></i> ${bData}</span> <button style='background:#38bdf8; color:#000; border:none; padding:3px 10px; border-radius:4px; font-size:0.7rem; font-weight:bold; cursor:pointer;' onclick='window.salinTeksP2P("${safeString(bData)}")'><i class='fa-solid fa-copy'></i> Copy</button></div>`;
+                        if(eData) rekTeks += "<div style='margin-bottom:5px; padding:5px 8px; background:rgba(0,0,0,0.4); border:1px solid #334155; border-radius:5px; display:flex; justify-content:space-between; align-items:center;'><span><i class='fa-solid fa-wallet' style='color:#e84393;'></i> " + eData + "</span> <button style='background:#e84393; color:#fff; border:none; padding:3px 10px; border-radius:4px; font-size:0.7rem; font-weight:bold; cursor:pointer;' onclick='window.salinTeksP2P(\"" + eData + "\")'><i class='fa-solid fa-copy'></i> Copy</button></div>";
                         
-                        if(eData) rekTeks += `<div style='margin-bottom:5px; padding:5px 8px; background:rgba(0,0,0,0.4); border:1px solid #334155; border-radius:5px; display:flex; justify-content:space-between; align-items:center;'><span><i class='fa-solid fa-wallet' style='color:#e84393;'></i> ${eData}</span> <button style='background:#e84393; color:#fff; border:none; padding:3px 10px; border-radius:4px; font-size:0.7rem; font-weight:bold; cursor:pointer;' onclick='window.salinTeksP2P("${safeString(eData)}")'><i class='fa-solid fa-copy'></i> Copy</button></div>`;
+                        if(cData) rekTeks += "<div style='margin-bottom:5px; padding:5px 8px; background:rgba(0,0,0,0.4); border:1px solid #334155; border-radius:5px; display:flex; justify-content:space-between; align-items:center;'><span><i class='fa-brands fa-usdt' style='color:#2ecc71;'></i> " + cData + "</span> <button style='background:#2ecc71; color:#000; border:none; padding:3px 10px; border-radius:4px; font-size:0.7rem; font-weight:bold; cursor:pointer;' onclick='window.salinTeksP2P(\"" + cData + "\")'><i class='fa-solid fa-copy'></i> Copy</button></div>";
                         
-                        if(cData) rekTeks += `<div style='margin-bottom:5px; padding:5px 8px; background:rgba(0,0,0,0.4); border:1px solid #334155; border-radius:5px; display:flex; justify-content:space-between; align-items:center;'><span><i class='fa-brands fa-usdt' style='color:#2ecc71;'></i> ${cData}</span> <button style='background:#2ecc71; color:#000; border:none; padding:3px 10px; border-radius:4px; font-size:0.7rem; font-weight:bold; cursor:pointer;' onclick='window.salinTeksP2P("${safeString(cData)}")'><i class='fa-solid fa-copy'></i> Copy</button></div>`;
-                        
-                        // Teks notifikasi cantik yang digabung dengan rincian rekening & tagihan
-                        let pesanNotif = `<b style='color:#f1c40f;'>P2P: Sultan (${oData.penjual_user}) telah MENERIMA pesanan Anda.</b><br/><br/>Nominal Tagihan: <b style='color:#2ecc71; font-size:1.1rem;'>Rp ${(oData.total_harga||0).toLocaleString('id-ID')}</b><br/><br/><span style='font-size:0.75rem; color:#94a3b8;'>Silakan transfer ke salah satu rekening berikut:</span><br/>${rekTeks}<br/><span style='color:#00f2fe; font-size:0.8rem;'><i class='fa-solid fa-circle-exclamation'></i> Segera UPLOAD BUKTI TF setelah transfer!</span>`;
+                        let pesanNotif = "<b style='color:#f1c40f;'>P2P: Sultan (" + oData.penjual_user + ") telah MENERIMA pesanan Anda.</b><br/><br/>Nominal Tagihan: <b style='color:#2ecc71; font-size:1.1rem;'>Rp " + (oData.total_harga||0).toLocaleString('id-ID') + "</b><br/><br/><span style='font-size:0.75rem; color:#94a3b8;'>Silakan transfer ke salah satu rekening berikut:</span><br/>" + rekTeks + "<br/><span style='color:#00f2fe; font-size:0.8rem;'><i class='fa-solid fa-circle-exclamation'></i> Segera UPLOAD BUKTI TF setelah transfer!</span>";
                         
                         transaction.set(doc(collection(db, "Notifikasi_Personal")), { email: oData.pembeli, pesan: pesanNotif, timestamp_local: Date.now() });
+                    }
                         
                     } else if (aksi === "BATAL") {
                         let targetEmail = currentP2PTab === "beli" ? oData.penjual : oData.pembeli;
