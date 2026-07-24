@@ -1404,6 +1404,15 @@
     window.togglePassMaster = (id, icon) => { const inp = document.getElementById(id); if (inp.type === 'password') { inp.type = 'text'; icon.classList.remove('fa-eye'); icon.classList.add('fa-eye-slash'); } else { inp.type = 'password'; icon.classList.remove('fa-eye-slash'); icon.classList.add('fa-eye'); } };
     window.showToast = (msg) => { const box = document.getElementById('toastBox'); document.getElementById('toastMsg').innerText = msg; box.style.opacity = 1; box.style.visibility = 'visible'; box.style.top = '50px'; setTimeout(() => { box.style.opacity = 0; box.style.visibility = 'hidden'; box.style.top = '20px'; }, 3000); };
     
+    // TAMBAHAN FUNGSI SALIN TEKS REKENING (P2P)
+    window.salinTeksP2P = (teks) => {
+        navigator.clipboard.writeText(teks).then(() => {
+            window.showToast("✅ Berhasil disalin: " + teks);
+        }).catch(() => {
+            window.showToast("❌ Gagal menyalin teks.");
+        });
+    };
+
     window.syncLang = (lang) => { localStorage.setItem('cisLang', lang); window.location.reload(); };
     // KAMUS BAHASA (Bisa ditambah sesuai kebutuhan)
     const i18nDict = {
@@ -2437,11 +2446,37 @@
         mainkanSuaraNotif(); // Bunyikan bel siber
         const mod = document.getElementById('modalNotifAdmin');
         const txt = document.getElementById('isiNotifAdmin');
+        
         if(mod && txt) {
-            txt.innerText = pesan;
+            txt.innerHTML = pesan; // Menggunakan innerHTML agar tombol Copy bisa dirender
+            
+            // Mengambil kendali tombol Tutup di dalam modal
+            const btnTutup = mod.querySelector('.btn-cyan');
+            if(btnTutup) {
+                if(pesan.includes("UPLOAD BUKTI TF")) {
+                    // MUTASI TOMBOL UNTUK P2P
+                    btnTutup.innerHTML = "<i class='fa-solid fa-upload'></i> LANJUT UPLOAD BUKTI";
+                    btnTutup.style.background = "#2ecc71"; // Warna hijau mencolok
+                    btnTutup.style.color = "#fff";
+                    btnTutup.onclick = () => {
+                        mod.style.display = "none";
+                        window.openScreen('screen-p2p'); // Otomatis buka P2P
+                        window.switchP2PTab('beli');     // Pastikan di menu Beli
+                    };
+                } else {
+                    // KEMBALIKAN KE MODE DEFAULT (Pesan Biasa)
+                    btnTutup.innerHTML = "TUTUP PESAN";
+                    btnTutup.style.background = "#00f2fe";
+                    btnTutup.style.color = "#000";
+                    btnTutup.onclick = () => {
+                        mod.style.display = "none";
+                    };
+                }
+            }
             mod.style.display = 'flex';
         } else {
-            window.showToast("?? NOTIFIKASI: " + pesan);
+            // Bersihkan tag HTML jika dilempar ke Toast
+            window.showToast("🔔 NOTIFIKASI: " + pesan.replace(/<[^>]*>?/gm, '')); 
         }
     };
 
@@ -3578,16 +3613,36 @@
                     transaction.set(doc(collection(db, "Notifikasi_Personal")), { email: myEmail, pesan: `?? Laporan diproses! Akun partner P2P Anda telah dibekukan oleh Sistem Anti-Fraud.`, timestamp_local: Date.now() });
                 }
                 else {
-                    transaction.update(orderRef, { status: aksi, waktu_update: serverTimestamp() });
+                    transaction.update(orderRef, { status: aksi, waktu_update: serverTimestamp() });
                     // Notif untuk DITERIMA atau BATAL
                     if (aksi === "DITERIMA") {
-                        transaction.set(doc(collection(db, "Notifikasi_Personal")), { email: oData.pembeli, pesan: `?? P2P: Sultan (${oData.penjual_user}) telah MENERIMA pesanan Anda. Segera lakukan Pembayaran & Upload Bukti!`, timestamp_local: Date.now() });
+                        // Tarik data Rekening milik Sultan (Penjual) saat ini
+                        let rekTeks = "";
+                        let bData = window.myProfileData.bank || "";
+                        let eData = window.myProfileData.ewallet || "";
+                        let cData = window.myProfileData.crypto || "";
+                        
+                        // Pengaman tanda kutip
+                        let safeString = (str) => str.replace(/'/g, "").replace(/"/g, "");
+                        
+                        // Rakit tombol Copy untuk masing-masing rekening yang diisi
+                        if(bData) rekTeks += `<div style='margin-bottom:5px; padding:5px 8px; background:rgba(0,0,0,0.4); border:1px solid #334155; border-radius:5px; display:flex; justify-content:space-between; align-items:center;'><span><i class='fa-solid fa-building-columns' style='color:#38bdf8;'></i> ${bData}</span> <button style='background:#38bdf8; color:#000; border:none; padding:3px 10px; border-radius:4px; font-size:0.7rem; font-weight:bold; cursor:pointer;' onclick='window.salinTeksP2P("${safeString(bData)}")'><i class='fa-solid fa-copy'></i> Copy</button></div>`;
+                        
+                        if(eData) rekTeks += `<div style='margin-bottom:5px; padding:5px 8px; background:rgba(0,0,0,0.4); border:1px solid #334155; border-radius:5px; display:flex; justify-content:space-between; align-items:center;'><span><i class='fa-solid fa-wallet' style='color:#e84393;'></i> ${eData}</span> <button style='background:#e84393; color:#fff; border:none; padding:3px 10px; border-radius:4px; font-size:0.7rem; font-weight:bold; cursor:pointer;' onclick='window.salinTeksP2P("${safeString(eData)}")'><i class='fa-solid fa-copy'></i> Copy</button></div>`;
+                        
+                        if(cData) rekTeks += `<div style='margin-bottom:5px; padding:5px 8px; background:rgba(0,0,0,0.4); border:1px solid #334155; border-radius:5px; display:flex; justify-content:space-between; align-items:center;'><span><i class='fa-brands fa-usdt' style='color:#2ecc71;'></i> ${cData}</span> <button style='background:#2ecc71; color:#000; border:none; padding:3px 10px; border-radius:4px; font-size:0.7rem; font-weight:bold; cursor:pointer;' onclick='window.salinTeksP2P("${safeString(cData)}")'><i class='fa-solid fa-copy'></i> Copy</button></div>`;
+                        
+                        // Teks notifikasi cantik yang digabung dengan rincian rekening & tagihan
+                        let pesanNotif = `<b style='color:#f1c40f;'>P2P: Sultan (${oData.penjual_user}) telah MENERIMA pesanan Anda.</b><br/><br/>Nominal Tagihan: <b style='color:#2ecc71; font-size:1.1rem;'>Rp ${(oData.total_harga||0).toLocaleString('id-ID')}</b><br/><br/><span style='font-size:0.75rem; color:#94a3b8;'>Silakan transfer ke salah satu rekening berikut:</span><br/>${rekTeks}<br/><span style='color:#00f2fe; font-size:0.8rem;'><i class='fa-solid fa-circle-exclamation'></i> Segera UPLOAD BUKTI TF setelah transfer!</span>`;
+                        
+                        transaction.set(doc(collection(db, "Notifikasi_Personal")), { email: oData.pembeli, pesan: pesanNotif, timestamp_local: Date.now() });
+                        
                     } else if (aksi === "BATAL") {
                         let targetEmail = currentP2PTab === "beli" ? oData.penjual : oData.pembeli;
                         let pembuatBatal = currentP2PTab === "beli" ? "Pembeli" : "Sultan";
-                        transaction.set(doc(collection(db, "Notifikasi_Personal")), { email: targetEmail, pesan: `? P2P: Transaksi telah DIBATALKAN oleh ${pembuatBatal}.`, timestamp_local: Date.now() });
+                        transaction.set(doc(collection(db, "Notifikasi_Personal")), { email: targetEmail, pesan: `❌ P2P: Transaksi telah DIBATALKAN oleh ${pembuatBatal}.`, timestamp_local: Date.now() });
                     }
-                }
+                }
             });
             window.showToast("Aksi Berhasil diproses!");
             window.loadP2POrders();
