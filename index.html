@@ -860,6 +860,24 @@
     <p style='font-size:0.7rem; color:#94a3b8; margin:0 0 10px 0;'>Isi rekening agar Anda bisa bertransaksi P2P di Daftar Top Sultan.</p>
     
     <label class='prof-label' style='font-size:0.7rem; color:#38bdf8;'>REKENING BANK NASIONAL</label>
+    <div class='input-group' style='display:flex; flex-direction:column; gap:10px; width:100%; margin-bottom:15px;'>
+        <div style='position:relative; width:100%;'>
+            <input class='input-dark' id='profBankName' list='listBankP2P' placeholder='Pilih / Ketik Nama Bank' type='text' readonly='true' style='width:100%; height:45px; padding-left:15px;'/>
+            <datalist id='listBankP2P'>
+                <option value='BCA'>
+                <option value='MANDIRI'>
+                <option value='BRI'>
+                <option value='BNI'>
+                <option value='BSI'>
+                <option value='CIMB NIAGA'>
+                <option value='BANK JAGO'>
+                <option value='SEABANK'>
+            </datalist>
+            <div class='btn-edit-corner' onclick='window.bukaKunciBank()'>Edit</div>
+        </div>
+        <input class='input-dark' id='profBankNum' placeholder='Nomor Rekening' type='number' readonly='true' style='width:100%; height:45px; padding-left:15px;'/>
+        <input class='input-dark' id='profBankOwner' placeholder='Nama Pemilik Rekening' type='text' readonly='true' style='width:100%; height:45px; padding-left:15px;'/>
+    </div>
     <div class='input-group' style='position:relative; width:100%; margin-bottom:15px;'>
         <input class='input-dark' id='profBankNum' placeholder='Contoh: BCA 1234567890 NAMA' type='text' readonly='true' style='padding-left:15px; width:100%; height:45px;'/>
         <div class='btn-edit-corner' onclick='window.bukaKunciBank()'>Edit</div>
@@ -1693,13 +1711,21 @@
     };
 
     window.bukaKunciBank = () => {
-        const inp = document.getElementById('profBankNum');
-        if(inp) {
-            inp.removeAttribute('readonly'); inp.style.color = '#fff'; inp.style.borderColor = '#00f2fe';
-            inp.focus(); document.getElementById('boxSimpanP2P').style.display = 'block';
-            window.showToast("Silakan isi Nama Bank & Nomor Rekening, lalu konfirmasi password.");
-        }
-    };
+        const iName = document.getElementById('profBankName');
+        const iNum = document.getElementById('profBankNum');
+        const iOwner = document.getElementById('profBankOwner');
+        if(iName && iNum && iOwner) {
+            [iName, iNum, iOwner].forEach(inp => {
+                inp.removeAttribute('readonly'); 
+                inp.style.color = '#fff'; 
+                inp.style.borderColor = '#00f2fe';
+            });
+            iName.focus(); 
+            let box = document.getElementById('boxSimpanP2P');
+            if(box) box.style.display = 'block';
+            window.showToast("Silakan lengkapi Data Bank (Nama, Nomor & Pemilik), lalu klik Simpan.");
+        }
+    };
 
     window.bukaKunciEwallet = () => {
         const sel = document.getElementById('profEwalletType');
@@ -1733,7 +1759,16 @@
     };
 
     window.simpanProfilP2P = async () => {
-    const uBank = document.getElementById('profBankNum').value;
+    const bName = document.getElementById('profBankName').value.trim().toUpperCase();
+    const bNum = document.getElementById('profBankNum').value.trim();
+    const bOwner = document.getElementById('profBankOwner').value.trim().toUpperCase();
+    
+    // Gabungkan 3 kolom menjadi 1 baris teks dengan pemisah strip
+    let uBank = "";
+    if (bName || bNum || bOwner) {
+        uBank = `${bName} - ${bNum} - ${bOwner}`;
+    }
+
     const eType = document.getElementById('profEwalletType').value;
     const eNum = document.getElementById('profEwalletNum').value;
     const uEwallet = (eType && eNum) ? `${eType} ${eNum}` : "";
@@ -1753,7 +1788,9 @@
         window.showToast("Rekening Tersimpan!");
         
         // Kunci kembali input setelah simpan
+        document.getElementById('profBankName').setAttribute('readonly', 'true');
         document.getElementById('profBankNum').setAttribute('readonly', 'true');
+        document.getElementById('profBankOwner').setAttribute('readonly', 'true');
         document.getElementById('profEwalletType').setAttribute('disabled', 'true');
         document.getElementById('profEwalletNum').setAttribute('readonly', 'true');
         document.getElementById('profCryptoNetwork').setAttribute('disabled', 'true');
@@ -3749,10 +3786,26 @@ if (!u.bank && !u.ewallet && !u.crypto) return;
       
       if(window.myProfileData) {
           let bData = window.myProfileData.bank || "";
+          let dName = document.getElementById('profBankName');
           let dNum = document.getElementById('profBankNum');
-          if(dNum) dNum.value = bData;
+          let dOwner = document.getElementById('profBankOwner');
           
-          let ewData = window.myProfileData.ewallet || "";
+          if(dName && dNum && dOwner) {
+              // Jika data memakai pemisah " - ", pecah jadi 3 bagian
+              if(bData.includes(" - ")) {
+                  let parts = bData.split(" - ");
+                  dName.value = parts[0] ? parts[0].trim() : "";
+                  dNum.value = parts[1] ? parts[1].trim() : "";
+                  dOwner.value = parts.length > 2 ? parts.slice(2).join(" - ").trim() : "";
+              } else {
+                  // Jika ini data user lama (legacy), masukkan semua ke kolom nomor sementara
+                  dName.value = "";
+                  dNum.value = bData;
+                  dOwner.value = "";
+              }
+          }
+          
+          let ewData = window.myProfileData.ewallet || "";
           if(ewData.includes(" ")) {
               let p = ewData.split(" ");
               document.getElementById('profEwalletType').value = p[0];
