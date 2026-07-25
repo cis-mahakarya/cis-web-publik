@@ -2481,25 +2481,37 @@
         const txt = document.getElementById('isiNotifAdmin');
         
         if(mod && txt) {
-            txt.innerHTML = pesan; // Menggunakan innerHTML agar tombol Copy bisa dirender
+            txt.innerHTML = pesan; // Menggunakan innerHTML agar tag HTML bisa dirender
             
             // Mengambil kendali tombol Tutup di dalam modal
             const btnTutup = mod.querySelector('.btn-cyan');
             if(btnTutup) {
                 if(pesan.includes("UPLOAD BUKTI TF")) {
-                    // MUTASI TOMBOL UNTUK P2P
+                    // KECERDASAN 1: MUTASI TOMBOL UNTUK PEMBELI
                     btnTutup.innerHTML = "<i class='fa-solid fa-upload'></i> LANJUT UPLOAD BUKTI";
-                    btnTutup.style.background = "#2ecc71"; // Warna hijau mencolok
+                    btnTutup.style.background = "#2ecc71"; // Warna hijau
                     btnTutup.style.color = "#fff";
                     btnTutup.onclick = () => {
                         mod.style.display = "none";
-                        window.openScreen('screen-p2p'); // Otomatis buka P2P
-                        window.switchP2PTab('beli');     // Pastikan di menu Beli
+                        window.openScreen('screen-p2p');
+                        window.switchP2PTab('beli'); // Buka tab Beli
                     };
-                } else {
-                    // KEMBALIKAN KE MODE DEFAULT (Pesan Biasa)
+                } 
+                else if (pesan.includes("me-request pembelian")) {
+                    // KECERDASAN 2: MUTASI TOMBOL UNTUK SULTAN (PENJUAL)
+                    btnTutup.innerHTML = "<i class='fa-solid fa-store'></i> RESPON PESANAN";
+                    btnTutup.style.background = "#e67e22"; // Warna orange/emas mencolok
+                    btnTutup.style.color = "#fff";
+                    btnTutup.onclick = () => {
+                        mod.style.display = "none";
+                        window.openScreen('screen-p2p');
+                        window.switchP2PTab('jual'); // Langsung buka tab Permintaan Masuk
+                    };
+                } 
+                else {
+                    // KEMBALIKAN KE MODE DEFAULT (Pesan Biasa / Pengumuman)
                     btnTutup.innerHTML = "TUTUP PESAN";
-                    btnTutup.style.background = "#00f2fe";
+                    btnTutup.style.background = "#00f2fe"; // Warna default biru muda
                     btnTutup.style.color = "#000";
                     btnTutup.onclick = () => {
                         mod.style.display = "none";
