@@ -2384,11 +2384,34 @@
     };
 	
 	window.loadNetworkTree = async () => {
-        const listDiv = document.getElementById('networkTreeList'); const uplineNameText = document.getElementById('uplineNameText'); const uplineWaBtn = document.getElementById('uplineWaBtn');
-        if(myReferredBy) {
-            uplineNameText.innerText = myReferredBy;
-            try { const upSnap = await getDocs(query(collection(db, "Akun_Publik"), where("username", "==", myReferredBy))); if(!upSnap.empty) { let upWa = upSnap.docs[0].data().wa; if(upWa) { uplineWaBtn.href = `https://wa.me/${upWa}`; uplineWaBtn.style.display = 'inline-block'; } } } catch(e){}
-        } else { uplineNameText.innerText = "None"; uplineWaBtn.style.display = 'none'; }
+        const listDiv = document.getElementById('networkTreeList'); 
+        const uplineNameText = document.getElementById('uplineNameText'); 
+        const uplineWaBtn = document.getElementById('uplineWaBtn');
+        
+        // ==========================================
+        // BUG FIX: Ambil sponsor dari Live Data Pusat, bukan dari Cache lokal
+        // ==========================================
+        let realSponsor = "";
+        if (window.myProfileData && window.myProfileData.referred_by) {
+            realSponsor = window.myProfileData.referred_by;
+        } else {
+            realSponsor = myReferredBy; // Fallback darurat
+        }
+
+        if(realSponsor) {
+            uplineNameText.innerText = realSponsor;
+            try { 
+                const upSnap = await getDocs(query(collection(db, "Akun_Publik"), where("username", "==", realSponsor))); 
+                if(!upSnap.empty) { 
+                    let upWa = upSnap.docs[0].data().wa; 
+                    if(upWa) { uplineWaBtn.href = `https://wa.me/${upWa}`; uplineWaBtn.style.display = 'inline-block'; } 
+                } 
+            } catch(e){}
+        } else { 
+            uplineNameText.innerText = "None"; 
+            uplineWaBtn.style.display = 'none'; 
+        }
+
         try {
             const snap = await getDocs(query(collection(db, "Akun_Publik"), where("referred_by", "==", myUsername))); 
             let htmlList = ""; 
