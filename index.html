@@ -2390,15 +2390,42 @@
             try { const upSnap = await getDocs(query(collection(db, "Akun_Publik"), where("username", "==", myReferredBy))); if(!upSnap.empty) { let upWa = upSnap.docs[0].data().wa; if(upWa) { uplineWaBtn.href = `https://wa.me/${upWa}`; uplineWaBtn.style.display = 'inline-block'; } } } catch(e){}
         } else { uplineNameText.innerText = "None"; uplineWaBtn.style.display = 'none'; }
         try {
-            const snap = await getDocs(query(collection(db, "Akun_Publik"), where("referred_by", "==", myUsername))); let html = ""; let count = 0;
+            const snap = await getDocs(query(collection(db, "Akun_Publik"), where("referred_by", "==", myUsername))); 
+            let htmlList = ""; 
+            let count = 0;
+            
+            // Merakit isi daftar nama
             snap.forEach(d => { 
                 let data = d.data(); let date = data.created_at ? data.created_at.toDate().toLocaleDateString('en-US') : '-'; 
                 let waBtn = data.wa ? `<a href="https://wa.me/${data.wa}" target="_blank" style="background:#2ecc71; color:#fff; padding:5px 10px; border-radius:5px; text-decoration:none; font-size:0.7rem; font-weight:bold;"><i class="fa-brands fa-whatsapp"></i> Chat</a>` : '';
-                html += `<div class='tree-node level-1'><div class='tree-icon'><i class='fa-solid fa-user-check'></i></div><div class='tree-info'><div class='tree-name'>${data.username}</div><div class='tree-detail'>Joined: ${date}</div></div><div>${waBtn}</div></div>`; count++; 
+                htmlList += `<div class='tree-node level-1'><div class='tree-icon'><i class='fa-solid fa-user-check'></i></div><div class='tree-info'><div class='tree-name'>${data.username}</div><div class='tree-detail'>Joined: ${date}</div></div><div>${waBtn}</div></div>`; 
+                count++; 
             });
-            if(count === 0) html = "<div style='text-align:center; padding:20px; color:#64748b; font-size:0.8rem;'>You have no downlines yet.</div>";
-            listDiv.innerHTML = html;
-        } catch(e) { listDiv.innerHTML = "<div style='text-align:center; color:#ef4444; font-size:0.8rem;'>Failed to load.</div>"; }
+
+            let finalHtml = "";
+            if(count === 0) {
+                finalHtml = "<div style='text-align:center; padding:20px; color:#64748b; font-size:0.8rem;'>Belum ada referral (downline).</div>";
+            } else {
+                // Merakit Papan Informasi Total + Tombol Buka Tutup + Kotak Daftar Nama
+                finalHtml = `
+                <div style='background:#1e293b; padding:15px; border-radius:10px; border:1px solid #334155; margin-bottom:15px; display:flex; justify-content:space-between; align-items:center; box-shadow:0 4px 6px rgba(0,0,0,0.3);'>
+                    <div>
+                        <span style='font-size:0.7rem; color:#94a3b8; font-weight:bold; letter-spacing:1px;'>TOTAL REFERRAL</span><br/>
+                        <span style='font-size:1.4rem; color:#00f2fe; font-family:Orbitron; font-weight:900;'>${count}</span> <span style='font-size:0.75rem; color:#64748b;'>Orang</span>
+                    </div>
+                    <button onclick='let c = document.getElementById("boxDaftarDownline"); let i = document.getElementById("iconToggleNet"); if(c.style.display === "none"){ c.style.display = "block"; i.className = "fa-solid fa-chevron-up"; } else { c.style.display = "none"; i.className = "fa-solid fa-chevron-down"; }' style='background:rgba(0, 242, 254, 0.1); border:1px solid #00f2fe; color:#00f2fe; padding:8px 12px; border-radius:8px; cursor:pointer; font-weight:bold; font-size:0.75rem; transition:0.3s; display:flex; align-items:center; gap:8px;'>
+                        LIHAT DAFTAR <i id='iconToggleNet' class='fa-solid fa-chevron-down'></i>
+                    </button>
+                </div>
+                
+                <!-- Kotak yang bisa disembunyikan/dimunculkan -->
+                <div id='boxDaftarDownline' style='display:none;'>
+                    ${htmlList}
+                </div>
+                `;
+            }
+            listDiv.innerHTML = finalHtml;
+        } catch(e) { listDiv.innerHTML = "<div style='text-align:center; color:#ef4444; font-size:0.8rem;'>Gagal memuat jaringan.</div>"; }
         
         const tbodyBonus = document.getElementById('tblBonusSponsor');
         try {
