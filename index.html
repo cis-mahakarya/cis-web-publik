@@ -2127,7 +2127,11 @@
         // --- END ---
 		// --- SINKRON SALDO & LIVE CHART STAKING ---
         let elStaking = document.getElementById('infoSaldoStaking'); if(elStaking) elStaking.innerText = "Rp " + (mySaldoRupiah||0).toLocaleString('id-ID');
-        if(document.getElementById('modalStaking').style.display === 'flex') { document.getElementById('stakeLivePrice').innerText = "Rp " + (window.vrscPriceRp || 2500).toLocaleString('id-ID'); window.loadRiwayatStakingUser(); window.hitungEstimasiStaking(); }
+        if(document.getElementById('modalStaking').style.display === 'flex') { 
+            document.getElementById('stakeLivePrice').innerText = "Rp " + (window.vrscPriceRp || 2500).toLocaleString('id-ID'); 
+            window.hitungEstimasiStaking();
+            if(window.renderPnlStakingLokal) window.renderPnlStakingLokal(); // Update angka saja, tanpa tarik database!
+        }
 		let eSpd = document.getElementById('displaySpeed'); if(eSpd) eSpd.innerText = formatKripto(mySpeed || 0);
         updateClaimTimer();
     }
@@ -4961,69 +4965,80 @@ if (!u.bank && !u.ewallet && !u.crypto) return;
             btn.innerHTML = "<i class='fa-solid fa-lock'></i> KUNCI SALDO 30 HARI"; btn.disabled = false;
         };
 
+        window.dataStakingLokal = []; // Memori penyimpanan sementara
+        
         window.loadRiwayatStakingUser = async () => {
             const listEl = document.getElementById('listStakingAktif');
-            if(document.getElementById('modalStaking').style.display === 'none') return; // Hemat RAM jika modal ditutup
+            if(document.getElementById('modalStaking').style.display === 'none') return; 
             
-            listEl.innerHTML = "<div style='text-align:center; color:#94a3b8; padding:10px;'><i class='fa-solid fa-spinner fa-spin'></i> Menghitung Nilai Live Pasar...</div>";
+            // Munculkan loading HANYA jika layarnya masih kosong
+            if(listEl.innerHTML.includes("Tidak ada kontrak") || listEl.innerHTML.trim() === "") {
+                listEl.innerHTML = "<div style='text-align:center; color:#94a3b8; padding:10px;'><i class='fa-solid fa-spinner fa-spin'></i> Menghitung Nilai Live Pasar...</div>";
+            }
+            
             try {
                 const snap = await getDocs(query(collection(db, "Data_Staking"), where("email", "==", myEmail), where("status", "==", "LOCKED")));
-                let html = "";
-                
-                snap.forEach(d => {
-                    let x = d.data();
-                    let tgl = new Date(x.waktu_cair_ms).toLocaleDateString('id-ID');
-
-                    // --- LOGIKA LIVE PROFIT/LOSS (PNL) ---
-                    let liveHarga = window.vrscPriceRp || 2500; // Tarik harga live saat ini
-                    let estimasiIdrLive = x.jumlah_vrsc_locked * liveHarga;
-                    let selisih = estimasiIdrLive - x.modal_idr;
-                    let persen = (selisih / x.modal_idr) * 100;
-
-                    let warnaProfit = "#94a3b8"; // Abu-abu (Netral/Sama)
-                    let iconProfit = "<i class='fa-solid fa-minus'></i>";
-                    let teksProfit = "Tetap";
-
-                    if (selisih > 0) {
-                        warnaProfit = "#2ecc71"; // Hijau (Untung)
-                        iconProfit = "<i class='fa-solid fa-arrow-trend-up'></i>";
-                        teksProfit = `+Rp ${Math.abs(selisih).toLocaleString('id-ID')} (${persen.toFixed(2)}%)`;
-                    } else if (selisih < 0) {
-                        warnaProfit = "#ef4444"; // Merah (Rugi)
-                        iconProfit = "<i class='fa-solid fa-arrow-trend-down'></i>";
-                        teksProfit = `-Rp ${Math.abs(selisih).toLocaleString('id-ID')} (${persen.toFixed(2)}%)`;
-                    }
-                    // ------------------------------------
-
-                    html += `
-                    <div style='background:#0f172a; padding:12px; border-radius:8px; border:1px solid ${warnaProfit}; margin-bottom:10px; box-shadow: 0 4px 6px rgba(0,0,0,0.3); transition:0.3s;'>
-                        <div style='display:flex; justify-content:space-between; margin-bottom:8px; border-bottom:1px dashed #334155; padding-bottom:8px;'>
-                            <div>
-                                <span style='font-size:0.65rem; color:#94a3b8;'>Aset Terkunci:</span><br/>
-                                <b style='color:#38bdf8; font-family:Orbitron;'>${x.jumlah_vrsc_locked.toFixed(6)} VRSC</b>
-                            </div>
-                            <div style='text-align:right;'>
-                                <span class='badge' style='background:rgba(245, 158, 11, 0.2); color:#fbbf24; border:1px solid #fbbf24; font-size:0.6rem;'>LOCKED 30 HARI</span><br/>
-                                <span style='font-size:0.65rem; color:#cbd5e1;'>Cair: ${tgl}</span>
-                            </div>
-                        </div>
-                        <div style='display:flex; justify-content:space-between; align-items:center;'>
-                            <div>
-                                <span style='font-size:0.65rem; color:#94a3b8;'>Modal Awal:</span><br/>
-                                <b style='color:#e2e8f0; font-size:0.8rem;'>Rp ${x.modal_idr.toLocaleString('id-ID')}</b>
-                            </div>
-                            <div style='text-align:right;'>
-                                <span style='font-size:0.65rem; color:${warnaProfit};'>Nilai Live Saat Ini:</span><br/>
-                                <b style='color:${warnaProfit}; font-family:Orbitron; font-size:0.95rem; text-shadow:0 0 10px ${warnaProfit}40;'>Rp ${Math.floor(estimasiIdrLive).toLocaleString('id-ID')}</b><br/>
-                                <span style='font-size:0.65rem; color:${warnaProfit}; font-weight:bold;'>${iconProfit} ${teksProfit}</span>
-                            </div>
-                        </div>
-                    </div>`;
-                });
-                listEl.innerHTML = html === "" ? "<div style='text-align:center; color:#94a3b8; padding:10px;'>Tidak ada kontrak aktif.</div>" : html;
+                window.dataStakingLokal = []; // Kosongkan memori lama
+                snap.forEach(d => window.dataStakingLokal.push({id: d.id, ...d.data()}));
+                window.renderPnlStakingLokal(); // Panggil fungsi render visual
             } catch(e) {
                 listEl.innerHTML = "<div style='text-align:center; color:#ef4444;'>Gagal memuat data live.</div>";
             }
+        };
+
+        window.renderPnlStakingLokal = () => {
+            const listEl = document.getElementById('listStakingAktif');
+            if(!listEl) return;
+            
+            let html = "";
+            window.dataStakingLokal.forEach(x => {
+                let tgl = new Date(x.waktu_cair_ms).toLocaleDateString('id-ID');
+                let liveHarga = window.vrscPriceRp || 2500; 
+                let estimasiIdrLive = x.jumlah_vrsc_locked * liveHarga;
+                let selisih = estimasiIdrLive - x.modal_idr;
+                let persen = (selisih / x.modal_idr) * 100;
+
+                let warnaProfit = "#94a3b8"; 
+                let iconProfit = "<i class='fa-solid fa-minus'></i>";
+                let teksProfit = "Tetap";
+
+                if (selisih > 0) {
+                    warnaProfit = "#2ecc71"; 
+                    iconProfit = "<i class='fa-solid fa-arrow-trend-up'></i>";
+                    teksProfit = `+Rp ${Math.abs(selisih).toLocaleString('id-ID')} (${persen.toFixed(2)}%)`;
+                } else if (selisih < 0) {
+                    warnaProfit = "#ef4444"; 
+                    iconProfit = "<i class='fa-solid fa-arrow-trend-down'></i>";
+                    teksProfit = `-Rp ${Math.abs(selisih).toLocaleString('id-ID')} (${persen.toFixed(2)}%)`;
+                }
+
+                html += `
+                <div style='background:#0f172a; padding:12px; border-radius:8px; border:1px solid ${warnaProfit}; margin-bottom:10px; box-shadow: 0 4px 6px rgba(0,0,0,0.3); transition:0.3s;'>
+                    <div style='display:flex; justify-content:space-between; margin-bottom:8px; border-bottom:1px dashed #334155; padding-bottom:8px;'>
+                        <div>
+                            <span style='font-size:0.65rem; color:#94a3b8;'>Aset Terkunci:</span><br/>
+                            <b style='color:#38bdf8; font-family:Orbitron;'>${x.jumlah_vrsc_locked.toFixed(6)} VRSC</b>
+                        </div>
+                        <div style='text-align:right;'>
+                            <span class='badge' style='background:rgba(245, 158, 11, 0.2); color:#fbbf24; border:1px solid #fbbf24; font-size:0.6rem;'>LOCKED 30 HARI</span><br/>
+                            <span style='font-size:0.65rem; color:#cbd5e1;'>Cair: ${tgl}</span>
+                        </div>
+                    </div>
+                    <div style='display:flex; justify-content:space-between; align-items:center;'>
+                        <div>
+                            <span style='font-size:0.65rem; color:#94a3b8;'>Modal Awal:</span><br/>
+                            <b style='color:#e2e8f0; font-size:0.8rem;'>Rp ${x.modal_idr.toLocaleString('id-ID')}</b>
+                        </div>
+                        <div style='text-align:right;'>
+                            <span style='font-size:0.65rem; color:${warnaProfit};'>Nilai Live Saat Ini:</span><br/>
+                            <b style='color:${warnaProfit}; font-family:Orbitron; font-size:0.95rem; text-shadow:0 0 10px ${warnaProfit}40;'>Rp ${Math.floor(estimasiIdrLive).toLocaleString('id-ID')}</b><br/>
+                            <span style='font-size:0.65rem; color:${warnaProfit}; font-weight:bold;'>${iconProfit} ${teksProfit}</span>
+                        </div>
+                    </div>
+                </div>`;
+            });
+            
+            listEl.innerHTML = html === "" ? "<div style='text-align:center; color:#94a3b8; padding:10px;'>Tidak ada kontrak aktif.</div>" : html;
         };
 		
         window.fetchPrice();
