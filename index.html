@@ -4280,66 +4280,75 @@ if (!u.bank && !u.ewallet && !u.crypto) return;
         }
 
         // --- START: MODE MAINTENANCE KHUSUS IT (WEB PUBLIK LOGIC) ---
-        let currentClientIP = "";
-        fetch('https://api.ipify.org?format=json').then(res => res.json()).then(data => { currentClientIP = data.ip; }).catch(e => console.log("Gagal get IP"));
+        async function jalankanRadarMaintenance() {
+            let currentClientIP = "";
+            try {
+                // SITEM MENUNGGU IP ADDRESS DIDAPATKAN TERLEBIH DAHULU
+                const res = await fetch('https://api.ipify.org?format=json');
+                const data = await res.json();
+                currentClientIP = data.ip;
+            } catch(e) { console.log("Gagal get IP"); }
 
-        try {
-            onSnapshot(query(collection(db, "System_Config"), where("tipe", "==", "APP_STATUS")), (snap) => {
-                const overlay = document.getElementById('status-overlay');
-                const mainApp = document.getElementById('mainAppContainer');
-                const splash = document.getElementById('splash-screen');
-                
-                if(!snap.empty) {
-                    let d = snap.docs[0].data();
-                    window.ANTI_HACK_ACTIVE = d.is_antihack === true;
+            try {
+                // SETELAH IP DAPAT, BARU FIREBASE BOLEH MENGECEK STATUS GEMBOK
+                onSnapshot(query(collection(db, "System_Config"), where("tipe", "==", "APP_STATUS")), (snap) => {
+                    const overlay = document.getElementById('status-overlay');
+                    const mainApp = document.getElementById('mainAppContainer');
+                    const splash = document.getElementById('splash-screen');
                     
-                    let isTimeExpired = false;
-                    if(d.target_launch) {
-                        let targetTime = new Date(d.target_launch).getTime();
-                        if(!isNaN(targetTime) && Date.now() >= targetTime) isTimeExpired = true;
-                    }
-
-                    // Logika Deteksi IP Peretas (Bypass IT)
-                    let isBypassIT = false;
-                    if (d.ip_it_bypass && currentClientIP !== "" && currentClientIP === d.ip_it_bypass) {
-                        isBypassIT = true;
-                        console.log("🔓 AKSES BYPASS IT AKTIF! Layar maintenance diabaikan.");
-                    }
-
-                    if((d.is_maintenance || d.is_countdown) && !isTimeExpired && !isBypassIT) {
-                        if(splash) splash.classList.add('hide-splash');
-                        if(mainApp) mainApp.style.display = 'none';
-                        if(overlay) overlay.style.display = 'flex';
+                    if(!snap.empty) {
+                        let d = snap.docs[0].data();
+                        window.ANTI_HACK_ACTIVE = d.is_antihack === true;
                         
-                        document.getElementById('anim-countdown').style.display = 'block';
-                        
-                        if(d.is_maintenance) {
-                            document.getElementById('anim-maintenance').style.display = 'block';
-                            document.querySelector('#anim-countdown i').style.display = 'none';
-                            document.querySelector('#anim-countdown h2').style.display = 'none';
-                            document.querySelector('#anim-countdown p').innerText = "Menghitung estimasi waktu perbaikan selesai...";
-                        } else {
-                            document.getElementById('anim-maintenance').style.display = 'none';
-                            document.querySelector('#anim-countdown i').style.display = 'inline-block';
-                            document.querySelector('#anim-countdown h2').style.display = 'block';
-                            document.querySelector('#anim-countdown p').innerText = "Menghitung mundur peluncuran Charity Integration System";
+                        let isTimeExpired = false;
+                        if(d.target_launch) {
+                            let targetTime = new Date(d.target_launch).getTime();
+                            if(!isNaN(targetTime) && Date.now() >= targetTime) isTimeExpired = true;
                         }
-                        
-                        if(d.target_launch) startLaunchTimer(d.target_launch);
-                    } 
-                    else {
-                        if(overlay) overlay.style.display = 'none';
-                        if(mainApp) mainApp.style.display = 'flex';
-                        if(launchTimerInt) clearInterval(launchTimerInt);
-                        
-                        // Notifikasi Khusus Tim IT jika berhasil masuk di tengah Maintenance
-                        if (isBypassIT && (d.is_maintenance || d.is_countdown)) {
-                            setTimeout(() => { window.showToast("🛠️ MODE DEVELOPER: Anda menembus layar Maintenance!"); }, 3500);
+
+                        // Logika Deteksi IP Peretas (Bypass IT)
+                        let isBypassIT = false;
+                        if (d.ip_it_bypass && currentClientIP !== "" && currentClientIP === d.ip_it_bypass) {
+                            isBypassIT = true;
+                            console.log("🔓 AKSES BYPASS IT AKTIF! Layar maintenance diabaikan.");
+                        }
+
+                        if((d.is_maintenance || d.is_countdown) && !isTimeExpired && !isBypassIT) {
+                            if(splash) splash.classList.add('hide-splash');
+                            if(mainApp) mainApp.style.display = 'none';
+                            if(overlay) overlay.style.display = 'flex';
+                            
+                            document.getElementById('anim-countdown').style.display = 'block';
+                            
+                            if(d.is_maintenance) {
+                                document.getElementById('anim-maintenance').style.display = 'block';
+                                document.querySelector('#anim-countdown i').style.display = 'none';
+                                document.querySelector('#anim-countdown h2').style.display = 'none';
+                                document.querySelector('#anim-countdown p').innerText = "Menghitung estimasi waktu perbaikan selesai...";
+                            } else {
+                                document.getElementById('anim-maintenance').style.display = 'none';
+                                document.querySelector('#anim-countdown i').style.display = 'inline-block';
+                                document.querySelector('#anim-countdown h2').style.display = 'block';
+                                document.querySelector('#anim-countdown p').innerText = "Menghitung mundur peluncuran Charity Integration System";
+                            }
+                            
+                            if(d.target_launch) startLaunchTimer(d.target_launch);
+                        } 
+                        else {
+                            if(overlay) overlay.style.display = 'none';
+                            if(mainApp) mainApp.style.display = 'flex';
+                            if(launchTimerInt) clearInterval(launchTimerInt);
+                            
+                            // Notifikasi Khusus Tim IT jika berhasil masuk di tengah Maintenance
+                            if (isBypassIT && (d.is_maintenance || d.is_countdown)) {
+                                setTimeout(() => { window.showToast("🛠️ MODE DEVELOPER: Anda menembus layar Maintenance!"); }, 3500);
+                            }
                         }
                     }
-                }
-            });
-        } catch(e) {}
+                });
+            } catch(e) {}
+        }
+        jalankanRadarMaintenance();
         // --- END ---
 
         function checkDisplayMode() {
