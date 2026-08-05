@@ -1232,6 +1232,20 @@
         </div>
       </div>
 
+		<!-- --- START: MODAL RIWAYAT PPOB --- -->
+      <div class='modal-overlay' id='modalRiwayatPPOB' style='z-index: 10005;'>
+        <div class='modal-card' style='max-width: 500px; padding: 20px;'>
+          <div style='display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;'>
+            <h3 style='color:#38bdf8; margin:0;'><i class='fa-solid fa-list-check'></i> Riwayat PPOB Saya</h3>
+            <i class='fa-solid fa-xmark' onclick='document.getElementById("modalRiwayatPPOB").style.display="none"' style='cursor:pointer; color:#ef4444; font-size:1.2rem;'></i>
+          </div>
+          <div style='max-height: 400px; overflow-y: auto; padding-right: 5px;' id='listRiwayatPpob'>
+            <div style='text-align:center; color:#94a3b8;'><i class='fa-solid fa-spinner fa-spin'></i> Memuat data...</div>
+          </div>
+        </div>
+      </div>
+      <!-- --- END --- -->
+	
 		// --- START: FORMULIR MODAL PPOB ---
       <div class='modal-overlay' id='modalPPOB'>
         <div class='modal-card' style='max-width: 450px;'>
@@ -1272,6 +1286,7 @@
 
           <button class='btn-cyan' id='btnProsesPpob' onclick='window.prosesPpob()' style='background:#2ecc71; color:#fff;'><i class='fa-solid fa-shopping-cart'></i> PROSES PEMBELIAN</button>
           <div class='sys-msg' id='msgPpob'></div>
+		  <button class='btn-cyan' onclick='window.openRiwayatPpob()' style='background:transparent; border:1px solid #38bdf8; color:#38bdf8; margin-top:10px;'><i class='fa-solid fa-clock-rotate-left'></i> Cek Riwayat & Komplain PPOB</button>
         </div>
       </div>
       // --- END ---
@@ -2850,6 +2865,70 @@
             msg('msgPpob', "Gagal memproses transaksi.", "error");
         }
         btn.disabled = false; btn.innerHTML = "<i class='fa-solid fa-shopping-cart'></i> PROSES PEMBELIAN";
+    };
+    // --- END ---
+
+		// --- START: LOGIKA RIWAYAT PPOB PUBLIK ---
+    window.openRiwayatPpob = async () => {
+        window.closeWalletModal('modalPPOB'); // Tutup modal beli
+        document.getElementById('modalRiwayatPPOB').style.display = 'flex';
+        const listEl = document.getElementById('listRiwayatPpob');
+        listEl.innerHTML = "<div style='text-align:center; color:#94a3b8;'><i class='fa-solid fa-spinner fa-spin'></i> Memuat data...</div>";
+        
+        try {
+            const snap = await getDocs(query(collection(db, "Transaksi_PPOB"), where("email", "==", myEmail)));
+            let dataArr = [];
+            snap.forEach(d => dataArr.push({ id: d.id, ...d.data() }));
+            dataArr.sort((a,b) => (b.waktu?.seconds || 0) - (a.waktu?.seconds || 0)); // Urutkan terbaru di atas
+            
+            let html = "";
+            dataArr.forEach(x => {
+                let wkt = x.waktu ? new Date(x.waktu.seconds * 1000).toLocaleString('id-ID') : '-';
+                let sttColor = x.status === "SUKSES" ? "#2ecc71" : (x.status === "PENDING" ? "#f59e0b" : "#ef4444");
+                let snText = x.sn || "Menunggu Diproses Pusat...";
+                
+                // Munculkan tombol komplain jika belum ditolak
+                let btnKomplain = "";
+                if(x.status === "PENDING" || x.status === "SUKSES") {
+                    btnKomplain = `<button onclick='window.komplainPPOB("${x.id}", "${x.jenis}", "${x.nominal}", "${x.target}")' style='background:rgba(239, 68, 68, 0.1); border:1px solid #ef4444; color:#ef4444; padding:5px 10px; border-radius:5px; font-size:0.7rem; cursor:pointer; margin-top:10px;'><i class='fa-solid fa-headset'></i> Lapor Kendala Pesanan</button>`;
+                }
+
+                html += `
+                <div style='background:#0b0f19; border:1px solid #334155; padding:15px; border-radius:8px; margin-bottom:10px;'>
+                    <div style='display:flex; justify-content:space-between; margin-bottom:5px;'>
+                        <b style='color:#38bdf8;'>${x.jenis} - ${x.nominal.toLocaleString('id-ID')}</b>
+                        <span style='font-size:0.7rem; color:#94a3b8;'>${wkt}</span>
+                    </div>
+                    <div style='font-size:0.8rem; color:#cbd5e1; margin-bottom:5px;'>Tujuan: <b style='color:#fbbf24;'>${x.target}</b></div>
+                    <div style='font-size:0.8rem; margin-bottom:5px;'>Status: <b style='color:${sttColor};'>${x.status}</b></div>
+                    <div style='background:rgba(255,255,255,0.05); padding:8px; border-radius:5px; font-size:0.75rem; color:#e2e8f0; line-height:1.4;'>SN/Token:<br/><b style='color:#2ecc71; font-family:monospace; font-size:0.85rem;'>${snText}</b></div>
+                    ${btnKomplain}
+                </div>`;
+            });
+            
+            listEl.innerHTML = html === "" ? "<div style='text-align:center; color:#94a3b8;'>Belum ada transaksi PPOB.</div>" : html;
+        } catch(e) {
+            listEl.innerHTML = "<div style='text-align:center; color:#ef4444;'>Gagal memuat riwayat.</div>";
+        }
+    };
+
+    window.komplainPPOB = async (id, jenis, nominal, target) => {
+        let keluhan = prompt("Jelaskan kendala transaksi Anda:\n(Contoh: Pulsa belum masuk / Token salah)");
+        if(!keluhan || keluhan.trim() === "") return;
+        
+        try {
+            let formatPesan = `[KOMPLAIN PPOB - ID: ${id}]\nJenis: ${jenis} ${nominal}\nTujuan: ${target}\nKeluhan: ${keluhan}`;
+            await addDoc(collection(db, "Pesan_Bantuan"), {
+                email: myEmail,
+                username: myUsername,
+                pesan: formatPesan,
+                status: "OPEN",
+                created_at: serverTimestamp()
+            });
+            window.showToast("Keluhan berhasil dikirim ke Admin Pusat!");
+        } catch(e) {
+            alert("Gagal mengirim komplain. Cek koneksi Anda.");
+        }
     };
     // --- END ---
 		  
