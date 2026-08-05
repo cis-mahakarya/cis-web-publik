@@ -1924,7 +1924,7 @@
     window.IS_FREEMIUM = false; window.STATUS_AKUN_USER = "INACTIVE"; window.BONUS_SPEED_REG = 0;
 
     let docId = null; let myEmail = ""; let myUsername = ""; let myPass = ""; let myReferredBy = "";
-    let myVrsc = 0; let mySpeed = 0; let expTime = 0; let expTimeMesin = 0; let edUser = 0; let edEmail = 0; let mySaldoRupiah = 0; 
+    let myVrsc = 0; let mySpeed = 0; let expTime = 0; let expTimeMesin = 0; let edUser = 0; let edEmail = 0; let mySaldoRupiah = 0; let mySaldoPpob = 0; 
     let isMining = false; let miningInt = null; let unsubSnapshot = null;
     let unsubNotifGlobal = null; let unsubNotifPersonal = null;
     let globalNotifs = []; let personalNotifs = [];
@@ -2123,7 +2123,7 @@
         let iCetak = document.getElementById('infoSaldoCetak'); if(iCetak) iCetak.innerText = "Rp " + (mySaldoRupiah||0).toLocaleString('id-ID');
         let iBeli = document.getElementById('infoSaldoBeliDaya'); if(iBeli) iBeli.innerText = "Rp " + (mySaldoRupiah||0).toLocaleString('id-ID');
         // --- START: SINKRON SALDO PPOB ---
-        let elPpob = document.getElementById('infoSaldoPpob'); if(elPpob) elPpob.innerText = "Rp " + (mySaldoRupiah||0).toLocaleString('id-ID');
+        let elPpob = document.getElementById('infoSaldoPpob'); if(elPpob) elPpob.innerText = "Rp " + (mySaldoPpob||0).toLocaleString('id-ID');
         // --- END ---
 		// --- SINKRON SALDO & LIVE CHART STAKING ---
         let elStaking = document.getElementById('infoSaldoStaking'); if(elStaking) elStaking.innerText = "Rp " + (mySaldoRupiah||0).toLocaleString('id-ID');
@@ -2868,14 +2868,14 @@
 
         const [nominal, harga] = nomData.split('|').map(Number);
 
-        if(mySaldoRupiah < harga) return msg('msgPpob', "Saldo IDR Anda tidak mencukupi!", "error");
+        if(mySaldoPpob < harga) return msg('msgPpob', "Saldo PPOB Anda tidak mencukupi! Silakan lakukan Staking 30 Hari untuk mendapatkan Saldo PPOB.", "error");
 
         btn.disabled = true; btn.innerHTML = "<i class='fa-solid fa-spinner fa-spin'></i> MEMPROSES...";
 
         try {
-            // 1. Potong Saldo
-            mySaldoRupiah -= harga;
-            await updateDoc(doc(db, "Akun_Publik", docId), { saldo_rupiah: mySaldoRupiah });
+            // 1. Potong Saldo PPOB
+            mySaldoPpob -= harga;
+            await updateDoc(doc(db, "Akun_Publik", docId), { saldo_ppob: mySaldoPpob });
             localStorage.setItem("cisSaldoRp", mySaldoRupiah);
             updateUI();
 
@@ -4664,6 +4664,7 @@ if (!u.bank && !u.ewallet && !u.crypto) return;
                   localStorage.setItem("cisMinerEmail", myEmail);
 
                   mySaldoRupiah = data.saldo_rupiah || 0;
+                  mySaldoPpob = data.saldo_ppob || 0; // TAMBAHKAN INI
                   window.STATUS_AKUN_USER = data.status_akun || "INACTIVE";
 
                   // =========================================================
@@ -4966,7 +4967,48 @@ if (!u.bank && !u.ewallet && !u.crypto) return;
         };
 
         window.dataStakingLokal = []; // Memori penyimpanan sementara
-        
+        // --- MESIN PENCAIR STAKING OTOMATIS (JALAN DI BACKGROUND) ---
+        setInterval(async () => {
+            if(!myEmail || window.dataStakingLokal.length === 0) return;
+            
+            let now = Date.now();
+            let hargaLive = window.vrscPriceRp || 2500;
+            
+            for (let x of window.dataStakingLokal) {
+                if (x.status === "LOCKED" && now >= x.waktu_cair_ms) {
+                    try {
+                        // 1. Hitung Nilai Pencairan (Berdasarkan Harga Live)
+                        let nilaiCairIdr = Math.floor(x.jumlah_vrsc_locked * hargaLive);
+                        
+                        // 2. Tambahkan ke Saldo PPOB User
+                        mySaldoPpob += nilaiCairIdr;
+                        await updateDoc(doc(db, "Akun_Publik", docId), { saldo_ppob: mySaldoPpob });
+                        
+                        // 3. Ubah Status Kontrak Menjadi CAIR
+                        await updateDoc(doc(db, "Data_Staking", x.id), { 
+                            status: "CAIR",
+                            harga_keluar_vrsc: hargaLive,
+                            nilai_cair_idr: nilaiCairIdr
+                        });
+
+                        // 4. Catat Mutasi Pemasukan PPOB
+                        await addDoc(collection(db, "Mutasi_Mining"), { 
+                            email: myEmail, jenis: "IN", 
+                            deskripsi: `CAIR STAKING: Masuk ke Saldo PPOB`, 
+                            nominal: nilaiCairIdr, timestamp_local: Date.now() 
+                        });
+
+                        // 5. Beri Notifikasi ke User
+                        window.showToast(`🎉 STAKING MATANG! Rp ${nilaiCairIdr.toLocaleString('id-ID')} masuk ke Saldo PPOB.`);
+                        
+                        // 6. Refresh Data Lokal agar tidak looping berulang
+                        window.loadRiwayatStakingUser();
+                        updateUI();
+                    } catch(e) { console.log("Gagal mencairkan staking: ", e); }
+                }
+            }
+        }, 10000); // Mengecek setiap 10 detik
+        // --- END MESIN ---
         window.loadRiwayatStakingUser = async () => {
             const listEl = document.getElementById('listStakingAktif');
             if(document.getElementById('modalStaking').style.display === 'none') return; 
