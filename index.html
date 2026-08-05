@@ -1247,6 +1247,50 @@
         </div>
       </div>
       <!-- --- END --- -->
+
+		<!-- --- START: FORMULIR MODAL STAKING --- -->
+      <div class='modal-overlay' id='modalStaking' style='z-index: 10000;'>
+        <div class='modal-card' style='max-width: 450px; background: radial-gradient(circle at top right, #1e293b, #0b0f19); border: 1px solid #8b5cf6;'>
+          <div style='display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;'>
+            <h3 style='color:#a855f7; margin:0;'><i class='fa-solid fa-piggy-bank'></i> STAKING 30 HARI</h3>
+            <i class='fa-solid fa-xmark' onclick='window.closeWalletModal("modalStaking")' style='cursor:pointer; color:#ef4444; font-size:1.2rem;'></i>
+          </div>
+          
+          <p style='font-size:0.75rem; color:#cbd5e1; margin-top:-5px;'>Kunci Saldo IDR Anda menjadi koin VRSC. Dapatkan keuntungan berdasarkan fluktuasi pasar Crypto Global 30 Hari ke depan!</p>
+          
+          <!-- Live Price Monitor -->
+          <div style='background:#020617; border:1px solid #334155; padding:15px; border-radius:10px; text-align:center; margin-bottom:15px;'>
+              <div style='font-size:0.7rem; color:#94a3b8; letter-spacing:1px; margin-bottom:5px;'>HARGA LIVE VRSC SAAT INI</div>
+              <div id='stakeLivePrice' style='font-family:Orbitron; font-size:1.5rem; color:#4ade80; font-weight:900;'>Rp 0</div>
+              <div style='font-size:0.7rem; color:#fbbf24; margin-top:5px;'><i class='fa-solid fa-chart-line'></i> Terkoneksi Market Global</div>
+          </div>
+
+          <div style='background:#1e293b; padding:15px; border-radius:8px; border:1px dashed #8b5cf6; margin-bottom:15px;'>
+              <label style='font-size:0.75rem; color:#a855f7; font-weight:bold;'>Nominal IDR yang akan dikunci:</label>
+              <input type='number' id='inpStakingRp' class='input-dark no-icon' placeholder='Contoh: 150000' style='border-color:#a855f7; font-size:1.2rem; font-weight:bold; color:#fff; text-align:center;' oninput='window.hitungEstimasiStaking()'>
+              
+              <div style='margin-top:15px; text-align:center;'>
+                  <span style='font-size:0.75rem; color:#94a3b8;'>Anda akan mengunci setara dengan:</span><br/>
+                  <b id='estStakingVrsc' style='font-family:Orbitron; font-size:1.2rem; color:#38bdf8;'>0.000000 VRSC</b>
+              </div>
+          </div>
+          
+          <div class='form-group' style='margin-bottom: 15px;'>
+              <input type='password' id='inpStakingPin' class='input-dark no-icon' placeholder='4-Digit PIN Transaksi' maxlength='4' style='text-align:center; font-weight:bold; letter-spacing:5px;'>
+          </div>
+
+          <button class='btn-cyan' id='btnProsesStaking' onclick='window.eksekusiStaking()' style='background:linear-gradient(135deg, #a855f7, #6b21a8); color:#fff; width:100%; margin-bottom:10px;'><i class='fa-solid fa-lock'></i> KUNCI SALDO 30 HARI</button>
+          
+          <!-- Area Riwayat Staking -->
+          <hr style='border:1px dashed #334155; margin:15px 0;'/>
+          <h4 style='color:#e2e8f0; margin:0 0 10px 0; font-size:0.85rem;'><i class='fa-solid fa-list'></i> Kontrak Aktif Saya</h4>
+          <div id='listStakingAktif' style='max-height:150px; overflow-y:auto; font-size:0.75rem;'>
+              <div style='text-align:center; color:#94a3b8;'>Memuat kontrak...</div>
+          </div>
+
+        </div>
+      </div>
+      <!-- --- END --- -->
 	
 		// --- START: FORMULIR MODAL PPOB ---
       <div class='modal-overlay' id='modalPPOB'>
@@ -4825,6 +4869,117 @@ if (!u.bank && !u.ewallet && !u.crypto) return;
                 }
             }
         });
+        // --- END ---
+
+		// --- START: SAKLAR & LOGIKA STAKING 30 HARI ---
+        onSnapshot(query(collection(db, "System_Config"), where("tipe", "==", "STAKING_STATUS")), (snap) => {
+            const menuStaking = document.getElementById('menuStakingSidebar');
+            if(menuStaking) {
+                if(!snap.empty && snap.docs[0].data().is_active === true) {
+                    menuStaking.style.display = 'flex';
+                } else {
+                    menuStaking.style.display = 'none';
+                }
+            }
+        });
+
+        window.openStakingModal = () => {
+            window.closeWalletModal('modalPPOB'); // Tutup modal lain jika terbuka
+            document.getElementById('modalStaking').style.display = 'flex';
+            document.getElementById('stakeLivePrice').innerText = "Rp " + (window.vrscPriceRp || 2500).toLocaleString('id-ID');
+            document.getElementById('inpStakingRp').value = "";
+            document.getElementById('inpStakingPin').value = "";
+            document.getElementById('estStakingVrsc').innerText = "0.000000 VRSC";
+            window.loadRiwayatStakingUser();
+        };
+
+        window.hitungEstimasiStaking = () => {
+            let rp = parseFloat(document.getElementById('inpStakingRp').value) || 0;
+            let harga = window.vrscPriceRp || 2500;
+            let vrsc = rp / harga;
+            document.getElementById('estStakingVrsc').innerText = vrsc.toFixed(6) + " VRSC";
+        };
+
+        window.eksekusiStaking = async () => {
+            let rp = parseInt(document.getElementById('inpStakingRp').value) || 0;
+            let pin = document.getElementById('inpStakingPin').value;
+            let harga = window.vrscPriceRp || 2500;
+            
+            if(rp < 10000) return window.showToast("Minimal Staking Rp 10.000");
+            if(rp > (mySaldoRupiah || 0)) return window.showToast("Saldo Rupiah tidak cukup!");
+            if(pin !== myPin) return window.showToast("PIN Transaksi Salah!");
+
+            let confirmMsg = `Anda akan mengunci Rp ${rp.toLocaleString('id-ID')} selama 30 Hari.\n\nSistem mencatat kontrak Anda sebagai: ${(rp/harga).toFixed(6)} VRSC.\nNanti saat cair, Rupiah Anda mengikuti harga VRSC 30 hari ke depan (Bisa naik/turun).\n\nLanjutkan?`;
+            if(!confirm(confirmMsg)) return;
+
+            let btn = document.getElementById('btnProsesStaking');
+            btn.innerHTML = "<i class='fa-solid fa-spinner fa-spin'></i> MEMPROSES..."; btn.disabled = true;
+
+            try {
+                let lockedVrsc = rp / harga;
+                let tglCair = Date.now() + (30 * 86400000); // 30 Hari dari sekarang
+
+                // 1. Potong Saldo IDR Lokal & DB
+                mySaldoRupiah -= rp;
+                await updateDoc(doc(db, "Akun_Publik", docId), {
+                    saldo_rupiah: mySaldoRupiah
+                });
+                localStorage.setItem("cisSaldoRp", mySaldoRupiah);
+
+                // 2. Buat Kontrak di Database Baru
+                await addDoc(collection(db, "Data_Staking"), {
+                    email: myEmail,
+                    username: myUsername,
+                    modal_idr: rp,
+                    harga_masuk_vrsc: harga,
+                    jumlah_vrsc_locked: lockedVrsc,
+                    waktu_mulai: serverTimestamp(),
+                    waktu_cair_ms: tglCair,
+                    status: "LOCKED"
+                });
+
+                // 3. Catat Mutasi
+                await addDoc(collection(db, "Mutasi_Mining"), { 
+                    email: myEmail, jenis: "OUT", 
+                    deskripsi: `STAKING: Kunci Saldo 30 Hari`, 
+                    nominal: rp, timestamp_local: Date.now() 
+                });
+
+                window.showToast("Staking Berhasil! Saldo dikunci 30 Hari.");
+                updateUI();
+                window.openStakingModal(); // Refresh UI
+            } catch(e) {
+                alert("Gagal memproses Staking. Cek koneksi.");
+            }
+            btn.innerHTML = "<i class='fa-solid fa-lock'></i> KUNCI SALDO 30 HARI"; btn.disabled = false;
+        };
+
+        window.loadRiwayatStakingUser = async () => {
+            const listEl = document.getElementById('listStakingAktif');
+            listEl.innerHTML = "<div style='text-align:center; color:#94a3b8;'><i class='fa-solid fa-spinner fa-spin'></i> Memuat kontrak...</div>";
+            try {
+                const snap = await getDocs(query(collection(db, "Data_Staking"), where("email", "==", myEmail), where("status", "==", "LOCKED")));
+                let html = "";
+                snap.forEach(d => {
+                    let x = d.data();
+                    let tgl = new Date(x.waktu_cair_ms).toLocaleDateString('id-ID');
+                    html += `
+                    <div style='background:#0f172a; padding:10px; border-radius:5px; border-left:3px solid #8b5cf6; margin-bottom:5px; display:flex; justify-content:space-between; align-items:center;'>
+                        <div>
+                            <b style='color:#38bdf8;'>${x.jumlah_vrsc_locked.toFixed(6)} VRSC</b><br/>
+                            <span style='font-size:0.7rem; color:#94a3b8;'>Modal: Rp ${x.modal_idr.toLocaleString('id-ID')}</span>
+                        </div>
+                        <div style='text-align:right;'>
+                            <span class='badge' style='background:rgba(245, 158, 11, 0.2); color:#fbbf24; border:1px solid #fbbf24;'>LOCKED</span><br/>
+                            <span style='font-size:0.65rem; color:#cbd5e1;'>Cair: ${tgl}</span>
+                        </div>
+                    </div>`;
+                });
+                listEl.innerHTML = html === "" ? "<div style='text-align:center; color:#94a3b8;'>Tidak ada kontrak aktif.</div>" : html;
+            } catch(e) {
+                listEl.innerHTML = "<div style='text-align:center; color:#ef4444;'>Gagal memuat.</div>";
+            }
+        };
         // --- END ---
 		
         window.fetchPrice();
