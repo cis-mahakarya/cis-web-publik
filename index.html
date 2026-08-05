@@ -747,7 +747,10 @@
 
           <div class='grid-menu'>
             <div class='menu-box' onclick='window.openScreen("screen-topup")' style='border-color:#00f2fe;'><i class='fa-solid fa-shield-cat' style='color:#00f2fe;'></i><span data-i18n='menuTopup'>Account Activation</span></div>
-            <div class='menu-box' onclick='window.openWalletModal("modalBeliDaya")' style='border-color:#2ecc71;'><i class='fa-solid fa-bolt' style='color:#2ecc71;'></i><span data-i18n='menuUpgrade'>Upgrade Speed</span></div>
+            // --- START: MENU PPOB KANAN ATAS ---
+            <div class='menu-box' id='menuPpobPublic' onclick='window.openWalletModal("modalPPOB")' style='border-color:#2ecc71; display:none;'><i class='fa-solid fa-mobile-screen-button' style='color:#2ecc71;'></i><span>Pulsa & Listrik</span></div>
+            // --- END ---
+			<div class='menu-box' onclick='window.openWalletModal("modalBeliDaya")' style='border-color:#2ecc71;'><i class='fa-solid fa-bolt' style='color:#2ecc71;'></i><span data-i18n='menuUpgrade'>Upgrade Speed</span></div>
             <div class='menu-box' onclick='window.openScreen("screen-wallet")' style='border-color:#f39c12;'><i class='fa-solid fa-wallet' style='color:#f39c12;'></i><span data-i18n='menuWallet'>Wallet &amp; Miner</span></div>
             <div class='menu-box' onclick='window.openScreen("screen-p2p")' style='border-color:#e84393;'><i class='fa-solid fa-cart-shopping' style='color:#e84393;'></i><span data-i18n='menuP2P'>Beli Token P2P</span></div>
             <div class='menu-box' onclick='window.openLeaderboard()' style='border-color:#f1c40f;'><i class='fa-solid fa-trophy' style='color:#f1c40f;'></i><span data-i18n='menuTopSultan'>Top 10 Sultan</span></div>
@@ -1229,6 +1232,50 @@
         </div>
       </div>
 
+		// --- START: FORMULIR MODAL PPOB ---
+      <div class='modal-overlay' id='modalPPOB'>
+        <div class='modal-card' style='max-width: 450px;'>
+          <button class='btn-close-modal' onclick='window.closeWalletModal("modalPPOB")' style='position:absolute; right:15px; top:15px; background:none; border:none; color:#ef4444; font-size:1.2rem; cursor:pointer;'><i class='fa-solid fa-xmark'></i></button>
+          <h3 style='color:#2ecc71; margin:0 0 15px 0;'><i class='fa-solid fa-bolt'></i> LAYANAN PPOB</h3>
+          <p style='font-size:0.75rem; color:#94a3b8; margin-top:0;'>Beli Pulsa & Token Listrik instan dengan Saldo Rupiah Anda.</p>
+          
+          <div style='background:rgba(46, 204, 113, 0.1); border:1px dashed #2ecc71; padding:10px; border-radius:8px; margin-bottom:15px; text-align:center;'>
+              <span style='font-size:0.75rem; color:#2ecc71; font-weight:bold;'>SALDO TERSEDIA</span><br/>
+              <span id='infoSaldoPpob' style='font-family:Orbitron; font-size:1.3rem; font-weight:900; color:#fff;'>Rp 0</span>
+          </div>
+
+          <div class='input-group'>
+              <select class='input-dark no-icon' id='ppobJenis' onchange='window.ubahFormPpob()'>
+                  <option value='PULSA'>Pulsa Reguler (All Operator)</option>
+                  <option value='PLN'>Token Listrik (PLN Prabayar)</option>
+              </select>
+          </div>
+
+          <div class='input-group'>
+              <input class='input-dark no-icon' id='ppobTarget' type='number' placeholder='Nomor HP Tujuan...' style='border-color:#38bdf8;'/>
+          </div>
+
+          <div class='input-group'>
+              <select class='input-dark no-icon' id='ppobNominal'>
+                  <option value=''>-- Pilih Nominal Pulsa --</option>
+                  <option value='10000|12000'>Pulsa 10.000 (Harga: Rp 12.000)</option>
+                  <option value='20000|22000'>Pulsa 20.000 (Harga: Rp 22.000)</option>
+                  <option value='50000|52000'>Pulsa 50.000 (Harga: Rp 52.000)</option>
+                  <option value='100000|102000'>Pulsa 100.000 (Harga: Rp 102.000)</option>
+              </select>
+          </div>
+
+          <div class='input-group' style='margin-bottom:15px;'>
+              <input class='input-dark no-icon' id='ppobPin' placeholder='4-Digit PIN Transaksi' style='border-color:#f1c40f;' type='password' maxlength='4' inputmode='numeric'/>
+              <i class='fa-solid fa-eye right-icon' onclick='window.togglePass("ppobPin", this)'></i>
+          </div>
+
+          <button class='btn-cyan' id='btnProsesPpob' onclick='window.prosesPpob()' style='background:#2ecc71; color:#fff;'><i class='fa-solid fa-shopping-cart'></i> PROSES PEMBELIAN</button>
+          <div class='sys-msg' id='msgPpob'></div>
+        </div>
+      </div>
+      // --- END ---
+	
       <div class='modal-overlay' id='modalWithdraw'>
         <div class='modal-card'>
           <button class='btn-close-modal' onclick='window.closeWalletModal("modalWithdraw")' style='position:absolute; right:15px; top:15px; background:none; border:none; color:#ef4444; font-size:1.2rem; cursor:pointer;'><i class='fa-solid fa-xmark'></i></button>
@@ -2010,7 +2057,10 @@
         let eTukar = document.getElementById('txtVrscBelumTukar'); if(eTukar) eTukar.innerText = "Rp " + Math.floor((myVrsc||0) * vrscPriceRp).toLocaleString('id-ID');
         let iCetak = document.getElementById('infoSaldoCetak'); if(iCetak) iCetak.innerText = "Rp " + (mySaldoRupiah||0).toLocaleString('id-ID');
         let iBeli = document.getElementById('infoSaldoBeliDaya'); if(iBeli) iBeli.innerText = "Rp " + (mySaldoRupiah||0).toLocaleString('id-ID');
-        let eSpd = document.getElementById('displaySpeed'); if(eSpd) eSpd.innerText = formatKripto(mySpeed || 0);
+        // --- START: SINKRON SALDO PPOB ---
+        let elPpob = document.getElementById('infoSaldoPpob'); if(elPpob) elPpob.innerText = "Rp " + (mySaldoRupiah||0).toLocaleString('id-ID');
+        // --- END ---
+		let eSpd = document.getElementById('displaySpeed'); if(eSpd) eSpd.innerText = formatKripto(mySpeed || 0);
         updateClaimTimer();
     }
 
@@ -2705,6 +2755,105 @@
         btn.disabled=false; btn.innerHTML=`<i class='fa-solid fa-exchange-alt'></i> EXCHANGE COINS TO IDR`;
     };
 
+	// --- START: LOGIKA TRANSAKSI PPOB ---
+    window.ubahFormPpob = () => {
+        const jenis = document.getElementById('ppobJenis').value;
+        const target = document.getElementById('ppobTarget');
+        const nominal = document.getElementById('ppobNominal');
+        
+        if (jenis === 'PULSA') {
+            target.placeholder = 'Nomor HP Tujuan...';
+            nominal.innerHTML = `
+                <option value=''>-- Pilih Nominal Pulsa --</option>
+                <option value='10000|12000'>Pulsa 10.000 (Harga: Rp 12.000)</option>
+                <option value='20000|22000'>Pulsa 20.000 (Harga: Rp 22.000)</option>
+                <option value='50000|52000'>Pulsa 50.000 (Harga: Rp 52.000)</option>
+                <option value='100000|102000'>Pulsa 100.000 (Harga: Rp 102.000)</option>
+            `;
+        } else {
+            target.placeholder = 'Nomor Meter / ID Pelanggan PLN...';
+            nominal.innerHTML = `
+                <option value=''>-- Pilih Nominal Token Listrik --</option>
+                <option value='20000|22500'>Token 20.000 (Harga: Rp 22.500)</option>
+                <option value='50000|52500'>Token 50.000 (Harga: Rp 52.500)</option>
+                <option value='100000|102500'>Token 100.000 (Harga: Rp 102.500)</option>
+                <option value='200000|202500'>Token 200.000 (Harga: Rp 202.500)</option>
+            `;
+        }
+    };
+
+    window.prosesPpob = async () => {
+        if(!myPin) return window.showToast("Buat PIN Transaksi di Profil dulu!");
+        
+        const jenis = document.getElementById('ppobJenis').value;
+        const target = document.getElementById('ppobTarget').value.trim();
+        const nomData = document.getElementById('ppobNominal').value;
+        const inputPin = document.getElementById('ppobPin').value;
+        const btn = document.getElementById('btnProsesPpob');
+
+        if(!target || !nomData || !inputPin) return msg('msgPpob', "Lengkapi semua form & PIN!", "error");
+        if(inputPin !== myPin) return msg('msgPpob', "PIN Transaksi Salah!", "error");
+
+        const [nominal, harga] = nomData.split('|').map(Number);
+
+        if(mySaldoRupiah < harga) return msg('msgPpob', "Saldo IDR Anda tidak mencukupi!", "error");
+
+        btn.disabled = true; btn.innerHTML = "<i class='fa-solid fa-spinner fa-spin'></i> MEMPROSES...";
+
+        try {
+            // 1. Potong Saldo
+            mySaldoRupiah -= harga;
+            await updateDoc(doc(db, "Akun_Publik", docId), { saldo_rupiah: mySaldoRupiah });
+            localStorage.setItem("cisSaldoRp", mySaldoRupiah);
+            updateUI();
+
+            // 2. Catat Mutasi User
+            await addDoc(collection(db, "Mutasi_Mining"), { 
+                email: myEmail, 
+                jenis: "OUT", 
+                deskripsi: `Beli ${jenis} ${nominal.toLocaleString('id-ID')} (${target})`, 
+                nominal: harga, 
+                timestamp_local: Date.now() 
+            });
+
+            // 3. Catat di DB Transaksi PPOB
+            let sn_dummy = "SN-" + Math.random().toString(36).substr(2, 8).toUpperCase();
+            await addDoc(collection(db, "Transaksi_PPOB"), {
+                email: myEmail,
+                username: myUsername,
+                jenis: jenis,
+                target: target,
+                nominal: nominal,
+                harga_bayar: harga,
+                sn: sn_dummy,
+                status: "SUKSES",
+                waktu: serverTimestamp()
+            });
+
+            // 4. Catat Mutasi Pusat (Untuk Kalkulator Likuiditas)
+            await addDoc(collection(db, "Mutasi_Pusat"), { 
+                jenis: "PPOB_IN", 
+                nominal: harga, 
+                deskripsi: `PPOB: ${myUsername} Beli ${jenis} ${nominal}`, 
+                waktu: serverTimestamp() 
+            });
+
+            msg('msgPpob', "Pembelian Berhasil Diproses!", "ok");
+            setTimeout(() => {
+                document.getElementById('msgPpob').style.display = 'none';
+                document.getElementById('ppobTarget').value = '';
+                document.getElementById('ppobPin').value = '';
+                window.closeWalletModal('modalPPOB');
+                window.showToast("Transaksi PPOB Sukses! Cek mutasi.");
+            }, 2500);
+
+        } catch(e) {
+            msg('msgPpob', "Gagal memproses transaksi.", "error");
+        }
+        btn.disabled = false; btn.innerHTML = "<i class='fa-solid fa-shopping-cart'></i> PROSES PEMBELIAN";
+    };
+    // --- END ---
+		  
     window.loadPaketMiningUser = async () => {
         const select = document.getElementById('pilihPaketHash'); const snap = await getDocs(query(collection(db, "Config_Mining"), orderBy("nominal", "asc"))); let html = "<option value=''>-- Select Speed Package --</option>";
         snap.forEach(d => { let p = d.data(); html += `<option value='${p.nominal}|${p.speed}|${p.durasi_hari}'>Engine Rp ${p.nominal.toLocaleString('en-US')} (${formatKripto(p.speed)} V/s | ${p.durasi_hari} Days)</option>`; });
@@ -4575,6 +4724,19 @@ if (!u.bank && !u.ewallet && !u.crypto) return;
     // Panggil fungsinya agar berjalan terus menerus
     muatPengumumanKlaim();
     // ---------------------------------------------
+
+		// --- START: PENGAMAT SAKLAR PPOB DARI MASTER PUSAT ---
+        onSnapshot(query(collection(db, "System_Config"), where("tipe", "==", "PPOB_STATUS")), (snap) => {
+            const menuPpob = document.getElementById('menuPpobPublic');
+            if(menuPpob) {
+                if(!snap.empty && snap.docs[0].data().is_active === true) {
+                    menuPpob.style.display = 'flex';
+                } else {
+                    menuPpob.style.display = 'none';
+                }
+            }
+        });
+        // --- END ---
 		
         window.fetchPrice();
         initSession().then(() => {
