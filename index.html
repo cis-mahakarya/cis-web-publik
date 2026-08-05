@@ -2817,7 +2817,6 @@
             });
 
             // 3. Catat di DB Transaksi PPOB
-            let sn_dummy = "SN-" + Math.random().toString(36).substr(2, 8).toUpperCase();
             await addDoc(collection(db, "Transaksi_PPOB"), {
                 email: myEmail,
                 username: myUsername,
@@ -2825,8 +2824,8 @@
                 target: target,
                 nominal: nominal,
                 harga_bayar: harga,
-                sn: sn_dummy,
-                status: "SUKSES",
+                sn: "Menunggu Diproses...", // Kosongkan SN karena belum diproses vendor
+                status: "PENDING", // UBAH KE PENDING
                 waktu: serverTimestamp()
             });
 
@@ -2834,17 +2833,17 @@
             await addDoc(collection(db, "Mutasi_Pusat"), { 
                 jenis: "PPOB_IN", 
                 nominal: harga, 
-                deskripsi: `PPOB: ${myUsername} Beli ${jenis} ${nominal}`, 
+                deskripsi: `PPOB [PENDING]: ${myUsername} Beli ${jenis} ${nominal}`, 
                 waktu: serverTimestamp() 
             });
 
-            msg('msgPpob', "Pembelian Berhasil Diproses!", "ok");
+            msg('msgPpob', "Pesanan Berhasil Diterima!", "ok");
             setTimeout(() => {
                 document.getElementById('msgPpob').style.display = 'none';
                 document.getElementById('ppobTarget').value = '';
                 document.getElementById('ppobPin').value = '';
                 window.closeWalletModal('modalPPOB');
-                window.showToast("Transaksi PPOB Sukses! Cek mutasi.");
+                window.showToast("Pesanan PPOB Diterima & Sedang Diproses!");
             }, 2500);
 
         } catch(e) {
