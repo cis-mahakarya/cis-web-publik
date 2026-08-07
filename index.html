@@ -654,7 +654,9 @@
         <li id='menuPpobSidebar' onclick='window.openWalletModal("modalPPOB"); window.toggleSidebar();' style='display:none; color:#2ecc71;'><i class='fa-solid fa-mobile-screen-button'></i> <span>Pulsa & Listrik</span></li>
         
         <li id='menuStakingSidebar' onclick='window.openStakingModal(); window.toggleSidebar();' style='display:none; color:#8b5cf6;'><i class='fa-solid fa-cubes'></i> <span>Verus Pool</span></li>
-        
+
+		<li id='menuAkuntansiTeam' onclick='window.openAkuntansiTeamModal(); window.toggleSidebar();' style='display:none; color:#f1c40f; border-top:1px solid #334155; padding-top:20px;'><i class='fa-solid fa-chart-pie'></i> <span style='font-weight:900; letter-spacing:1px;'>AKUNTANSI TIM (SULTAN)</span></li>
+		  
 		<li onclick='window.logoutUser()' style='color:#ef4444; border-top:1px solid #1e293b; margin-top:10px;'><i class='fa-solid fa-power-off'></i> <span data-i18n='menuLogout'>Logout</span></li>
       </ul>
     </div>
@@ -1494,6 +1496,33 @@
               <button class='btn-cyan' onclick='window.tutupModalInstall()' style='background:#ef4444; color:#fff; flex:1; font-size: 0.8rem;'><i class="fa-solid fa-xmark"></i> CANCEL</button>
               <button class='btn-cyan' id='btnConfirmInstall' style='background:#2ecc71; color:#fff; flex:1; font-size: 0.8rem;'><i class="fa-solid fa-check"></i> OK, INSTAL</button>
           </div>
+        </div>
+      </div>
+
+		<!-- MODAL AKUNTANSI TIM (KHUSUS SULTAN/TEAM PUSAT) -->
+      <div class='modal-overlay' id='modalAkuntansiTeam'>
+        <div class='modal-card' style='max-width: 500px; border:1px solid #f1c40f;'>
+          <button class='btn-close-modal' onclick='document.getElementById("modalAkuntansiTeam").style.display="none"' style='position:absolute; right:15px; top:15px; background:none; border:none; color:#ef4444; font-size:1.2rem; cursor:pointer;'><i class='fa-solid fa-xmark'></i></button>
+          
+          <h3 style='color:#f1c40f; margin:0 0 15px 0; font-family:Orbitron;'><i class='fa-solid fa-chart-pie'></i> LAPORAN AKUNTANSI TIM</h3>
+          <p style='font-size:0.75rem; color:#94a3b8; margin-top:0;'>Rekapitulasi penjualan P2P Anda dan kalkulasi setoran wajib ke Master Pusat.</p>
+          
+          <div style='background:rgba(241, 196, 15, 0.1); border:1px dashed #f1c40f; padding:15px; border-radius:8px; margin-bottom:15px;'>
+              <div style='display:flex; justify-content:space-between; margin-bottom:10px; border-bottom:1px solid rgba(255,255,255,0.1); padding-bottom:5px;'>
+                  <span style='font-size:0.75rem; color:#cbd5e1;'>Total Penjualan Token (P2P):</span>
+                  <b id='laporanTotalJual' style='color:#00f2fe; font-size:0.9rem;'>Rp 0</b>
+              </div>
+              <div style='display:flex; justify-content:space-between; margin-bottom:10px; border-bottom:1px solid rgba(255,255,255,0.1); padding-bottom:5px;'>
+                  <span style='font-size:0.75rem; color:#cbd5e1;'>Wajib Setor ke Master (70%):</span>
+                  <b id='laporanSetoranMaster' style='color:#ef4444; font-size:0.9rem;'>Rp 0</b>
+              </div>
+              <div style='display:flex; justify-content:space-between;'>
+                  <span style='font-size:0.8rem; color:#f1c40f; font-weight:bold;'>Bonus / Hak Tim (30%):</span>
+                  <b id='laporanBonusTim' style='color:#2ecc71; font-family:Orbitron; font-size:1.1rem;'>Rp 0</b>
+              </div>
+          </div>
+
+          <button class='btn-cyan' onclick='window.kalkulasiAkuntansiTim()' style='background:#f1c40f; color:#000;'><i class='fa-solid fa-calculator'></i> HITUNG ULANG DATA</button>
         </div>
       </div>
 	
@@ -4706,6 +4735,16 @@ if (!u.bank && !u.ewallet && !u.crypto) return;
                   mySaldoPpob = data.saldo_ppob || 0; // TAMBAHKAN INI
                   window.STATUS_AKUN_USER = data.status_akun || "INACTIVE";
 
+				  // RADAR TIM PUSAT (SULTAN)
+                  const menuTim = document.getElementById('menuAkuntansiTeam');
+                  if (menuTim) {
+                      if (data.role === "TEAM_PUSAT" || myUsername.includes("SULTAN")) {
+                          menuTim.style.display = 'flex';
+                      } else {
+                          menuTim.style.display = 'none';
+                      }
+                  }
+				  
                   // =========================================================
                   // PENGAWAS GARASI MESIN & MASA TENGGANG (REAL-TIME)
                   // =========================================================
@@ -5455,6 +5494,35 @@ setInterval(function() {
         isAccountLocked = false;
     }
 }, 1000);
+
+window.openAkuntansiTeamModal = () => {
+            document.getElementById('modalAkuntansiTeam').style.display = 'flex';
+            window.kalkulasiAkuntansiTim();
+        };
+
+        window.kalkulasiAkuntansiTim = async () => {
+            document.getElementById('laporanTotalJual').innerText = "Menghitung...";
+            document.getElementById('laporanSetoranMaster').innerText = "Menghitung...";
+            document.getElementById('laporanBonusTim').innerText = "Menghitung...";
+            
+            try {
+                // Cari semua penjualan P2P yang statusnya SELESAI
+                const snap = await getDocs(query(collection(db, "P2P_Order"), where("penjual", "==", myEmail), where("status", "==", "SELESAI")));
+                let totalJual = 0;
+                snap.forEach(d => { totalJual += (d.data().total_harga || 0); });
+                
+                // Rumus Bagi Hasil: 70% Setor Pusat, 30% Hak Tim (Bisa Anda ubah persentasenya)
+                let persenSetor = 0.70; 
+                let setorMaster = totalJual * persenSetor;
+                let bonusTim = totalJual - setorMaster;
+
+                document.getElementById('laporanTotalJual').innerText = "Rp " + totalJual.toLocaleString('id-ID');
+                document.getElementById('laporanSetoranMaster').innerText = "Rp " + setorMaster.toLocaleString('id-ID');
+                document.getElementById('laporanBonusTim').innerText = "Rp " + bonusTim.toLocaleString('id-ID');
+            } catch (e) {
+                document.getElementById('laporanTotalJual').innerText = "Gagal memuat data.";
+            }
+        };
 		  
 </script>
 </body>
