@@ -1267,9 +1267,15 @@
           </div>
 
           <div style='background:#1e293b; padding:15px; border-radius:8px; border:1px dashed #8b5cf6; margin-bottom:15px;'>
-			  <div style='text-align:center; margin-bottom:15px; border-bottom:1px solid #334155; padding-bottom:10px;'>
-                  <span style='font-size:0.7rem; color:#2ecc71; font-weight:bold; letter-spacing:1px;'>SALDO TERSEDIA (IDR)</span><br/>
-                  <span id='infoSaldoStaking' style='font-family:Orbitron; font-size:1.4rem; font-weight:900; color:#fff;'>Rp 0</span>
+			  <div style='display:flex; justify-content:space-between; text-align:center; margin-bottom:15px; border-bottom:1px solid #334155; padding-bottom:10px;'>
+                  <div style='flex:1; border-right:1px solid #334155;'>
+                      <span style='font-size:0.65rem; color:#2ecc71; font-weight:bold; letter-spacing:0.5px;'>SALDO DOMPET</span><br/>
+                      <span id='infoSaldoStaking' style='font-family:Orbitron; font-size:1.15rem; font-weight:900; color:#fff;'>Rp 0</span>
+                  </div>
+                  <div style='flex:1;'>
+                      <span style='font-size:0.65rem; color:#00f2fe; font-weight:bold; letter-spacing:0.5px;'>HASIL POOL (PPOB)</span><br/>
+                      <span id='infoSaldoHasilPool' style='font-family:Orbitron; font-size:1.15rem; font-weight:900; color:#fff;'>Rp 0</span>
+                  </div>
               </div>
               <label style='font-size:0.75rem; color:#a855f7; font-weight:bold;'>Nominal IDR yang akan dikunci:</label>
               <input type='number' id='inpStakingRp' class='input-dark no-icon' placeholder='Contoh: 150000' style='border-color:#a855f7; font-size:1.2rem; font-weight:bold; color:#fff; text-align:center;' oninput='window.hitungEstimasiStaking()'>
@@ -2128,6 +2134,7 @@
         // --- END ---
 		// --- SINKRON SALDO & LIVE CHART STAKING ---
         let elStaking = document.getElementById('infoSaldoStaking'); if(elStaking) elStaking.innerText = "Rp " + (mySaldoRupiah||0).toLocaleString('id-ID');
+		let elHasilPool = document.getElementById('infoSaldoHasilPool'); if(elHasilPool) elHasilPool.innerText = "Rp " + (mySaldoPpob||0).toLocaleString('id-ID');
         if(document.getElementById('modalStaking').style.display === 'flex') { 
             document.getElementById('stakeLivePrice').innerText = "Rp " + (window.vrscPriceRp || 2500).toLocaleString('id-ID'); 
             window.hitungEstimasiStaking();
