@@ -2834,23 +2834,40 @@
         const target = document.getElementById('ppobTarget');
         const nominal = document.getElementById('ppobNominal');
         
+        // Ambil markup yang dikirim dari Web Master
+        let markup = window.PPOB_MARKUP || 0; 
+        
         if (jenis === 'PULSA') {
             target.placeholder = 'Nomor HP Tujuan...';
+            
+            // Modal dasar Digiflazz + Keuntungan (Markup)
+            let harga10 = 10500 + markup;
+            let harga20 = 20500 + markup;
+            let harga50 = 50500 + markup;
+            let harga100 = 100500 + markup;
+
             nominal.innerHTML = `
                 <option value=''>-- Pilih Nominal Pulsa --</option>
-                <option value='10000|12000'>Pulsa 10.000 (Harga: Rp 12.000)</option>
-                <option value='20000|22000'>Pulsa 20.000 (Harga: Rp 22.000)</option>
-                <option value='50000|52000'>Pulsa 50.000 (Harga: Rp 52.000)</option>
-                <option value='100000|102000'>Pulsa 100.000 (Harga: Rp 102.000)</option>
+                <option value='10000|${harga10}'>Pulsa 10.000 (Harga: Rp ${harga10.toLocaleString('id-ID')})</option>
+                <option value='20000|${harga20}'>Pulsa 20.000 (Harga: Rp ${harga20.toLocaleString('id-ID')})</option>
+                <option value='50000|${harga50}'>Pulsa 50.000 (Harga: Rp ${harga50.toLocaleString('id-ID')})</option>
+                <option value='100000|${harga100}'>Pulsa 100.000 (Harga: Rp ${harga100.toLocaleString('id-ID')})</option>
             `;
         } else {
             target.placeholder = 'Nomor Meter / ID Pelanggan PLN...';
+            
+            // Modal dasar Digiflazz + Keuntungan (Markup)
+            let harga20 = 20500 + markup;
+            let harga50 = 50500 + markup;
+            let harga100 = 100500 + markup;
+            let harga200 = 200500 + markup;
+
             nominal.innerHTML = `
                 <option value=''>-- Pilih Nominal Token Listrik --</option>
-                <option value='20000|22500'>Token 20.000 (Harga: Rp 22.500)</option>
-                <option value='50000|52500'>Token 50.000 (Harga: Rp 52.500)</option>
-                <option value='100000|102500'>Token 100.000 (Harga: Rp 102.500)</option>
-                <option value='200000|202500'>Token 200.000 (Harga: Rp 202.500)</option>
+                <option value='20000|${harga20}'>Token 20.000 (Harga: Rp ${harga20.toLocaleString('id-ID')})</option>
+                <option value='50000|${harga50}'>Token 50.000 (Harga: Rp ${harga50.toLocaleString('id-ID')})</option>
+                <option value='100000|${harga100}'>Token 100.000 (Harga: Rp ${harga100.toLocaleString('id-ID')})</option>
+                <option value='200000|${harga200}'>Token 200.000 (Harga: Rp ${harga200.toLocaleString('id-ID')})</option>
             `;
         }
     };
@@ -4886,11 +4903,22 @@ if (!u.bank && !u.ewallet && !u.crypto) return;
     // ---------------------------------------------
 
 		// --- START: PENGAMAT SAKLAR PPOB DARI MASTER PUSAT ---
-        onSnapshot(query(collection(db, "System_Config"), where("tipe", "==", "PPOB_STATUS")), (snap) => {
+        window.PPOB_MARKUP = 0; // Variabel global untuk menyimpan margin keuntungan
+        onSnapshot(query(collection(db, "System_Config"), where("tipe", "==", "PPOB_CONFIG")), (snap) => {
             const menuPpobSidebar = document.getElementById('menuPpobSidebar');
             if(menuPpobSidebar) {
-                if(!snap.empty && snap.docs[0].data().is_active === true) {
-                    menuPpobSidebar.style.display = 'flex';
+                if(!snap.empty) {
+                    let d = snap.docs[0].data();
+                    window.PPOB_MARKUP = parseFloat(d.markup) || 0; // Simpan harga markup ke memori
+                    
+                    if(d.is_active === true) {
+                        menuPpobSidebar.style.display = 'flex';
+                    } else {
+                        menuPpobSidebar.style.display = 'none';
+                    }
+                    
+                    // Perbarui daftar harga di layar secara otomatis jika modal sedang terbuka
+                    if(typeof window.ubahFormPpob === "function") window.ubahFormPpob(); 
                 } else {
                     menuPpobSidebar.style.display = 'none';
                 }
