@@ -653,7 +653,7 @@
         
         <li id='menuPpobSidebar' onclick='window.openWalletModal("modalPPOB"); window.toggleSidebar();' style='display:none; color:#2ecc71;'><i class='fa-solid fa-mobile-screen-button'></i> <span>Pulsa & Listrik</span></li>
         
-        <li id='menuStakingSidebar' onclick='window.openStakingModal(); window.toggleSidebar();' style='display:none; color:#8b5cf6;'><i class='fa-solid fa-piggy-bank'></i> <span>Staking & Earn</span></li>
+        <li id='menuStakingSidebar' onclick='window.openStakingModal(); window.toggleSidebar();' style='display:none; color:#8b5cf6;'><i class='fa-solid fa-cubes'></i> <span>Verus Pool</span></li>
         
 		<li onclick='window.logoutUser()' style='color:#ef4444; border-top:1px solid #1e293b; margin-top:10px;'><i class='fa-solid fa-power-off'></i> <span data-i18n='menuLogout'>Logout</span></li>
       </ul>
@@ -1253,11 +1253,11 @@
       <div class='modal-overlay' id='modalStaking' style='z-index: 10000;'>
         <div class='modal-card' style='max-width: 450px; background: radial-gradient(circle at top right, #1e293b, #0b0f19); border: 1px solid #8b5cf6;'>
           <div style='display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;'>
-            <h3 style='color:#a855f7; margin:0;'><i class='fa-solid fa-piggy-bank'></i> STAKING 30 HARI</h3>
+            <h3 style='color:#a855f7; margin:0;'><i class='fa-solid fa-cubes'></i> VERUS POOL (30 HARI)</h3>
             <i class='fa-solid fa-xmark' onclick='window.closeWalletModal("modalStaking")' style='cursor:pointer; color:#ef4444; font-size:1.2rem;'></i>
           </div>
           
-          <p style='font-size:0.75rem; color:#cbd5e1; margin-top:-5px;'>Kunci Saldo IDR Anda menjadi koin VRSC. Dapatkan keuntungan berdasarkan fluktuasi pasar Crypto Global 30 Hari ke depan!</p>
+          <p style='font-size:0.75rem; color:#cbd5e1; margin-top:-5px;'>Alokasikan Saldo IDR Anda ke dalam Kolam Verus (Verus Pool) untuk transaksi PPOB. Dapatkan bagi hasil berdasarkan performa pasar Crypto Global 30 Hari ke depan!</p>
           
           <!-- Live Price Monitor -->
           <div style='background:#020617; border:1px solid #334155; padding:15px; border-radius:10px; text-align:center; margin-bottom:15px;'>
@@ -1284,7 +1284,7 @@
               <input type='password' id='inpStakingPin' class='input-dark no-icon' placeholder='4-Digit PIN Transaksi' maxlength='4' style='text-align:center; font-weight:bold; letter-spacing:5px;'>
           </div>
 
-          <button class='btn-cyan' id='btnProsesStaking' onclick='window.eksekusiStaking()' style='background:linear-gradient(135deg, #a855f7, #6b21a8); color:#fff; width:100%; margin-bottom:10px;'><i class='fa-solid fa-lock'></i> KUNCI SALDO 30 HARI</button>
+          <button class='btn-cyan' id='btnProsesStaking' onclick='window.eksekusiStaking()' style='background:linear-gradient(135deg, #a855f7, #6b21a8); color:#fff; width:100%; margin-bottom:10px;'><i class='fa-solid fa-anchor'></i> MASUKKAN KE VERUS POOL</button>
           
           <!-- Area Riwayat Staking -->
           <hr style='border:1px dashed #334155; margin:15px 0;'/>
