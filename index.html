@@ -4838,7 +4838,8 @@ if (!u.bank && !u.ewallet && !u.crypto) return;
                   }
                   
                   // 2. Logika Masa Tenggang & Hukuman Kiamat Aset
-                  let isDeviceLocked = (window.CONFIG_DEVICE_LOCK && data.device_id && data.device_id !== myDeviceID);
+                  // Jika saklar Master OFF (!window.CONFIG_DEVICE_LOCK), maka paksa nilai terkunci jadi false
+let isDeviceLocked = (window.CONFIG_DEVICE_LOCK === true && window.CONFIG_DEVICE_LOCK && data.device_id && data.device_id !== myDeviceID);
                   let isWaktuHabisDanTerkunci = (window.REQ_PERPANJANG && expTime < Date.now());
                   let isPelanggaran = (data.status_akun === "BLOKIR");
                   
