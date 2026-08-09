@@ -3303,6 +3303,29 @@
         
         if(!targetUser) { msg('msgWithdraw', "Target username required!", "error"); return; }
         if(targetUser === myUsername) { msg('msgWithdraw', "Swap ke akun sendiri dilarang! Gunakan username lain.", "error"); return; }
+		// ==========================================
+        // RADAR PENGAMAN SWAP (GLOBAL)
+        // ==========================================
+        let emailTarget = myEmail;
+        if (targetUser !== myUsername) {
+            btn.innerHTML = "<i class='fa-solid fa-spinner fa-spin'></i> Memeriksa Target...";
+            const targetSnap = await getDocs(query(collection(db, "Akun_Publik"), where("username", "==", targetUser)));
+            if (targetSnap.empty) {
+                msg('msgWithdraw', "Username tujuan tidak ditemukan!", "error");
+                btn.disabled = false; btn.innerText = "PROCESS SWAP"; return;
+            }
+
+            let tData = targetSnap.docs[0].data();
+            let wktExpiredTarget = tData.expired_at ? (tData.expired_at.seconds ? tData.expired_at.seconds * 1000 : tData.expired_at) : 0;
+
+            // Cek apakah akun tujuan sedang mati (Expired) atau 0 (Belum Aktif)
+            if (wktExpiredTarget === 0 || wktExpiredTarget < Date.now()) {
+                msg('msgWithdraw', `Akun ${targetUser} expire / tidak aktif!`, "error");
+                btn.disabled = false; btn.innerText = "PROCESS SWAP"; return;
+            }
+            emailTarget = tData.email;
+        }
+        // ==========================================
         if(targetRp < 10000 || targetRp % 10000 !== 0) { msg('msgWithdraw', "Invalid nominal option!", "error"); return; }
         if(mySaldoRupiah < targetRp) { msg('msgWithdraw', `Insufficient IDR Balance!`, "error"); return; }
         
@@ -3321,34 +3344,14 @@
             if(!confSnap.empty) isAutoWD = confSnap.docs[0].data().is_active;
 
             if (isAutoWD) {
-                // LOGIKA AUTO WD (Langsung Cetak Token)
-                let t = ''; const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; for(let j = 0; j < 16; j++) t += chars.charAt(Math.floor(Math.random() * chars.length)); let tk = `${t.slice(0,4)}-${t.slice(4,8)}-${t.slice(8,12)}-${t.slice(12,16)}`;
-                
-                let emailTarget = myEmail;
-                if (targetUser !== myUsername) {
-                    const targetSnap = await getDocs(query(collection(db, "Akun_Publik"), where("username", "==", targetUser)));
-                    if (targetSnap.empty) {
-                        msg('msgWithdraw', "Username tujuan tidak ditemukan!", "error");
-                        btn.disabled = false; btn.innerText = "PROCESS SWAP"; return;
-                    }
-                    
-                    let tData = targetSnap.docs[0].data();
-                    let wktExpiredTarget = tData.expired_at ? (tData.expired_at.seconds ? tData.expired_at.seconds * 1000 : tData.expired_at) : 0;
-                    
-                    // RADAR PENGAMAN: Cek apakah akun tujuan Swap sedang mati
-                    if (wktExpiredTarget > 0 && wktExpiredTarget < Date.now()) {
-                        msg('msgWithdraw', `Akun ${targetUser} expire / tidak aktif!`, "error");
-                        btn.disabled = false; btn.innerText = "PROCESS SWAP"; return;
-                    }
-                    
-                    emailTarget = tData.email;
-                }
+        // LOGIKA AUTO WD (Langsung Cetak Token)
+        let t = ''; const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; for(let j = 0; j < 16; j++) t += chars.charAt(Math.floor(Math.random() * chars.length)); let tk = `${t.slice(0,4)}-${t.slice(4,8)}-${t.slice(8,12)}-${t.slice(12,16)}`;
 
-                // 1. Simpan Token Baru
-                await addDoc(collection(db, "Database_Token"), { kode_token: tk, nominal_rupiah: targetRp, durasi_hari: 30, status: "AKTIF", distribusi_ke: jenisToken, pemilik: emailTarget, pemilik_username: targetUser, pengirim: "System (Auto)", pembuat: "Auto-WD", dibuat_pada: serverTimestamp(), dipakai_oleh: null });
-                
-                // 2. Simpan Riwayat Request (Langsung DISETUJUI)
-                await addDoc(collection(db, "Request_Withdraw"), { email_pemohon: myEmail, username_pemohon: myUsername, doc_id_pemohon: docId, nominal_rupiah: targetRp, distribusi_ke: jenisToken, target_username: targetUser, target_wa: "", status: "DISETUJUI", waktu_request: serverTimestamp() });
+        // 1. Simpan Token Baru
+        await addDoc(collection(db, "Database_Token"), { kode_token: tk, nominal_rupiah: targetRp, durasi_hari: 30, status: "AKTIF", distribusi_ke: jenisToken, pemilik: emailTarget, pemilik_username: targetUser, pengirim: myUsername, pembuat: "Sistem Auto", dibuat_pada: serverTimestamp(), dipakai_oleh: null });
+
+        // 2. Simpan Riwayat Request (Langsung DISETUJUI)
+        await addDoc(collection(db, "Request_Withdraw"), { email_pemohon: myEmail, username_pemohon: myUsername, doc_id_pemohon: docId, nominal_rupiah: targetRp, distribusi_ke: jenisToken, target_username: targetUser, status: "DISETUJUI", waktu_request: serverTimestamp() });
                 
                 // 3. Catat di Buku Kas Pusat
                 await addDoc(collection(db, "Mutasi_Pusat"), { jenis: "OUT", nominal: targetRp, deskripsi: `Auto WD (Token ${jenisToken}) dari ${myUsername}`, waktu: serverTimestamp() });
