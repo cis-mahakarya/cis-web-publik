@@ -4738,8 +4738,8 @@ if (!u.bank && !u.ewallet && !u.crypto) return;
 				  // RADAR TIM PUSAT (SULTAN)
                   const menuTim = document.getElementById('menuAkuntansiTeam');
                   if (menuTim) {
-                      // Sensor membaca Role yang disetting dari Web Master (TIM 1, TIM 2, dst)
-                      if ((data.role && data.role.includes("TIM")) || myUsername.includes("SULTAN")) {
+                      // Sensor MURNI membaca Role dari Web Master (Tidak ada bypass Username)
+                      if (data.role && data.role.includes("TIM")) {
                           menuTim.style.display = 'flex';
                       } else {
                           menuTim.style.display = 'none';
