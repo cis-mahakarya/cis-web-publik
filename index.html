@@ -5517,6 +5517,7 @@ window.openAkuntansiTeamModal = () => {
             document.getElementById('laporanTotalJual').innerText = "Menghitung...";
             document.getElementById('laporanSetoranMaster').innerText = "Menghitung...";
             document.getElementById('laporanBonusTim').innerText = "Menghitung...";
+            document.getElementById('infoRekeningMaster').innerHTML = "<i class='fa-solid fa-spinner fa-spin'></i> Memuat rekening pusat...";
             
             try {
                 // 1. Tarik Pengaturan Persentase dari Pusat
@@ -5529,12 +5530,22 @@ window.openAkuntansiTeamModal = () => {
                 document.getElementById('txtLabelSetor').innerText = `Wajib Setor ke Master (${persenPusat}%):`;
                 document.getElementById('txtLabelBonus').innerText = `Bonus / Hak Tim (${persenTim}%):`;
 
-                // 2. Cari semua penjualan P2P yang statusnya SELESAI
+                // 2. Tarik Data Rekening Master dari Pusat
+                const rekSnap = await getDocs(query(collection(db, "System_Config"), where("tipe", "==", "REKENING_MASTER")));
+                const boxRek = document.getElementById('infoRekeningMaster');
+                if(!rekSnap.empty) {
+                    let r = rekSnap.docs[0].data();
+                    boxRek.innerHTML = `<b style='color:#fff;'>${r.nama_bank}</b><br/><span style='font-family:Orbitron; font-size:1.1rem; color:#f1c40f; word-break:break-all;'>${r.no_rek}</span><br/>a/n ${r.atas_nama}`;
+                } else {
+                    boxRek.innerHTML = "Rekening Pusat belum diatur.";
+                }
+
+                // 3. Cari semua penjualan P2P yang statusnya SELESAI
                 const snap = await getDocs(query(collection(db, "P2P_Order"), where("penjual", "==", myEmail), where("status", "==", "SELESAI")));
                 let totalJual = 0;
                 snap.forEach(d => { totalJual += (d.data().total_harga || 0); });
                 
-                // 3. Kalkulasi Bagi Hasil Dinamis
+                // 4. Kalkulasi Bagi Hasil Dinamis
                 let setorMaster = totalJual * (persenPusat / 100);
                 let bonusTimNom = totalJual * (persenTim / 100);
 
@@ -5543,6 +5554,7 @@ window.openAkuntansiTeamModal = () => {
                 document.getElementById('laporanBonusTim').innerText = "Rp " + bonusTimNom.toLocaleString('id-ID');
             } catch (e) {
                 document.getElementById('laporanTotalJual').innerText = "Gagal memuat data.";
+                document.getElementById('infoRekeningMaster').innerHTML = "Gagal memuat rekening.";
             }
         };
 
