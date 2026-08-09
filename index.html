@@ -3302,7 +3302,8 @@
         const btn = document.getElementById('btnWithdraw');
         
         if(!targetUser) { msg('msgWithdraw', "Target username required!", "error"); return; }
-        if(targetRp < 10000 || targetRp % 10000 !== 0) { msg('msgWithdraw', "Invalid nominal option!", "error"); return; } 
+        if(targetUser === myUsername) { msg('msgWithdraw', "Swap ke akun sendiri dilarang! Gunakan username lain.", "error"); return; }
+        if(targetRp < 10000 || targetRp % 10000 !== 0) { msg('msgWithdraw', "Invalid nominal option!", "error"); return; }
         if(mySaldoRupiah < targetRp) { msg('msgWithdraw', `Insufficient IDR Balance!`, "error"); return; }
         
         btn.disabled = true; btn.innerText = "SENDING REQUEST...";
@@ -3833,6 +3834,10 @@
         
         // Deteksi jika pembeli menggunakan jalur input manual
         if (sultan === 'MANUAL') {
+            let inputManual = document.getElementById('p2pPenjualManual').value.trim().toUpperCase();
+            if(inputManual === myUsername) {
+                return window.showToast("Order ke akun sendiri dilarang! Silakan gunakan username lainnya.");
+            }
             sultan = document.getElementById('infoRekeningSultan').getAttribute('data-sultan-manual');
             if(!sultan) return window.showToast("Username Penjual Manual tidak valid / belum dicek!");
         }
