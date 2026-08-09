@@ -3865,8 +3865,17 @@
             if(inputManual === myUsername) {
                 return window.showToast("Order ke akun sendiri dilarang! Silakan gunakan username lainnya.");
             }
-            sultan = document.getElementById('infoRekeningSultan').getAttribute('data-sultan-manual');
-            if(!sultan) return window.showToast("Username Penjual Manual tidak valid / belum dicek!");
+            
+            let boxInfo = document.getElementById('infoRekeningSultan');
+            sultan = boxInfo.getAttribute('data-sultan-manual');
+            if(!sultan) {
+                // DINAMIS: Tarik pesan error langsung dari teks peringatan merah yang tampil di layar
+                let pesanError = boxInfo.innerText || boxInfo.textContent;
+                if (!pesanError || pesanError.includes("Memuat")) {
+                    pesanError = "Username Penjual Manual Expired atau tidak aktif!";
+                }
+                return window.showToast(pesanError);
+            }
         }
 
         const emailSultan = document.getElementById('infoRekeningSultan').getAttribute('data-email');
