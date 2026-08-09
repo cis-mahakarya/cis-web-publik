@@ -3335,9 +3335,9 @@
                     let tData = targetSnap.docs[0].data();
                     let wktExpiredTarget = tData.expired_at ? (tData.expired_at.seconds ? tData.expired_at.seconds * 1000 : tData.expired_at) : 0;
                     
-                    // RADAR: Cek apakah akun tujuan Swap sedang mati
-                    if (wktExpiredTarget < Date.now()) {
-                        msg('msgWithdraw', `Akun ${targetUser} sedang EXPIRED. Tidak bisa menerima Token Swap!`, "error");
+                    // RADAR PENGAMAN: Cek apakah akun tujuan Swap sedang mati
+                    if (wktExpiredTarget > 0 && wktExpiredTarget < Date.now()) {
+                        msg('msgWithdraw', `Akun ${targetUser} expire / tidak aktif!`, "error");
                         btn.disabled = false; btn.innerText = "PROCESS SWAP"; return;
                     }
                     
