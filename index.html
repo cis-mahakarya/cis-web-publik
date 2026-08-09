@@ -2657,6 +2657,7 @@
     };
 
     window.p2pAudioPlayer = null;
+    window.audioContext = null;
 
     window.hentikanSuaraNotif = () => {
         if (window.p2pAudioPlayer) {
@@ -2667,23 +2668,39 @@
 
     window.mainkanSuaraNotif = (isP2P = false) => {
         try {
-            window.hentikanSuaraNotif(); // Matikan suara sebelumnya jika bertumpuk
+            window.hentikanSuaraNotif(); 
             
             let nada = localStorage.getItem("cisNadaDering") || "1";
-            let audioUrl = "https://actions.google.com/sounds/v1/alarms/spaceship_alarm.ogg"; // Nada 1: Alarm Kapal (Sangat Keras)
-            if (nada === "2") audioUrl = "https://actions.google.com/sounds/v1/alarms/dosimeter_alarm.ogg"; // Nada 2: Alarm Dosimeter
-            if (nada === "3") audioUrl = "https://actions.google.com/sounds/v1/alarms/phone_alerts_and_rings.ogg"; // Nada 3: Dering Telepon Klasik
+            let audioUrl = "https://actions.google.com/sounds/v1/alarms/spaceship_alarm.ogg"; // Nada 1
+            if (nada === "2") audioUrl = "https://actions.google.com/sounds/v1/alarms/dosimeter_alarm.ogg"; // Nada 2
+            if (nada === "3") audioUrl = "https://actions.google.com/sounds/v1/alarms/phone_alerts_and_rings.ogg"; // Nada 3
 
             window.p2pAudioPlayer = new Audio(audioUrl);
-            window.p2pAudioPlayer.volume = 1.0; // Paksa volume rata kanan
-            
-            if(isP2P) {
-                window.p2pAudioPlayer.loop = true; // BUNYIKAN TERUS-MENERUS SAMPAI SULTAN MENGANGKATNYA
-            } else {
-                window.p2pAudioPlayer.loop = false; // Jika cuma notif klaim biasa, bunyi sekali saja
-            }
+            window.p2pAudioPlayer.crossOrigin = "anonymous"; // Izin ditarik ke mesin Amplifier
+            window.p2pAudioPlayer.volume = 1.0; 
+            window.p2pAudioPlayer.loop = isP2P; // Looping jika ini panggilan P2P
 
-            window.p2pAudioPlayer.play().catch(e => console.log("Browser menahan suara sampai layar disentuh"));
+            // --- MESIN AMPLIFIER (TOA) WEB AUDIO API ---
+            try {
+                if (!window.audioContext) {
+                    window.audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                }
+                if (window.audioContext.state === 'suspended') window.audioContext.resume();
+
+                let source = window.audioContext.createMediaElementSource(window.p2pAudioPlayer);
+                let gainNode = window.audioContext.createGain();
+                
+                // BOOSTER SUARA 500% (Sangat Keras / Menembus Batas Speaker HP)
+                gainNode.gain.value = 5.0; 
+                
+                source.connect(gainNode);
+                gainNode.connect(window.audioContext.destination);
+            } catch(e) {
+                console.log("Sistem HP memblokir Amplifier, memutar dengan volume standar.");
+            }
+            // -------------------------------------------
+
+            window.p2pAudioPlayer.play().catch(e => console.log("Sentuh layar dulu agar suara bisa keluar"));
         } catch(err) {}
     };
 
