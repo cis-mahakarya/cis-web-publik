@@ -3327,7 +3327,21 @@
                 let emailTarget = myEmail;
                 if (targetUser !== myUsername) {
                     const targetSnap = await getDocs(query(collection(db, "Akun_Publik"), where("username", "==", targetUser)));
-                    if (!targetSnap.empty) emailTarget = targetSnap.docs[0].data().email;
+                    if (targetSnap.empty) {
+                        msg('msgWithdraw', "Username tujuan tidak ditemukan!", "error");
+                        btn.disabled = false; btn.innerText = "PROCESS SWAP"; return;
+                    }
+                    
+                    let tData = targetSnap.docs[0].data();
+                    let wktExpiredTarget = tData.expired_at ? (tData.expired_at.seconds ? tData.expired_at.seconds * 1000 : tData.expired_at) : 0;
+                    
+                    // RADAR: Cek apakah akun tujuan Swap sedang mati
+                    if (wktExpiredTarget < Date.now()) {
+                        msg('msgWithdraw', `Akun ${targetUser} sedang EXPIRED. Tidak bisa menerima Token Swap!`, "error");
+                        btn.disabled = false; btn.innerText = "PROCESS SWAP"; return;
+                    }
+                    
+                    emailTarget = tData.email;
                 }
 
                 // 1. Simpan Token Baru
@@ -3639,6 +3653,11 @@
                 const snapUser = await getDocs(query(collection(db, "Akun_Publik"), where("username", "==", sName)));
                 if(!snapUser.empty) {
                     let uData = snapUser.docs[0].data();
+                    
+                    // RADAR: Cek apakah akun Sultan ini sedang mati (Expired)
+                    let wktExpired = uData.expired_at ? (uData.expired_at.seconds ? uData.expired_at.seconds * 1000 : uData.expired_at) : 0;
+                    if (wktExpired < Date.now()) continue; // Jika mati, lewati! Jangan masukkan ke daftar P2P
+
                     // FILTER KEDUA: Pastikan saldo memenuhi syarat, dan rekening terisi
                     if((uData.saldo_rupiah || 0) >= targetMinimal && (uData.bank || uData.ewallet || uData.crypto)) {
                         html += `<option value='${sName}'>${sName} (IDR: Rp ${(uData.saldo_rupiah || 0).toLocaleString('id-ID')})</option>`;
@@ -3713,7 +3732,15 @@
             
             let d = snap.docs[0].data();
             
-            // RADAR PENGAMAN: Cek apakah target penjual punya rekening untuk ditransfer?
+            // RADAR PENGAMAN 1: Cek apakah akun penjual sedang mati (Expired)
+            let wktExpired = d.expired_at ? (d.expired_at.seconds ? d.expired_at.seconds * 1000 : d.expired_at) : 0;
+            if (wktExpired < Date.now()) {
+                box.innerHTML = `<b style='color:#ef4444;'>Penjual [${usernameManual}] sedang dalam masa TENGGANG/EXPIRED. Tidak bisa menerima order!</b>`;
+                box.removeAttribute('data-sultan-manual');
+                return;
+            }
+
+            // RADAR PENGAMAN 2: Cek apakah target penjual punya rekening untuk ditransfer?
             if(!d.bank && !d.ewallet && !d.crypto) {
                 box.innerHTML = `<b style='color:#ef4444;'>Penjual [${usernameManual}] belum mengisi data rekening di Profilnya! Transaksi dibatalkan sistem demi keamanan Anda.</b>`;
                 box.removeAttribute('data-sultan-manual');
