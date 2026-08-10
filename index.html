@@ -3217,12 +3217,15 @@
                 transaction.update(tDocRef, { status: "TERPAKAI", dipakai_oleh: myEmail, pemilik: myEmail, waktu_dipakai: serverTimestamp() });
                 
                 // =========================================================
-                // LOGIKA GARASI MESIN INDEPENDEN (TIDAK DITUMPUK)
+                // LOGIKA GARASI MESIN DENGAN AKUMULASI WAKTU
                 // =========================================================
                 let garasiMesin = userDoc.data().daftar_mesin || [];
                 
-                // Setiap mesin berjalan independen selama durasi (misal 30 hari) sejak HARI INI dibeli!
-                let waktuMatiMesinBaru = Date.now() + (finalHariTambah * 86400000);
+                // Cari waktu terjauh dari mesin yang ada
+                let waktuTerjauhSaatIni = Date.now();
+                if (garasiMesin.length > 0) {
+                    waktuTerjauhSaatIni = Math.max(...garasiMesin.map(m => m.expired_kontrak));
+                }
                 
                 // AKUMULASI: Tambahkan waktu ke ujung waktu terjauh saat ini
                 let patokanMulaiMesin = waktuTerjauhSaatIni > Date.now() ? waktuTerjauhSaatIni : Date.now();
@@ -4849,34 +4852,28 @@ if (!u.bank && !u.ewallet && !u.crypto) return;
                   // expTime SEKARANG MURNI MILIK AKUN (Token REG)
                   expTime = data.expired_at || 0; 
                   
-                  // 1. Sidak semua mesin: Buang yang mati, simpan yang hidup
-                  let garasiBersih = [];
+                  // 1. Sidak semua mesin: Apakah ada yang mati hari ini?
                   if (garasiMesin.length > 0) {
                       garasiMesin.forEach(mesin => {
                           if (mesin.expired_kontrak > Date.now()) {
-                              garasiBersih.push(mesin); // Hanya simpan mesin yang masih hidup!
-                              totalSpeedAktif += Number(mesin.speed_bawaan || 0); 
+                              totalSpeedAktif += Number(mesin.speed_bawaan || 0); // KUNCI: Paksa konversi ke angka murni
                               if (mesin.expired_kontrak > waktuExpiredMesin) {
                                   waktuExpiredMesin = mesin.expired_kontrak;
                               }
                           }
                       });
-                      if (totalSpeedAktif === 0 && garasiMesin.length > 0) {
+                      if (totalSpeedAktif === 0) {
                            waktuExpiredMesin = Math.max(...garasiMesin.map(m => m.expired_kontrak));
                       }
                   }
 
                   mySpeed = totalSpeedAktif;
-                  expTimeMesin = waktuExpiredMesin; 
-                  localStorage.setItem("cisExpMesin", expTimeMesin); 
-
+                  expTimeMesin = waktuExpiredMesin; // Variabel mesin dipisah murni
+                  localStorage.setItem("cisExpMesin", expTimeMesin); // Amankan ke memori HP
+                  
                   // Update paksa ke Firebase jika sistem mendeteksi ada speed yang baru saja hangus
                   if (data.kecepatan_hash !== mySpeed && !docSnap.metadata.hasPendingWrites) {
-                      updateDoc(doc(db, "Akun_Publik", docId), { 
-                          kecepatan_hash: mySpeed,
-                          daftar_mesin: garasiBersih // Timpa garasi lama dengan yang sudah dibersihkan
-                      });
-                      window.showToast("🔔 Masa aktif salah satu Mesin Anda telah habis. Speed disesuaikan!");
+                      updateDoc(doc(db, "Akun_Publik", docId), { kecepatan_hash: mySpeed });
                   }
                   
                   // 2. Logika Masa Tenggang & Hukuman Kiamat Aset
