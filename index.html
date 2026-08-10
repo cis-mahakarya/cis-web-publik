@@ -5645,7 +5645,14 @@ window.openAkuntansiTeamModal = () => {
                 const boxRek = document.getElementById('infoRekeningMaster');
                 if(!rekSnap.empty) {
                     let r = rekSnap.docs[0].data();
-                    boxRek.innerHTML = `<b style='color:#fff;'>${r.nama_bank}</b><br/><span style='font-family:Orbitron; font-size:1.1rem; color:#f1c40f; word-break:break-all;'>${r.no_rek}</span><br/>a/n ${r.atas_nama}`;
+                    boxRek.innerHTML = `
+                <b style='color:#fff;'>${r.nama_bank}</b><br/>
+                <div style='display:flex; justify-content:center; align-items:center; gap:10px; margin:5px 0;'>
+                    <span style='font-family:Orbitron; font-size:1.2rem; color:#f1c40f; font-weight:bold; letter-spacing:1px;'>${r.no_rek}</span>
+                    <button onclick='window.salinTeksP2P("${r.no_rek}")' style='background:#f1c40f; color:#0b0f19; border:none; padding:4px 10px; border-radius:6px; cursor:pointer; font-size:0.75rem; font-weight:bold; transition:0.2s;'><i class='fa-solid fa-copy'></i> COPY</button>
+                </div>
+                <span style='color:#94a3b8; font-size:0.8rem;'>a/n ${r.atas_nama}</span>
+            `;
                 } else {
                     boxRek.innerHTML = "Rekening Pusat belum diatur.";
                 }
