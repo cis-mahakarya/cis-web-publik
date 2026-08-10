@@ -1508,10 +1508,15 @@
           <p style='font-size:0.75rem; color:#94a3b8; margin-top:0;'>Rekapitulasi penjualan P2P Anda dan kalkulasi setoran wajib ke Master Pusat.</p>
           
           <div style='background:rgba(241, 196, 15, 0.1); border:1px dashed #f1c40f; padding:15px; border-radius:8px; margin-bottom:15px;'>
-              <div style='display:flex; justify-content:space-between; margin-bottom:10px; border-bottom:1px solid rgba(255,255,255,0.1); padding-bottom:5px;'>
-                  <span style='font-size:0.75rem; color:#cbd5e1;'>Total Penjualan Token (P2P):</span>
-                  <b id='laporanTotalJual' style='color:#00f2fe; font-size:0.9rem;'>Rp 0</b>
-              </div>
+              <div style='display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; border-bottom:1px solid rgba(255,255,255,0.1); padding-bottom:5px;'>
+            <span style='font-size:0.75rem; color:#cbd5e1;'>Total Penjualan Token (P2P):<br>
+                <button onclick='let el=document.getElementById("rincianJualP2p"); el.style.display = el.style.display==="none" ? "block" : "none";' style='background:transparent; border:1px solid #00f2fe; color:#00f2fe; padding:3px 8px; border-radius:4px; font-size:0.65rem; cursor:pointer; margin-top:5px;'><i class='fa-solid fa-eye'></i> Lihat Rincian</button>
+            </span>
+            <b id='laporanTotalJual' style='color:#00f2fe; font-size:0.9rem;'>Rp 0</b>
+        </div>
+        <div id='rincianJualP2p' style='display:none; background:rgba(0,0,0,0.3); border:1px dashed #334155; padding:10px; border-radius:8px; margin-bottom:15px; font-size:0.75rem; max-height:150px; overflow-y:auto;'>
+            <!-- Rincian diisi dari JS -->
+        </div>
               <div style='display:flex; justify-content:space-between; margin-bottom:10px; border-bottom:1px solid rgba(255,255,255,0.1); padding-bottom:5px;'>
                   <span id='txtLabelSetor' style='font-size:0.75rem; color:#cbd5e1;'>Wajib Setor ke Master (70%):</span>
                   <b id='laporanSetoranMaster' style='color:#ef4444; font-size:0.9rem;'>Rp 0</b>
@@ -5668,9 +5673,26 @@ window.openAkuntansiTeamModal = () => {
                 }
 
                 // 3. Cari semua penjualan P2P yang statusnya SELESAI
-                const snap = await getDocs(query(collection(db, "P2P_Order"), where("penjual", "==", myEmail), where("status", "==", "SELESAI")));
-                let totalJual = 0;
-                snap.forEach(d => { totalJual += (d.data().total_harga || 0); });
+				const snap = await getDocs(query(collection(db, "P2P_Order"), where("penjual", "==", myEmail), where("status", "==", "SELESAI")));
+				let totalJual = 0;
+				let htmlRincian = "";
+
+				snap.forEach(d => { 
+    			let o = d.data();
+    			let harga = o.total_harga || o.total_bayar_rp || 0; 
+    			totalJual += harga; 
+    
+    			let tglOrder = o.timestamp ? new Date(o.timestamp).toLocaleString('id-ID') : '-';
+    			let pembeli = o.pembeli || o.nama_pembeli || 'Member';
+    
+    			htmlRincian += `<div style="display:flex; justify-content:space-between; border-bottom:1px dashed #334155; padding:6px 0;">
+        		<span><b style="color:#e2e8f0;">${pembeli}</b><br><span style="font-size:0.6rem; color:#64748b;">${tglOrder}</span></span>
+        		<b style="color:#38bdf8;">Rp ${harga.toLocaleString('id-ID')}</b>
+    			</div>`;
+				});
+
+				let boxRincian = document.getElementById('rincianJualP2p');
+				if(boxRincian) boxRincian.innerHTML = htmlRincian || "<div style='text-align:center; color:#94a3b8;'>Belum ada rincian penjualan selesai.</div>";
                 
                 // 4. Kalkulasi Bagi Hasil Dinamis
                 let setorMaster = totalJual * (persenPusat / 100);
