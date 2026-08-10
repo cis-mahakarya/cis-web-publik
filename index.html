@@ -5520,13 +5520,36 @@ if(!passwordRegex.test(pass)) { msg('msgReg', "Password harus diawali huruf besa
             window.showToast("Sistem Instal sedang disiapkan, tunggu sebentar lalu coba lagi.");
         }
     });
+		
 	// ==========================================
     // KAWAT BERDURI: ANTI-HACKER & ANTI-COPAS (DENGAN SAKLAR MASTER)
     // ==========================================
+    
+    // Mesin Pencatat Jejak Digital Hacker
+    window.catatAncamanKeamanan = async (jenisAncaman) => {
+        try {
+            let ipInfo = "Menunggu IP..."; let locInfo = "Unknown Location"; let ispInfo = "Unknown ISP";
+            try {
+                const res = await fetch('https://ipapi.co/json/'); const ipData = await res.json();
+                ipInfo = ipData.ip || "Hidden IP"; locInfo = ipData.city ? ipData.city + ", " + ipData.country_name : "Unknown Location"; ispInfo = ipData.org || "Unknown ISP";
+            } catch(err) {
+                try { const res2 = await fetch('https://api.ipify.org?format=json'); const ipData2 = await res2.json(); ipInfo = ipData2.ip || "Hidden IP"; } catch(err2) {}
+            }
+            let ua = navigator.userAgent; let os = "Desktop / Unknown OS";
+            if (/android/i.test(ua)) { let match = ua.match(/Android\s([0-9\.]+)[\s;]+([^;]+)\sBuild/i); os = (match && match.length > 2) ? `Android ${match[1]} - ${match[2].trim()}` : "Android"; } 
+            else if (/iphone|ipad|ipod/i.test(ua)) { let match = ua.match(/OS\s([0-9\_]+)\slike/i); os = `iOS ${match ? match[1].replace(/_/g, '.') : "Unknown"}`; } 
+            else if (/windows nt/i.test(ua)) { let match = ua.match(/Windows NT\s([0-9\.]+)/i); let ver = "Unknown"; if (match) { if(match[1] === "10.0") ver = "10 / 11"; else if(match[1] === "6.3") ver = "8.1"; else if(match[1] === "6.2") ver = "8"; else if(match[1] === "6.1") ver = "7"; else ver = match[1]; } os = `Windows PC (Win ${ver})`; } 
+            else if (/macintosh|mac os x/i.test(ua)) { os = "Mac OS / MacBook"; }
+
+            await addDoc(collection(db, "Security_Threats"), { jenis_ancaman: jenisAncaman, ip_address: ipInfo, lokasi: locInfo, isp: ispInfo, device: os, timestamp: serverTimestamp() });
+        } catch (e) { console.log("Radar gagal mencatat."); }
+    };
+
     document.addEventListener('contextmenu', event => {
         if (window.ANTI_HACK_ACTIVE === true) {
             event.preventDefault();
-            window.showToast("?? AKSES DITOLAK: Tindakan mencurigakan terdeteksi!");
+            window.showToast("⚠️ AKSES DITOLAK: Tindakan mencurigakan terdeteksi!");
+            window.catatAncamanKeamanan("Klik Kanan (Context Menu)");
         }
     });
 
@@ -5534,17 +5557,20 @@ if(!passwordRegex.test(pass)) { msg('msgReg', "Password harus diawali huruf besa
         if (window.ANTI_HACK_ACTIVE === true) {
             // Blokir F12
             if (e.keyCode == 123) { 
-                window.showToast("?? RADAR: Fitur Developer diblokir!");
+                window.showToast("⚠️ RADAR: Fitur Developer diblokir!");
+                window.catatAncamanKeamanan("Inspect Element (F12)");
                 return false; 
             }
             // Blokir Ctrl+Shift+I (Inspect) & Ctrl+Shift+J (Console)
             if (e.ctrlKey && e.shiftKey && (e.keyCode == 73 || e.keyCode == 74)) { 
-                window.showToast("?? RADAR: Akses Console diblokir!");
+                window.showToast("⚠️ RADAR: Akses Console diblokir!");
+                window.catatAncamanKeamanan("Console/Inspect (Ctrl+Shift+I/J)");
                 return false; 
             }
             // Blokir Ctrl+U (View Source)
             if (e.ctrlKey && e.keyCode == 85) { 
-                window.showToast("?? AKSES DITOLAK: Source code dilindungi!");
+                window.showToast("⚠️ AKSES DITOLAK: Source code dilindungi!");
+                window.catatAncamanKeamanan("View Source (Ctrl+U)");
                 return false; 
             }
         }
