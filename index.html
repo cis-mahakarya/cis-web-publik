@@ -5646,11 +5646,21 @@ window.openAkuntansiTeamModal = () => {
         };
 
         window.kalkulasiAkuntansiTim = async () => {
-        let myEmail = localStorage.getItem("cis_user_email");
-        if(!myEmail) return;
+        // 1. DETEKSI EMAIL OTOMATIS (Sapu bersih semua kemungkinan kunci di LocalStorage)
+        let myEmail = localStorage.getItem("email") || localStorage.getItem("userEmail") || localStorage.getItem("cisUserEmail") || localStorage.getItem("cis_user_email");
+        
+        if(!myEmail) {
+            console.log("Email tidak terdeteksi di memori lokal.");
+            alert("Sistem tidak mendeteksi sesi Anda. Silakan Log Out dan Login kembali.");
+            return;
+        }
+
+        // Ubah tombol jadi loading
+        const btnHitung = document.querySelector(`button[onclick='window.kalkulasiAkuntansiTim()']`);
+        if(btnHitung) { btnHitung.innerHTML = "<i class='fa-solid fa-spinner fa-spin'></i> MENGHITUNG..."; btnHitung.disabled = true; }
 
         try {
-            // 1. Ambil Pengaturan Persentase dari Pusat
+            // 2. Ambil Pengaturan Persentase dari Pusat
             let persenTim = 50; let persenMaster = 50;
             const snapConfig = await getDocs(query(collection(db, "System_Config"), where("tipe", "==", "TEAM_BONUS")));
             if(!snapConfig.empty) {
@@ -5661,7 +5671,7 @@ window.openAkuntansiTeamModal = () => {
             document.getElementById('txtLabelSetor').innerText = `Total Kewajiban Setor (${persenMaster}%):`;
             document.getElementById('txtLabelBonus').innerText = `Bonus / Hak Tim (${persenTim}%):`;
 
-            // 2. Hitung Penjualan P2P
+            // 3. Hitung Penjualan P2P
             const snapP2p = await getDocs(query(collection(db, "P2P_Order"), where("penjual", "==", myEmail), where("status", "==", "SELESAI")));
             let totalJual = 0;
             let htmlRincian = "";
@@ -5679,17 +5689,17 @@ window.openAkuntansiTeamModal = () => {
             let boxRincian = document.getElementById('rincianJualP2p');
             if(boxRincian) boxRincian.innerHTML = htmlRincian || "<div style='text-align:center; color:#94a3b8;'>Belum ada penjualan selesai.</div>";
 
-            // 3. Hitung Setoran yang Sudah di-ACC
+            // 4. Hitung Setoran yang Sudah di-ACC
             const snapSetor = await getDocs(query(collection(db, "Laporan_Setoran"), where("email", "==", myEmail), where("status", "==", "DISETUJUI")));
             let totalSudahSetor = 0;
             snapSetor.forEach(d => { totalSudahSetor += (d.data().nominal || 0); });
 
-            // 4. Kalkulasi Akhir
+            // 5. Kalkulasi Akhir
             let wajibSetor = totalJual * (persenMaster / 100);
             let hakTim = totalJual * (persenTim / 100);
             let sisaSetor = wajibSetor - totalSudahSetor;
 
-            // 5. Tampilkan ke Layar
+            // 6. Tampilkan ke Layar
             document.getElementById('laporanTotalJual').innerText = "Rp " + totalJual.toLocaleString('id-ID');
             document.getElementById('laporanSetoranMaster').innerText = "Rp " + wajibSetor.toLocaleString('id-ID');
             document.getElementById('laporanBonusTim').innerText = "Rp " + hakTim.toLocaleString('id-ID');
@@ -5711,6 +5721,9 @@ window.openAkuntansiTeamModal = () => {
         } catch (e) {
             console.error("Gagal kalkulasi:", e);
         }
+
+        // Kembalikan tombol ke semula
+        if(btnHitung) { btnHitung.innerHTML = "<i class='fa-solid fa-calculator'></i> HITUNG ULANG DATA"; btnHitung.disabled = false; }
     };
 
 				window.loadRiwayatSetoranSultan = () => {
