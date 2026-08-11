@@ -3738,10 +3738,18 @@
 
             let calonSultan = new Set();
 
-            // 4. CARI PENJUAL DENGAN SALDO >= TARGET
-            const qSultan = query(collection(db, "Akun_Publik"), where("saldo_rupiah", ">=", targetMinimal), orderBy("saldo_rupiah", "desc"), limit(20));
-            const snapSultan = await getDocs(qSultan);
-            snapSultan.forEach(d => {
+            // 4. CARI PENJUAL DENGAN SALDO >= TARGET (JALUR INDEPENDEN PRIBADI & MASTER)
+            const qSultanPribadi = query(collection(db, "Akun_Publik"), where("saldo_rupiah", ">=", targetMinimal), orderBy("saldo_rupiah", "desc"), limit(20));
+            const qSultanMaster = query(collection(db, "Akun_Publik"), where("saldo_rupiah_master", ">=", targetMinimal), orderBy("saldo_rupiah_master", "desc"), limit(20));
+            
+            const [snapPribadi, snapMaster] = await Promise.all([getDocs(qSultanPribadi), getDocs(qSultanMaster)]);
+            
+            snapPribadi.forEach(d => {
+                if(d.data().username && d.data().username !== "Pusat" && d.data().username !== myUsername) {
+                    calonSultan.add(d.data().username);
+                }
+            });
+            snapMaster.forEach(d => {
                 if(d.data().username && d.data().username !== "Pusat" && d.data().username !== myUsername) {
                     calonSultan.add(d.data().username);
                 }
@@ -3769,9 +3777,13 @@
                     let wktExpired = uData.expired_at ? (uData.expired_at.seconds ? uData.expired_at.seconds * 1000 : uData.expired_at) : 0;
                     if (wktExpired < Date.now()) continue; // Jika mati, lewati! Jangan masukkan ke daftar P2P
 
-                    // FILTER KEDUA: Pastikan saldo memenuhi syarat, dan rekening terisi
-                    if((uData.saldo_rupiah || 0) >= targetMinimal && (uData.bank || uData.ewallet || uData.crypto)) {
-                        html += `<option value='${sName}'>${sName} (IDR: Rp ${(uData.saldo_rupiah || 0).toLocaleString('id-ID')})</option>`;
+                    // FILTER KEDUA: Pastikan SALAH SATU saldo memenuhi syarat, dan rekening terisi
+                    let sPribadi = uData.saldo_rupiah || 0;
+                    let sMaster = uData.saldo_rupiah_master || 0;
+                    let saldoTertinggi = Math.max(sPribadi, sMaster); // Ambil saldo brankas yang paling kuat
+
+                    if(saldoTertinggi >= targetMinimal && (uData.bank || uData.ewallet || uData.crypto)) {
+                        html += `<option value='${sName}'>${sName} (Kapasitas: Rp ${saldoTertinggi.toLocaleString('id-ID')})</option>`;
                         adaPenjual = true;
                     }
                 }
@@ -4420,27 +4432,45 @@
                 minSaldoSyarat = confSnap.docs[0].data().min_sultan;
             }
 
-            // 2. Tarik 30 data teratas untuk difilter secara lokal
-            const qSultan = query(collection(db, "Akun_Publik"), where("saldo_rupiah", ">=", minSaldoSyarat), orderBy("saldo_rupiah", "desc"), limit(30));
+            // 2. Tarik 30 data teratas (Dari Jalur Pribadi dan Jalur Master secara Independen)
+            const qSultanPribadi = query(collection(db, "Akun_Publik"), where("saldo_rupiah", ">=", minSaldoSyarat), orderBy("saldo_rupiah", "desc"), limit(30));
+            const qSultanMaster = query(collection(db, "Akun_Publik"), where("saldo_rupiah_master", ">=", minSaldoSyarat), orderBy("saldo_rupiah_master", "desc"), limit(30));
             
-            // 3. Matikan CCTV lama jika ada, sebelum menyalakan yang baru
-            if (unsubLeaderboard) unsubLeaderboard();
+            // 3. Matikan CCTV lama jika ada
+            if (window.unsubLeaderboard1) window.unsubLeaderboard1();
+            if (window.unsubLeaderboard2) window.unsubLeaderboard2();
 
-            // 4. Nyalakan CCTV Real-Time (onSnapshot)
-            unsubLeaderboard = onSnapshot(qSultan, (snap) => {
-                if(snap.empty) {
-                    listDiv.innerHTML = `<div style='text-align:center; padding:20px; color:#94a3b8;'>Belum ada Sultan yang memenuhi syarat minimal saldo (Rp ${minSaldoSyarat.toLocaleString('id-ID')}).</div>`;
+            let snap1Docs = [];
+            let snap2Docs = [];
+
+            const renderLeaderboardIndependen = () => {
+                let combinedMap = new Map();
+                snap1Docs.forEach(d => combinedMap.set(d.id, d.data()));
+                snap2Docs.forEach(d => combinedMap.set(d.id, d.data()));
+                
+                let dataArr = Array.from(combinedMap.values());
+                
+                // Urutkan berdasarkan kekuatan saldo tertinggi di antara dua brankas
+                dataArr.sort((a,b) => {
+                    let maxA = Math.max(a.saldo_rupiah || 0, a.saldo_rupiah_master || 0);
+                    let maxB = Math.max(b.saldo_rupiah || 0, b.saldo_rupiah_master || 0);
+                    return maxB - maxA;
+                });
+
+                if(dataArr.length === 0) {
+                    listDiv.innerHTML = `<div style='text-align:center; padding:20px; color:#94a3b8;'>Belum ada Sultan yang memenuhi syarat likuiditas (Rp ${minSaldoSyarat.toLocaleString('id-ID')}).</div>`;
                     return;
                 }
-                
+
                 let html = ""; let rank = 1;
-                snap.forEach(doc => {
-                    let u = doc.data();
-                    
+                dataArr.forEach(u => {
                     // FILTER SULTAN: Lewati jika akun mati atau belum isi rekening
-let wktExpired = u.expired_at ? (u.expired_at.seconds ? u.expired_at.seconds * 1000 : u.expired_at) : 0;
-if (wktExpired < Date.now()) return; // <-- Langsung sembunyikan jika REG habis!
-if (!u.bank && !u.ewallet && !u.crypto) return;
+                    let wktExpired = u.expired_at ? (u.expired_at.seconds ? u.expired_at.seconds * 1000 : u.expired_at) : 0;
+                    if (wktExpired < Date.now()) return; 
+                    if (!u.bank && !u.ewallet && !u.crypto) return;
+
+                    let saldoKuat = Math.max(u.saldo_rupiah || 0, u.saldo_rupiah_master || 0);
+                    if (saldoKuat < minSaldoSyarat) return; // Proteksi kembalikan syarat minimal
 
                     // Batasi tampilan hanya 10 Sultan sesungguhnya
                     if (rank > 10) return;
@@ -4451,20 +4481,30 @@ if (!u.bank && !u.ewallet && !u.crypto) return;
                         <div class='rank-num'>${rank}</div>
                         <div style='flex:1;'>
                             <b style='color:#00f2fe; font-size:1.05rem;'>${u.username}</b><br/>
-                            <span style='font-size:0.8rem; color:#2ecc71; font-weight:bold;'><i class='fa-solid fa-wallet'></i> Profit: Rp ${(u.saldo_rupiah || 0).toLocaleString('id-ID')}</span>
+                            <span style='font-size:0.8rem; color:#2ecc71; font-weight:bold;'><i class='fa-solid fa-wallet'></i> Likuiditas: Rp ${saldoKuat.toLocaleString('id-ID')}</span>
                         </div>
                     </div>`;
                     rank++;
                 });
                 
                 if(html === "") {
-                    html = `<div style='text-align:center; padding:20px; color:#94a3b8;'>Sultan dengan saldo mencukupi belum mengisi data rekening P2P atau sedang expired.</div>`;
+                    html = `<div style='text-align:center; padding:20px; color:#94a3b8;'>Sultan dengan likuiditas mencukupi belum mengisi data rekening P2P atau sedang expired.</div>`;
                 }
                 listDiv.innerHTML = html;
+            };
+
+            // 4. Nyalakan CCTV Real-Time Independen
+            window.unsubLeaderboard1 = onSnapshot(qSultanPribadi, (snap) => {
+                snap1Docs = snap.docs;
+                renderLeaderboardIndependen();
+            });
+            window.unsubLeaderboard2 = onSnapshot(qSultanMaster, (snap) => {
+                snap2Docs = snap.docs;
+                renderLeaderboardIndependen();
             });
         } catch(error) {
             console.error(error);
-            listDiv.innerHTML = "<div style='text-align:center; color:#ef4444;'>Gagal memproses data Sultan. Pastikan Index Firestore sudah aktif.</div>";
+            listDiv.innerHTML = "<div style='text-align:center; color:#ef4444;'>Gagal memproses data Sultan.</div>";
         }
     };
 
