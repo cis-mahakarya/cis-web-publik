@@ -5647,7 +5647,7 @@ window.openAkuntansiTeamModal = () => {
 
         window.kalkulasiAkuntansiTim = async () => {
         // 1. DETEKSI EMAIL OTOMATIS (Sapu bersih semua kemungkinan kunci di LocalStorage)
-        let myEmail = localStorage.getItem("email") || localStorage.getItem("userEmail") || localStorage.getItem("cisUserEmail") || localStorage.getItem("cis_user_email");
+        let myEmail = localStorage.getItem("cisMinerEmail");
         
         if(!myEmail) {
             console.log("Email tidak terdeteksi di memori lokal.");
