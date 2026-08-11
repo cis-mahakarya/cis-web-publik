@@ -3459,7 +3459,7 @@
         await addDoc(collection(db, "Database_Token"), { kode_token: tk, nominal_rupiah: targetRp, durasi_hari: 30, status: "AKTIF", distribusi_ke: jenisToken, pemilik: emailTarget, pemilik_username: targetUser, pengirim: myUsername, pembuat: "Sistem Auto", dibuat_pada: serverTimestamp(), dipakai_oleh: null });
 
         // 2. Simpan Riwayat Request (Langsung DISETUJUI)
-        await addDoc(collection(db, "Request_Withdraw"), { email_pemohon: myEmail, username_pemohon: myUsername, doc_id_pemohon: docId, nominal_rupiah: targetRp, distribusi_ke: jenisToken, target_username: targetUser, status: "DISETUJUI", waktu_request: serverTimestamp() });
+        await addDoc(collection(db, "Request_Withdraw"), { email_pemohon: myEmail, username_pemohon: myUsername, doc_id_pemohon: docId, nominal_rupiah: targetRp, distribusi_ke: jenisToken, target_username: targetUser, status: "DISETUJUI", waktu_request: serverTimestamp(), sumber_dana: sumberDana });
                 
                 // 3. Catat di Buku Kas Pusat
                 await addDoc(collection(db, "Mutasi_Pusat"), { jenis: "OUT", nominal: targetRp, deskripsi: `Auto WD (Token ${jenisToken}) dari ${myUsername}`, waktu: serverTimestamp() });
@@ -3498,7 +3498,7 @@
                 msg('msgWithdraw', "Withdrawal Auto-Approved.", "ok");
             } else {
                 // LOGIKA WD MANUAL (Menunggu Antrean Master)
-                await addDoc(collection(db, "Request_Withdraw"), { email_pemohon: myEmail, username_pemohon: myUsername, doc_id_pemohon: docId, nominal_rupiah: targetRp, distribusi_ke: jenisToken, target_username: targetUser, target_wa: "", status: "PENDING", waktu_request: serverTimestamp() });
+                await addDoc(collection(db, "Request_Withdraw"), { email_pemohon: myEmail, username_pemohon: myUsername, doc_id_pemohon: docId, nominal_rupiah: targetRp, distribusi_ke: jenisToken, target_username: targetUser, target_wa: "", status: "PENDING", waktu_request: serverTimestamp(), sumber_dana: sumberDana });
                 
                 catatMutasi("OUT", `? Pengajuan WD: Token ${jenisToken}`, targetRp);
 
