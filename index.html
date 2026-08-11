@@ -4839,15 +4839,15 @@ if (!u.bank && !u.ewallet && !u.crypto) return;
                   mySaldoPpob = data.saldo_ppob || 0; // TAMBAHKAN INI
                   window.STATUS_AKUN_USER = data.status_akun || "INACTIVE";
 
-				  // RADAR TIM PUSAT (SULTAN)
+				  // RADAR TIM PUSAT (SULTAN) & KUNCI STAKING
                   const menuTim = document.getElementById('menuAkuntansiTeam');
-                  if (menuTim) {
-                      // Sensor MURNI membaca Role dari Web Master (Tidak ada bypass Username)
-                      if (data.role && data.role.includes("TIM")) {
-                          menuTim.style.display = 'flex';
-                      } else {
-                          menuTim.style.display = 'none';
-                      }
+                  const menuStaking = document.getElementById('menuStakingSidebar');
+                  
+                  if (data.role && data.role.includes("TIM")) {
+                      if (menuTim) menuTim.style.display = 'flex';
+                      if (menuStaking) menuStaking.style.display = 'none'; // Gembok mati Staking untuk Tim
+                  } else {
+                      if (menuTim) menuTim.style.display = 'none';
                   }
 				  
                   // =========================================================
@@ -5088,7 +5088,11 @@ let isDeviceLocked = (window.CONFIG_DEVICE_LOCK === true && window.CONFIG_DEVICE
         onSnapshot(query(collection(db, "System_Config"), where("tipe", "==", "STAKING_STATUS")), (snap) => {
             const menuStaking = document.getElementById('menuStakingSidebar');
             if(menuStaking) {
-                if(!snap.empty && snap.docs[0].data().is_active === true) {
+                // Proteksi: Deteksi apakah akun ini adalah TIM
+                let isTim = (window.myProfileData && window.myProfileData.role && window.myProfileData.role.includes("TIM"));
+                
+                // Tampilkan hanya jika saklar Pusat ON DAN user BUKAN Tim
+                if(!snap.empty && snap.docs[0].data().is_active === true && !isTim) {
                     menuStaking.style.display = 'flex';
                 } else {
                     menuStaking.style.display = 'none';
