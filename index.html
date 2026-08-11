@@ -5839,12 +5839,28 @@ window.openAkuntansiTeamModal = () => {
 				let boxRincian = document.getElementById('rincianJualP2p');
 				if(boxRincian) boxRincian.innerHTML = htmlRincian || "<div style='text-align:center; color:#94a3b8;'>Belum ada rincian penjualan selesai.</div>";
                 
-                // 4. Kalkulasi Bagi Hasil Dinamis
-                let setorMaster = totalJual * (persenPusat / 100);
+                // 4. Hitung Total Uang yang Sudah Disetor (Status Disetujui + Pending)
+                const snapSetoran = await getDocs(query(collection(db, "Laporan_Setoran"), where("email", "==", myEmail)));
+                let totalSudahSetor = 0;
+                snapSetoran.forEach(d => {
+                    let sData = d.data();
+                    if (sData.status === "DISETUJUI" || sData.status === "PENDING") {
+                        totalSudahSetor += sData.nominal || 0;
+                    }
+                });
+
+                // 5. Kalkulasi Sisa Wajib Setor & Hak Tim
+                let totalKewajibanPusat = totalJual * (persenPusat / 100);
+                let sisaWajibSetor = totalKewajibanPusat - totalSudahSetor;
+                if (sisaWajibSetor < 0) sisaWajibSetor = 0; // Proteksi agar tidak minus
                 let bonusTimNom = totalJual * (persenTim / 100);
 
+                // Simpan ke memori untuk dibaca oleh tombol pengaman di form
+                window.SISA_WAJIB_SETOR = sisaWajibSetor;
+
                 document.getElementById('laporanTotalJual').innerText = "Rp " + totalJual.toLocaleString('id-ID');
-                document.getElementById('laporanSetoranMaster').innerText = "Rp " + setorMaster.toLocaleString('id-ID');
+                document.getElementById('txtLabelSetor').innerText = `Sisa Wajib Setor (${persenPusat}%):`;
+                document.getElementById('laporanSetoranMaster').innerText = "Rp " + sisaWajibSetor.toLocaleString('id-ID');
                 document.getElementById('laporanBonusTim').innerText = "Rp " + bonusTimNom.toLocaleString('id-ID');
                 if(typeof window.loadRiwayatSetoranSultan === 'function') window.loadRiwayatSetoranSultan();
             } catch (e) {
@@ -5880,6 +5896,14 @@ window.openAkuntansiTeamModal = () => {
             if(!nominal || nominal <= 0) return window.showToast("Masukkan nominal yang valid!");
             if(!file) return window.showToast("Silakan upload foto bukti transfer!");
             
+            // --- KAWAT BERDURI: CEGAH TRANSFER BERLEBIH / DOUBLE BAYAR ---
+            if (typeof window.SISA_WAJIB_SETOR === 'undefined') return window.showToast("Harap tunggu, sistem sedang menghitung tagihan.");
+            if (window.SISA_WAJIB_SETOR <= 0) return window.showToast("TIDAK ADA TAGIHAN! Sisa Wajib Setor Anda saat ini Rp 0.");
+            if (nominal > window.SISA_WAJIB_SETOR) {
+                return window.showToast(`DITOLAK! Nominal laporan melebihi Sisa Wajib Setor (Maksimal Rp ${window.SISA_WAJIB_SETOR.toLocaleString('id-ID')})`);
+            }
+            // -------------------------------------------------------
+
             if(!confirm(`Kirim laporan setoran sebesar Rp ${nominal.toLocaleString('id-ID')} ke Master Pusat?`)) return;
             
             const btn = document.querySelector(`button[onclick='window.kirimLaporanSetoran()']`);
