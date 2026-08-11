@@ -2951,6 +2951,56 @@
         btn.disabled=false; btn.innerHTML=`<i class='fa-solid fa-exchange-alt'></i> EXCHANGE COINS TO IDR`;
     };
 
+		  window.tukarVrscMasterKeRupiah = async () => {
+        // --- LOGIKA KUNCI ---
+        let mySafeExp = (expTime && expTime.seconds) ? expTime.seconds * 1000 : expTime;
+        if (isAccountLocked || (mySafeExp > 0 && Date.now() > mySafeExp)) {
+            alert("Akses Exchange diblokir. Silakan order token aktivasi akun untuk melanjutkan!");
+            return false; 
+        }
+        // --------------------
+
+        let maxRp = Math.floor((myVrscMaster || 0) * vrscPriceRp);
+        let inputEl = document.getElementById('inpTukarVrscMaster');
+        let targetRp = parseInt(inputEl.value);
+
+        if(!targetRp || isNaN(targetRp)) { window.showToast("Masukkan nominal yang ingin ditukar!"); return; }
+        if(targetRp < 10000 || targetRp % 10000 !== 0) { window.showToast("Nominal harus kelipatan Rp 10.000!"); return; }
+        if(targetRp > maxRp) { window.showToast("Saldo VRSC Master Anda tidak mencukupi untuk nominal ini!"); return; }
+
+        const btn = document.getElementById('btnTukarVrscMaster'); 
+        btn.disabled = true; 
+        btn.innerHTML = "<i class='fa-solid fa-spinner fa-spin'></i> PROSES...";
+        
+        let vrscToDeduct = targetRp / vrscPriceRp;
+        myRupiahMaster += targetRp; 
+        myVrscMaster -= vrscToDeduct;
+        if(myVrscMaster < 0) myVrscMaster = 0; // Proteksi agar tidak minus
+
+        try {
+            await updateDoc(doc(db, "Akun_Publik", docId), { 
+                saldo_vrsc_master: myVrscMaster, 
+                saldo_rupiah_master: myRupiahMaster 
+            });
+            
+            catatMutasi("IN", `Exchange Likuiditas Pusat: VRSC to IDR Master`, targetRp);
+            
+            window.showToast("Exchange Master Sukses!"); 
+            inputEl.value = ''; 
+            updateUI(); 
+            
+            // Update angka di layar brankas secara instan
+            let elVrscM = document.getElementById('infoVrscMaster'); if(elVrscM) elVrscM.innerText = formatKripto(myVrscMaster);
+            let elIdrM = document.getElementById('infoIdrMaster'); if(elIdrM) elIdrM.innerText = "Rp " + myRupiahMaster.toLocaleString('id-ID');
+            
+        } catch(e) {
+            window.showToast("Gagal menukar saldo: " + e.message);
+        }
+        
+        btn.disabled = false; 
+        btn.innerHTML = `<i class='fa-solid fa-exchange-alt'></i> TUKAR`;
+    };
+
 	// --- START: LOGIKA TRANSAKSI PPOB ---
     window.ubahFormPpob = () => {
         const jenis = document.getElementById('ppobJenis').value;
