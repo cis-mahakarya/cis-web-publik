@@ -1508,24 +1508,31 @@
           <p style='font-size:0.75rem; color:#94a3b8; margin-top:0;'>Rekapitulasi penjualan P2P Anda dan kalkulasi setoran wajib ke Master Pusat.</p>
           
           <div style='background:rgba(241, 196, 15, 0.1); border:1px dashed #f1c40f; padding:15px; border-radius:8px; margin-bottom:15px;'>
-              <div style='display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; border-bottom:1px solid rgba(255,255,255,0.1); padding-bottom:5px;'>
-            <span style='font-size:0.75rem; color:#cbd5e1;'>Total Penjualan Token (P2P):<br>
-                <button onclick='let el=document.getElementById("rincianJualP2p"); el.style.display = el.style.display==="none" ? "block" : "none";' style='background:transparent; border:1px solid #00f2fe; color:#00f2fe; padding:3px 8px; border-radius:4px; font-size:0.65rem; cursor:pointer; margin-top:5px;'><i class='fa-solid fa-eye'></i> Lihat Rincian</button>
-            </span>
-            <b id='laporanTotalJual' style='color:#00f2fe; font-size:0.9rem;'>Rp 0</b>
+            <div style='display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; border-bottom:1px solid rgba(255,255,255,0.1); padding-bottom:5px;'>
+                <span style='font-size:0.75rem; color:#cbd5e1;'>Total Penjualan Token (P2P):<br>
+                    <button onclick='let el=document.getElementById("rincianJualP2p"); el.style.display = el.style.display==="none" ? "block" : "none";' style='background:transparent; border:1px solid #00f2fe; color:#00f2fe; padding:3px 8px; border-radius:4px; font-size:0.65rem; cursor:pointer; margin-top:5px;'><i class='fa-solid fa-eye'></i> Lihat Rincian</button>
+                </span>
+                <b id='laporanTotalJual' style='color:#00f2fe; font-size:0.9rem;'>Rp 0</b>
+            </div>
+            <div id='rincianJualP2p' style='display:none; background:rgba(0,0,0,0.3); border:1px dashed #334155; padding:10px; border-radius:8px; margin-bottom:15px; font-size:0.75rem; max-height:150px; overflow-y:auto;'></div>
+            
+            <div style='display:flex; justify-content:space-between; margin-bottom:10px; border-bottom:1px solid rgba(255,255,255,0.1); padding-bottom:5px;'>
+                <span id='txtLabelBonus' style='font-size:0.75rem; color:#cbd5e1;'>Bonus / Hak Tim (50%):</span>
+                <b id='laporanBonusTim' style='color:#2ecc71; font-size:0.9rem;'>Rp 0</b>
+            </div>
+            <div style='display:flex; justify-content:space-between; margin-bottom:10px; border-bottom:1px solid rgba(255,255,255,0.1); padding-bottom:5px;'>
+                <span id='txtLabelSetor' style='font-size:0.75rem; color:#cbd5e1;'>Total Kewajiban Setor (50%):</span>
+                <b id='laporanSetoranMaster' style='color:#f59e0b; font-size:0.9rem;'>Rp 0</b>
+            </div>
+            <div style='display:flex; justify-content:space-between; margin-bottom:10px; border-bottom:1px dashed rgba(255,255,255,0.2); padding-bottom:10px;'>
+                <span style='font-size:0.75rem; color:#cbd5e1;'>Sudah Disetor & ACC Pusat:</span>
+                <b id='laporanSudahSetor' style='color:#38bdf8; font-size:0.9rem;'>Rp 0</b>
+            </div>
+            <div style='display:flex; justify-content:space-between; align-items:center; background:rgba(0,0,0,0.4); padding:10px; border-radius:5px; border:1px solid #ef4444;' id='boxSisaSetor'>
+                <span style='font-size:0.75rem; color:#e2e8f0; font-weight:bold;'><i class='fa-solid fa-file-invoice-dollar'></i> SISA WAJIB SETOR:</span>
+                <b id='laporanSisaSetor' style='color:#ef4444; font-family:Orbitron; font-size:1.1rem;'>Rp 0</b>
+            </div>
         </div>
-        <div id='rincianJualP2p' style='display:none; background:rgba(0,0,0,0.3); border:1px dashed #334155; padding:10px; border-radius:8px; margin-bottom:15px; font-size:0.75rem; max-height:150px; overflow-y:auto;'>
-            <!-- Rincian diisi dari JS -->
-        </div>
-              <div style='display:flex; justify-content:space-between; margin-bottom:10px; border-bottom:1px solid rgba(255,255,255,0.1); padding-bottom:5px;'>
-                  <span id='txtLabelSetor' style='font-size:0.75rem; color:#cbd5e1;'>Wajib Setor ke Master (70%):</span>
-                  <b id='laporanSetoranMaster' style='color:#ef4444; font-size:0.9rem;'>Rp 0</b>
-              </div>
-              <div style='display:flex; justify-content:space-between;'>
-                  <span id='txtLabelBonus' style='font-size:0.8rem; color:#f1c40f; font-weight:bold;'>Bonus / Hak Tim (30%):</span>
-                  <b id='laporanBonusTim' style='color:#2ecc71; font-family:Orbitron; font-size:1.1rem;'>Rp 0</b>
-              </div>
-          </div>
 
           <h4 style='color:#38bdf8; margin:0 0 10px 0; font-size:0.8rem;'><i class='fa-solid fa-building-columns'></i> REKENING TUJUAN PUSAT</h4>
           <div id='infoRekeningMaster' style='background:#0b0f19; padding:12px; border-radius:8px; border:1px dashed #38bdf8; font-size:0.8rem; color:#cbd5e1; margin-bottom:15px; text-align:center;'>
@@ -5639,74 +5646,72 @@ window.openAkuntansiTeamModal = () => {
         };
 
         window.kalkulasiAkuntansiTim = async () => {
-            document.getElementById('laporanTotalJual').innerText = "Menghitung...";
-            document.getElementById('laporanSetoranMaster').innerText = "Menghitung...";
-            document.getElementById('laporanBonusTim').innerText = "Menghitung...";
-            document.getElementById('infoRekeningMaster').innerHTML = "<i class='fa-solid fa-spinner fa-spin'></i> Memuat rekening pusat...";
-            
-            try {
-                // 1. Tarik Pengaturan Persentase dari Pusat
-                let persenTim = 30; // Angka default
-                const confSnap = await getDocs(query(collection(db, "System_Config"), where("tipe", "==", "TEAM_BONUS")));
-                if(!confSnap.empty) { persenTim = confSnap.docs[0].data().persen_tim || 30; }
-                let persenPusat = 100 - persenTim;
+        let myEmail = localStorage.getItem("cis_user_email");
+        if(!myEmail) return;
 
-                // Update Teks Label di Layar
-                document.getElementById('txtLabelSetor').innerText = `Wajib Setor ke Master (${persenPusat}%):`;
-                document.getElementById('txtLabelBonus').innerText = `Bonus / Hak Tim (${persenTim}%):`;
-
-                // 2. Tarik Data Rekening Master dari Pusat
-                const rekSnap = await getDocs(query(collection(db, "System_Config"), where("tipe", "==", "REKENING_MASTER")));
-                const boxRek = document.getElementById('infoRekeningMaster');
-                if(!rekSnap.empty) {
-                    let r = rekSnap.docs[0].data();
-                    boxRek.innerHTML = `
-                <b style='color:#fff;'>${r.nama_bank}</b><br/>
-                <div style='display:flex; justify-content:center; align-items:center; gap:10px; margin:5px 0;'>
-                    <span style='font-family:Orbitron; font-size:1.2rem; color:#f1c40f; font-weight:bold; letter-spacing:1px;'>${r.no_rek}</span>
-                    <button onclick='window.salinTeksP2P("${r.no_rek}")' style='background:#f1c40f; color:#0b0f19; border:none; padding:4px 10px; border-radius:6px; cursor:pointer; font-size:0.75rem; font-weight:bold; transition:0.2s;'><i class='fa-solid fa-copy'></i> COPY</button>
-                </div>
-                <span style='color:#94a3b8; font-size:0.8rem;'>a/n ${r.atas_nama}</span>
-            `;
-                } else {
-                    boxRek.innerHTML = "Rekening Pusat belum diatur.";
-                }
-
-                // 3. Cari semua penjualan P2P yang statusnya SELESAI
-				const snap = await getDocs(query(collection(db, "P2P_Order"), where("penjual", "==", myEmail), where("status", "==", "SELESAI")));
-				let totalJual = 0;
-				let htmlRincian = "";
-
-				snap.forEach(d => { 
-    			let o = d.data();
-    			let harga = o.total_harga || o.total_bayar_rp || 0; 
-    			totalJual += harga; 
-    
-    			let tglOrder = o.timestamp ? new Date(o.timestamp).toLocaleString('id-ID') : '-';
-    			let pembeli = o.pembeli || o.nama_pembeli || 'Member';
-    
-    			htmlRincian += `<div style="display:flex; justify-content:space-between; border-bottom:1px dashed #334155; padding:6px 0;">
-        		<span><b style="color:#e2e8f0;">${pembeli}</b><br><span style="font-size:0.6rem; color:#64748b;">${tglOrder}</span></span>
-        		<b style="color:#38bdf8;">Rp ${harga.toLocaleString('id-ID')}</b>
-    			</div>`;
-				});
-
-				let boxRincian = document.getElementById('rincianJualP2p');
-				if(boxRincian) boxRincian.innerHTML = htmlRincian || "<div style='text-align:center; color:#94a3b8;'>Belum ada rincian penjualan selesai.</div>";
-                
-                // 4. Kalkulasi Bagi Hasil Dinamis
-                let setorMaster = totalJual * (persenPusat / 100);
-                let bonusTimNom = totalJual * (persenTim / 100);
-
-                document.getElementById('laporanTotalJual').innerText = "Rp " + totalJual.toLocaleString('id-ID');
-                document.getElementById('laporanSetoranMaster').innerText = "Rp " + setorMaster.toLocaleString('id-ID');
-                document.getElementById('laporanBonusTim').innerText = "Rp " + bonusTimNom.toLocaleString('id-ID');
-                if(typeof window.loadRiwayatSetoranSultan === 'function') window.loadRiwayatSetoranSultan();
-            } catch (e) {
-                document.getElementById('laporanTotalJual').innerText = "Gagal memuat data.";
-                document.getElementById('infoRekeningMaster').innerHTML = "Gagal memuat rekening.";
+        try {
+            // 1. Ambil Pengaturan Persentase dari Pusat
+            let persenTim = 50; let persenMaster = 50;
+            const snapConfig = await getDocs(query(collection(db, "System_Config"), where("tipe", "==", "TEAM_BONUS")));
+            if(!snapConfig.empty) {
+                persenTim = snapConfig.docs[0].data().persen_tim || 50;
+                persenMaster = 100 - persenTim;
             }
-        };
+
+            document.getElementById('txtLabelSetor').innerText = `Total Kewajiban Setor (${persenMaster}%):`;
+            document.getElementById('txtLabelBonus').innerText = `Bonus / Hak Tim (${persenTim}%):`;
+
+            // 2. Hitung Penjualan P2P
+            const snapP2p = await getDocs(query(collection(db, "P2P_Order"), where("penjual", "==", myEmail), where("status", "==", "SELESAI")));
+            let totalJual = 0;
+            let htmlRincian = "";
+            snapP2p.forEach(d => { 
+                let o = d.data();
+                let harga = o.total_harga || o.total_bayar_rp || 0; 
+                totalJual += harga; 
+                let tglOrder = o.timestamp ? new Date(o.timestamp).toLocaleString('id-ID') : '-';
+                let pembeli = o.pembeli || o.nama_pembeli || 'Member';
+                htmlRincian += `<div style="display:flex; justify-content:space-between; border-bottom:1px dashed #334155; padding:6px 0;">
+                    <span><b style="color:#e2e8f0;">${pembeli}</b><br><span style="font-size:0.6rem; color:#64748b;">${tglOrder}</span></span>
+                    <b style="color:#38bdf8;">Rp ${harga.toLocaleString('id-ID')}</b>
+                </div>`;
+            });
+            let boxRincian = document.getElementById('rincianJualP2p');
+            if(boxRincian) boxRincian.innerHTML = htmlRincian || "<div style='text-align:center; color:#94a3b8;'>Belum ada penjualan selesai.</div>";
+
+            // 3. Hitung Setoran yang Sudah di-ACC
+            const snapSetor = await getDocs(query(collection(db, "Laporan_Setoran"), where("email", "==", myEmail), where("status", "==", "DISETUJUI")));
+            let totalSudahSetor = 0;
+            snapSetor.forEach(d => { totalSudahSetor += (d.data().nominal || 0); });
+
+            // 4. Kalkulasi Akhir
+            let wajibSetor = totalJual * (persenMaster / 100);
+            let hakTim = totalJual * (persenTim / 100);
+            let sisaSetor = wajibSetor - totalSudahSetor;
+
+            // 5. Tampilkan ke Layar
+            document.getElementById('laporanTotalJual').innerText = "Rp " + totalJual.toLocaleString('id-ID');
+            document.getElementById('laporanSetoranMaster').innerText = "Rp " + wajibSetor.toLocaleString('id-ID');
+            document.getElementById('laporanBonusTim').innerText = "Rp " + hakTim.toLocaleString('id-ID');
+            document.getElementById('laporanSudahSetor').innerText = "Rp " + totalSudahSetor.toLocaleString('id-ID');
+            
+            let elSisa = document.getElementById('laporanSisaSetor');
+            let boxSisa = document.getElementById('boxSisaSetor');
+            
+            if (sisaSetor <= 0) {
+                elSisa.innerText = "LUNAS (Rp 0)";
+                elSisa.style.color = "#4ade80";
+                boxSisa.style.borderColor = "#4ade80";
+            } else {
+                elSisa.innerText = "Rp " + sisaSetor.toLocaleString('id-ID');
+                elSisa.style.color = "#ef4444";
+                boxSisa.style.borderColor = "#ef4444";
+            }
+
+        } catch (e) {
+            console.error("Gagal kalkulasi:", e);
+        }
+    };
 
 				window.loadRiwayatSetoranSultan = () => {
             const listEl = document.getElementById('listRiwayatSetoranSultan');
