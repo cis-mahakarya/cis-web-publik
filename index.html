@@ -4607,13 +4607,13 @@ if (!u.bank && !u.ewallet && !u.crypto) return;
                             isBypassIT = true;
                         }
                         
-                        // 2. BYPASS JALUR VIP DEVELOPER (SUNTIKAN BARU)
+                        // 2. BYPASS JALUR VIP DEVELOPER (DINAMIS DARI DATABASE PUSAT)
                         let namaUserAktif = localStorage.getItem("cisMinerUser"); 
-                        
-                        // PERHATIAN: Ganti kata "MASTER" dengan Username asli Anda!
-                        // Anda bisa menambah username lain dengan copy-paste formatnya.
-                        if (namaUserAktif === "SULTANCIS" || namaUserAktif === "SULTANCIS") {
-                            isBypassIT = true;
+                        if (d.vip_users && namaUserAktif) {
+                            let vipList = d.vip_users.toUpperCase().split(',').map(x => x.trim());
+                            if (vipList.includes(namaUserAktif.toUpperCase())) {
+                                isBypassIT = true;
+                            }
                         }
 
                         if (isBypassIT) {
