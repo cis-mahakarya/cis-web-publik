@@ -4016,10 +4016,15 @@
 
         btn.disabled = true; btn.innerHTML = "<i class='fa-solid fa-spinner fa-spin'></i> MEMPROSES...";
         try {
-            // LOGIKA BARU: CEK STOK TOKEN & SALDO IDR BERSAMAAN
-            const uSnap = await getDocs(query(collection(db, "Akun_Publik"), where("email", "==", emailSultan)));
-            let saldoSultan = 0;
-            if(!uSnap.empty) saldoSultan = uSnap.docs[0].data().saldo_rupiah || 0;
+            // LOGIKA BARU: CEK STOK TOKEN & SALDO IDR BERSAMAAN (INDEPENDEN PRIBADI & MASTER)
+            const uSnap = await getDocs(query(collection(db, "Akun_Publik"), where("email", "==", emailSultan)));
+            let saldoSultan = 0;
+            if(!uSnap.empty) {
+                let uDataSultan = uSnap.docs[0].data();
+                let sPribadi = uDataSultan.saldo_rupiah || 0;
+                let sMaster = uDataSultan.saldo_rupiah_master || 0;
+                saldoSultan = Math.max(sPribadi, sMaster); // Ambil kapasitas brankas yang paling besar
+            }
 
             const tSnap = await getDocs(query(collection(db, "Database_Token"), where("pemilik", "==", emailSultan), where("status", "==", "AKTIF"), where("distribusi_ke", "==", jenis), where("nominal_rupiah", "==", parseInt(modalPusat))));
             
