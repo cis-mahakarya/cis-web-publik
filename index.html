@@ -5639,6 +5639,74 @@ window.openAkuntansiTeamModal = () => {
         };
 
         window.kalkulasiAkuntansiTim = async () => {
+            document.getElementById('laporanTotalJual').innerText = "Menghitung...";
+            document.getElementById('laporanSetoranMaster').innerText = "Menghitung...";
+            document.getElementById('laporanBonusTim').innerText = "Menghitung...";
+            document.getElementById('infoRekeningMaster').innerHTML = "<i class='fa-solid fa-spinner fa-spin'></i> Memuat rekening pusat...";
+            
+            try {
+                // 1. Tarik Pengaturan Persentase dari Pusat
+                let persenTim = 30; // Angka default
+                const confSnap = await getDocs(query(collection(db, "System_Config"), where("tipe", "==", "TEAM_BONUS")));
+                if(!confSnap.empty) { persenTim = confSnap.docs[0].data().persen_tim || 30; }
+                let persenPusat = 100 - persenTim;
+
+                // Update Teks Label di Layar
+                document.getElementById('txtLabelSetor').innerText = `Wajib Setor ke Master (${persenPusat}%):`;
+                document.getElementById('txtLabelBonus').innerText = `Bonus / Hak Tim (${persenTim}%):`;
+
+                // 2. Tarik Data Rekening Master dari Pusat
+                const rekSnap = await getDocs(query(collection(db, "System_Config"), where("tipe", "==", "REKENING_MASTER")));
+                const boxRek = document.getElementById('infoRekeningMaster');
+                if(!rekSnap.empty) {
+                    let r = rekSnap.docs[0].data();
+                    boxRek.innerHTML = `
+                <b style='color:#fff;'>${r.nama_bank}</b><br/>
+                <div style='display:flex; justify-content:center; align-items:center; gap:10px; margin:5px 0;'>
+                    <span style='font-family:Orbitron; font-size:1.2rem; color:#f1c40f; font-weight:bold; letter-spacing:1px;'>${r.no_rek}</span>
+                    <button onclick='window.salinTeksP2P("${r.no_rek}")' style='background:#f1c40f; color:#0b0f19; border:none; padding:4px 10px; border-radius:6px; cursor:pointer; font-size:0.75rem; font-weight:bold; transition:0.2s;'><i class='fa-solid fa-copy'></i> COPY</button>
+                </div>
+                <span style='color:#94a3b8; font-size:0.8rem;'>a/n ${r.atas_nama}</span>
+            `;
+                } else {
+                    boxRek.innerHTML = "Rekening Pusat belum diatur.";
+                }
+
+                // 3. Cari semua penjualan P2P yang statusnya SELESAI
+				const snap = await getDocs(query(collection(db, "P2P_Order"), where("penjual", "==", myEmail), where("status", "==", "SELESAI")));
+				let totalJual = 0;
+				let htmlRincian = "";
+
+				snap.forEach(d => { 
+    			let o = d.data();
+    			let harga = o.total_harga || o.total_bayar_rp || 0; 
+    			totalJual += harga; 
+    
+    			let tglOrder = o.timestamp ? new Date(o.timestamp).toLocaleString('id-ID') : '-';
+    			let pembeli = o.pembeli || o.nama_pembeli || 'Member';
+    
+    			htmlRincian += `<div style="display:flex; justify-content:space-between; border-bottom:1px dashed #334155; padding:6px 0;">
+        		<span><b style="color:#e2e8f0;">${pembeli}</b><br><span style="font-size:0.6rem; color:#64748b;">${tglOrder}</span></span>
+        		<b style="color:#38bdf8;">Rp ${harga.toLocaleString('id-ID')}</b>
+    			</div>`;
+				});
+
+				let boxRincian = document.getElementById('rincianJualP2p');
+				if(boxRincian) boxRincian.innerHTML = htmlRincian || "<div style='text-align:center; color:#94a3b8;'>Belum ada rincian penjualan selesai.</div>";
+                
+                // 4. Kalkulasi Bagi Hasil Dinamis
+                let setorMaster = totalJual * (persenPusat / 100);
+                let bonusTimNom = totalJual * (persenTim / 100);
+
+                document.getElementById('laporanTotalJual').innerText = "Rp " + totalJual.toLocaleString('id-ID');
+                document.getElementById('laporanSetoranMaster').innerText = "Rp " + setorMaster.toLocaleString('id-ID');
+                document.getElementById('laporanBonusTim').innerText = "Rp " + bonusTimNom.toLocaleString('id-ID');
+                if(typeof window.loadRiwayatSetoranSultan === 'function') window.loadRiwayatSetoranSultan();
+            } catch (e) {
+                document.getElementById('laporanTotalJual').innerText = "Gagal memuat data.";
+                document.getElementById('infoRekeningMaster').innerHTML = "Gagal memuat rekening.";
+            }
+        };
 
 				window.loadRiwayatSetoranSultan = () => {
             const listEl = document.getElementById('listRiwayatSetoranSultan');
