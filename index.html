@@ -1370,6 +1370,11 @@
               <option value=''>-- Pilih Jenis Token Dulu --</option>
           </select>
 
+			<select class='input-dark no-icon' id='sumberDanaWd' style='margin-bottom:10px; border-color:#38bdf8; color:#38bdf8; font-weight:bold; display:none;'>
+              <option value='MASTER'>Sumber: Saldo IDR Brankas Master</option>
+              <option value='PRIBADI'>Sumber: Saldo IDR Pribadi (Mining)</option>
+          </select>
+			
           <div class='input-group' style='margin-bottom:15px;'>
               <input class='input-dark no-icon' id='pinWithdrawInline' placeholder='Masukkan 4-Digit PIN Anda' style='border-color:#f1c40f;' type='password' maxlength='4' inputmode='numeric'/>
               <i class='fa-solid fa-eye right-icon' onclick='window.togglePass("pinWithdrawInline", this)'></i>
@@ -1719,7 +1724,20 @@
         document.getElementById('screen-home').style.display = 'block'; 
     };
     
-    window.openWalletModal = (id) => { document.getElementById(id).style.display = 'flex'; };
+    window.openWalletModal = (id) => { 
+        document.getElementById(id).style.display = 'flex'; 
+        if (id === 'modalWithdraw') {
+            let sDana = document.getElementById('sumberDanaWd');
+            if (sDana) {
+                if (window.myProfileData && window.myProfileData.role && window.myProfileData.role.includes("TIM")) {
+                    sDana.style.display = 'block';
+                } else {
+                    sDana.style.display = 'none';
+                    sDana.value = 'PRIBADI';
+                }
+            }
+        }
+    };
     window.closeWalletModal = (id) => { 
         document.getElementById(id).style.display = 'none'; 
         if(id === 'modalStokToken') { let f = document.getElementById('formTransferToken'); if(f) f.style.display = 'none'; } 
@@ -3405,16 +3423,28 @@
         }
         // ==========================================
         if(targetRp < 10000 || targetRp % 10000 !== 0) { msg('msgWithdraw', "Invalid nominal option!", "error"); return; }
-        if(mySaldoRupiah < targetRp) { msg('msgWithdraw', `Insufficient IDR Balance!`, "error"); return; }
+        
+        let sDanaWd = document.getElementById('sumberDanaWd');
+        let sumberDana = (sDanaWd && sDanaWd.style.display !== 'none') ? sDanaWd.value : 'PRIBADI';
+
+        if(sumberDana === 'PRIBADI' && mySaldoRupiah < targetRp) { msg('msgWithdraw', `Saldo IDR Pribadi Anda Tidak Cukup!`, "error"); return; }
+        if(sumberDana === 'MASTER' && myRupiahMaster < targetRp) { msg('msgWithdraw', `Saldo IDR Brankas Master Tidak Cukup!`, "error"); return; }
         
         btn.disabled = true; btn.innerText = "SENDING REQUEST...";
         try {
             const snapPending = await getDocs(query(collection(db, "Request_Withdraw"), where("email_pemohon", "==", myEmail), where("status", "==", "PENDING")));
             if (!snapPending.empty) { msg('msgWithdraw', "DENIED: You still have a pending withdrawal request.", "error"); btn.disabled = false; btn.innerText = "PROCESS WITHDRAWAL"; return; }
 
-            // Potong Saldo IDR
-            await updateDoc(doc(db, "Akun_Publik", docId), { saldo_rupiah: mySaldoRupiah - targetRp });
-            mySaldoRupiah -= targetRp; localStorage.setItem("cisSaldoRp", mySaldoRupiah); updateUI(); 
+            // Potong Saldo IDR Sesuai Sumber Dana
+            if (sumberDana === 'MASTER') {
+                myRupiahMaster -= targetRp;
+                await updateDoc(doc(db, "Akun_Publik", docId), { saldo_rupiah_master: myRupiahMaster });
+            } else {
+                mySaldoRupiah -= targetRp; 
+                localStorage.setItem("cisSaldoRp", mySaldoRupiah);
+                await updateDoc(doc(db, "Akun_Publik", docId), { saldo_rupiah: mySaldoRupiah });
+            }
+            updateUI(); 
 
             // Cek Status Saklar Auto WD dari Master
             const confSnap = await getDocs(query(collection(db, "System_Config"), where("tipe", "==", "AUTO_WD")));
@@ -4084,9 +4114,17 @@
                         if(x.status === "REQUEST") { statusWarna = "#f1c40f"; btnAksi = `<button class='btn-cyan' onclick='window.prosesAksiP2P("${x.id}", "DITERIMA")' style='background:#2ecc71; color:#fff; width:100%; margin-bottom:5px; font-size:0.7rem;'><i class='fa-solid fa-check'></i> TERIMA ORDER</button>
                         <button class='btn-cyan' onclick='window.prosesAksiP2P("${x.id}", "BATAL")' style='background:#ef4444; color:#fff; width:100%; font-size:0.7rem;'><i class='fa-solid fa-xmark'></i> TOLAK</button>`; }
                         else if(x.status === "DITERIMA") { statusWarna = "#e67e22"; btnAksi = `<span style='font-size:0.7rem; color:#e67e22;'>Menunggu Pembeli Transfer</span>`; }
-                        else if(x.status === "DIBAYAR") { statusWarna = "#9b59b6"; btnAksi = `<a href='${x.bukti_tf}' target='_blank' style='display:block; text-align:center; background:#f39c12; color:#fff; padding:5px; border-radius:5px; text-decoration:none; font-size:0.7rem; margin-bottom:5px;'>Lihat Bukti TF</a>
+                        else if(x.status === "DIBAYAR") { 
+                            statusWarna = "#9b59b6"; 
+                            let selectSumberP2P = "";
+                            if (window.myProfileData && window.myProfileData.role && window.myProfileData.role.includes("TIM")) {
+                                selectSumberP2P = `<select id='sumberP2P_${x.id}' style='width:100%; margin-bottom:5px; padding:6px; font-size:0.7rem; font-weight:bold; background:#0b0f19; color:#38bdf8; border:1px solid #38bdf8; border-radius:4px;'><option value='MASTER'>Dana: Brankas Master</option><option value='PRIBADI'>Dana: Saldo Pribadi</option></select>`;
+                            }
+                            btnAksi = `<a href='${x.bukti_tf}' target='_blank' style='display:block; text-align:center; background:#f39c12; color:#fff; padding:5px; border-radius:5px; text-decoration:none; font-size:0.7rem; margin-bottom:5px;'>Lihat Bukti TF</a>
+                        ${selectSumberP2P}
                         <button class='btn-cyan' onclick='window.prosesAksiP2P("${x.id}", "DIKIRIM")' style='background:#2ecc71; color:#fff; width:100%; font-size:0.7rem; margin-bottom:5px;'><i class='fa-solid fa-paper-plane'></i> KIRIM TOKEN</button>
-                        <button class='btn-cyan' onclick='window.prosesAksiP2P("${x.id}", "LAPOR")' style='background:#ef4444; color:#fff; width:100%; font-size:0.7rem;'><i class='fa-solid fa-triangle-exclamation'></i> LAPOR BUKTI PALSU</button>`; }
+                        <button class='btn-cyan' onclick='window.prosesAksiP2P("${x.id}", "LAPOR")' style='background:#ef4444; color:#fff; width:100%; font-size:0.7rem;'><i class='fa-solid fa-triangle-exclamation'></i> LAPOR BUKTI PALSU</button>`; 
+                        }
                         else if(x.status === "DIKIRIM") { statusWarna = "#2ecc71"; btnAksi = `<span style='font-size:0.7rem; color:#2ecc71;'>Menunggu Konfirmasi Pembeli</span>`; }
                     }
 
@@ -4171,23 +4209,34 @@
                     let kekuranganToken = butuhToken - stokTersedia;
                     let lockedTokens = [];
 
-                    // EKSEKUSI AUTO-MINTING JIKA STOK KURANG
-                    if (kekuranganToken > 0) {
-                        let butuhIDR = kekuranganToken * oData.nominal_pusat;
-                        const uDoc = await transaction.get(doc(db, "Akun_Publik", docId));
-                        let saldoSekarang = uDoc.data().saldo_rupiah || 0;
+                    // SUNTIKAN: BACA SUMBER DANA P2P
+                    let elSumber = document.getElementById('sumberP2P_' + orderId);
+                    let sumberP2P = elSumber ? elSumber.value : "PRIBADI";
 
-                        if (saldoSekarang < butuhIDR) throw "Saldo IDR Anda tidak mencukupi untuk Auto-Minting token ini!";
+                    // EKSEKUSI AUTO-MINTING JIKA STOK KURANG
+                    if (kekuranganToken > 0) {
+                        let butuhIDR = kekuranganToken * oData.nominal_pusat;
+                        const uDoc = await transaction.get(doc(db, "Akun_Publik", docId));
+                        
+                        let sPribadi = uDoc.data().saldo_rupiah || 0;
+                        let sMaster = uDoc.data().saldo_rupiah_master || 0;
 
-                        // 1. Potong Saldo IDR Sultan
-                        transaction.update(doc(db, "Akun_Publik", docId), { saldo_rupiah: saldoSekarang - butuhIDR });
+                        if (sumberP2P === "MASTER" && sMaster < butuhIDR) throw "Saldo IDR Master Anda tidak cukup untuk cetak token ini!";
+                        if (sumberP2P === "PRIBADI" && sPribadi < butuhIDR) throw "Saldo IDR Pribadi Anda tidak cukup untuk cetak token ini!";
 
-                        // 2. Catat Mutasi Auto-Minting
-                        transaction.set(doc(collection(db, "Mutasi_Mining")), {
-                            email: myEmail, jenis: "OUT",
-                            deskripsi: `Auto-Mint P2P: ${kekuranganToken}x ${oData.jenis_token}`,
-                            nominal: butuhIDR, timestamp_local: Date.now()
-                        });
+                        // 1. Potong Saldo IDR Sesuai Pilihan
+                        if (sumberP2P === "MASTER") {
+                            transaction.update(doc(db, "Akun_Publik", docId), { saldo_rupiah_master: sMaster - butuhIDR });
+                        } else {
+                            transaction.update(doc(db, "Akun_Publik", docId), { saldo_rupiah: sPribadi - butuhIDR });
+                        }
+
+                        // 2. Catat Mutasi Auto-Minting
+                        transaction.set(doc(collection(db, "Mutasi_Mining")), {
+                            email: myEmail, jenis: "OUT",
+                            deskripsi: `Auto-Mint P2P [${sumberP2P}]: ${kekuranganToken}x ${oData.jenis_token}`,
+                            nominal: butuhIDR, timestamp_local: Date.now()
+                        });
 
                         // 3. Cetak Token Baru & Langsung Dikunci untuk Pembeli
                         const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
@@ -4215,7 +4264,7 @@
                         lockedTokens.push(tDoc.id);
                     }
 
-                    transaction.update(orderRef, { status: "DIKIRIM", token_dikirim: lockedTokens });
+                    transaction.update(orderRef, { status: "DIKIRIM", token_dikirim: lockedTokens, sumber_dana: sumberP2P });
                     transaction.set(doc(collection(db, "Notifikasi_Personal")), { email: oData.pembeli, pesan: `?? P2P: Sultan telah MENGIRIM Token. Segera konfirmasi terima di menu P2P!`, order_id: orderId, timestamp_local: Date.now() });
                 } 
                 else if (aksi === "SELESAI") {
@@ -5753,10 +5802,14 @@ window.openAkuntansiTeamModal = () => {
 				let totalJual = 0;
 				let htmlRincian = "";
 
-				snap.forEach(d => { 
-    			let o = d.data();
-    			let harga = o.total_harga || o.total_bayar_rp || 0; 
-    			totalJual += harga; 
+				snap.forEach(d => {
+				let o = d.data();
+
+				// KODE FILTER: Abaikan transaksi jika sumber dananya PRIBADI
+				if (o.sumber_dana !== "MASTER") return;
+
+				let harga = o.total_harga || o.total_bayar_rp || 0;
+				totalJual += harga; 
     
     			let tglOrder = o.timestamp ? new Date(o.timestamp).toLocaleString('id-ID') : '-';
     			let pembeli = o.pembeli || o.nama_pembeli || 'Member';
