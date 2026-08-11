@@ -5820,6 +5820,22 @@ window.openAkuntansiTeamModal = () => {
     			</div>`;
 				});
 
+				// TAMBAHAN: Hitung juga Distribusi Token via SWAP (Khusus Brankas Master)
+            const snapSwap = await getDocs(query(collection(db, "Request_Withdraw"), where("email_pemohon", "==", myEmail), where("status", "==", "DISETUJUI")));
+            snapSwap.forEach(d => {
+                let o = d.data();
+                if (o.sumber_dana !== "MASTER") return; // Abaikan jika pakai saldo pribadi
+                
+                let harga = o.nominal_rupiah || 0;
+                totalJual += harga;
+                let tglOrder = o.waktu_request ? new Date(o.waktu_request.seconds * 1000).toLocaleString('id-ID') : '-';
+                let pembeli = o.target_username || 'Member';
+                htmlRincian += `<div style="display:flex; justify-content:space-between; border-bottom:1px dashed #334155; padding:6px 0;">
+                    <span><b style="color:#e2e8f0;">${pembeli} (Swap)</b><br><span style="font-size:0.6rem; color:#64748b;">${tglOrder}</span></span>
+                    <b style="color:#f1c40f;">Rp ${harga.toLocaleString('id-ID')}</b>
+                </div>`;
+            });
+
 				let boxRincian = document.getElementById('rincianJualP2p');
 				if(boxRincian) boxRincian.innerHTML = htmlRincian || "<div style='text-align:center; color:#94a3b8;'>Belum ada rincian penjualan selesai.</div>";
                 
