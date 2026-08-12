@@ -3109,6 +3109,9 @@
             });
 
             // 3. Catat di DB Transaksi PPOB
+            let finalStatusPpob = window.PPOB_AUTO_API ? "PENDING" : "MENUNGGU_ACC";
+            let finalSnPesan = window.PPOB_AUTO_API ? "Menunggu Diproses API..." : "Menunggu Antrean Manual Pusat...";
+
             await addDoc(collection(db, "Transaksi_PPOB"), {
                 email: myEmail,
                 username: myUsername,
@@ -3116,8 +3119,8 @@
                 target: target,
                 nominal: nominal,
                 harga_bayar: harga,
-                sn: "Menunggu Diproses...", // Kosongkan SN karena belum diproses vendor
-                status: "PENDING", // UBAH KE PENDING
+                sn: finalSnPesan, 
+                status: finalStatusPpob,
                 waktu: serverTimestamp()
             });
 
@@ -3125,7 +3128,7 @@
             await addDoc(collection(db, "Mutasi_Pusat"), { 
                 jenis: "PPOB_IN", 
                 nominal: harga, 
-                deskripsi: `PPOB [PENDING]: ${myUsername} Beli ${jenis} ${nominal}`, 
+                deskripsi: `PPOB [${finalStatusPpob}]: ${myUsername} Beli ${jenis} ${nominal}`, 
                 waktu: serverTimestamp() 
             });
 
@@ -5239,21 +5242,19 @@ let isDeviceLocked = (window.CONFIG_DEVICE_LOCK === true && window.CONFIG_DEVICE
     // ---------------------------------------------
 
 		// --- START: PENGAMAT SAKLAR PPOB DARI MASTER PUSAT ---
-        window.PPOB_MARKUP = 0; // Variabel global untuk menyimpan margin keuntungan
+        window.PPOB_MARKUP = 0; 
+        window.PPOB_AUTO_API = false; // Memori saklar otomatis
         onSnapshot(query(collection(db, "System_Config"), where("tipe", "==", "PPOB_CONFIG")), (snap) => {
             const menuPpobSidebar = document.getElementById('menuPpobSidebar');
             if(menuPpobSidebar) {
                 if(!snap.empty) {
                     let d = snap.docs[0].data();
-                    window.PPOB_MARKUP = parseFloat(d.markup) || 0; // Simpan harga markup ke memori
+                    window.PPOB_MARKUP = parseFloat(d.markup) || 0; 
+                    window.PPOB_AUTO_API = d.is_auto_api === true; // Simpan keputusan Pusat
                     
-                    if(d.is_active === true) {
-                        menuPpobSidebar.style.display = 'flex';
-                    } else {
-                        menuPpobSidebar.style.display = 'none';
-                    }
+                    if(d.is_active === true) { menuPpobSidebar.style.display = 'flex'; } 
+                    else { menuPpobSidebar.style.display = 'none'; }
                     
-                    // Perbarui daftar harga di layar secara otomatis jika modal sedang terbuka
                     if(typeof window.ubahFormPpob === "function") window.ubahFormPpob(); 
                 } else {
                     menuPpobSidebar.style.display = 'none';
