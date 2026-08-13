@@ -5826,7 +5826,7 @@ window.openAkuntansiTeamModal = () => {
                 // 1. Tarik Pengaturan Persentase dari Pusat
                 let persenTim = 30; // Angka default
                 const confSnap = await getDocs(query(collection(db, "System_Config"), where("tipe", "==", "TEAM_BONUS")));
-                if(!confSnap.empty) { persenTim = confSnap.docs[0].data().persen_tim || 30; }
+                if(!confSnap.empty) { persenTim = parseInt(confSnap.docs[0].data().persen_tim) || 30; }
                 let persenPusat = 100 - persenTim;
 
                 // 2. Tarik Data Rekening Master dari Pusat
@@ -5858,8 +5858,10 @@ window.openAkuntansiTeamModal = () => {
                     let harga = o.total_harga || o.total_bayar_rp || 0;
                     totalJual += harga; 
     
-                    let tglOrder = o.timestamp ? new Date(o.timestamp).toLocaleString('id-ID') : '-';
-                    let pembeli = o.pembeli || o.nama_pembeli || 'Member';
+                    // PERBAIKAN WAKTU DAN NAMA PEMBELI
+                    let wktOrder = o.waktu_update || o.waktu_order;
+                    let tglOrder = wktOrder ? new Date(wktOrder.seconds * 1000).toLocaleString('id-ID') : '-';
+                    let pembeli = o.pembeli_user || o.pembeli || 'Member';
     
                     htmlRincian += `<div style="display:flex; justify-content:space-between; border-bottom:1px dashed #334155; padding:6px 0;">
                     <span><b style="color:#e2e8f0;">${pembeli}</b><br><span style="font-size:0.6rem; color:#64748b;">${tglOrder}</span></span>
@@ -5875,8 +5877,12 @@ window.openAkuntansiTeamModal = () => {
                     
                     let harga = o.nominal_rupiah || 0;
                     totalJual += harga;
-                    let tglOrder = o.waktu_request ? new Date(o.waktu_request.seconds * 1000).toLocaleString('id-ID') : '-';
+                    
+                    // PERBAIKAN WAKTU DAN NAMA PEMBELI SWAP
+                    let wktRequest = o.waktu_request;
+                    let tglOrder = wktRequest ? new Date(wktRequest.seconds * 1000).toLocaleString('id-ID') : '-';
                     let pembeli = o.target_username || 'Member';
+                    
                     htmlRincian += `<div style="display:flex; justify-content:space-between; border-bottom:1px dashed #334155; padding:6px 0;">
                         <span><b style="color:#e2e8f0;">${pembeli} (Swap)</b><br><span style="font-size:0.6rem; color:#64748b;">${tglOrder}</span></span>
                         <b style="color:#f1c40f;">Rp ${harga.toLocaleString('id-ID')}</b>
@@ -5896,51 +5902,50 @@ window.openAkuntansiTeamModal = () => {
                     }
                 });
 
-                // 5. Kalkulasi Sisa Wajib Setor & Hak Tim
-                let totalKewajibanPusat = totalJual * (persenPusat / 100);
-                let selisihSetoran = totalKewajibanPusat - totalSudahSetor;
+                // 5. Kalkulasi Sisa Wajib Setor & Hak Tim (RUMUS BARU YANG PRESISI)
+                let hakPusat = totalJual * (persenPusat / 100);
+                let hakTim = totalJual * (persenTim / 100);
+                let sisaWajibSetor = hakPusat - totalSudahSetor;
 
-                // Set default warna layar
+                // Identifikasi Label HTML
                 let labelSetor = document.getElementById('txtLabelSetor');
                 let valSetor = document.getElementById('laporanSetoranMaster');
+                let labelBonus = document.getElementById('txtLabelBonus');
+                
+                // Update Text Persentase agar dinamis mengikuti database
+                if(labelBonus) labelBonus.innerText = `Bonus / Hak Tim (${persenTim}%):`;
 
-                if (selisihSetoran < 0) {
+                // Update Total Jual
+                document.getElementById('laporanTotalJual').innerText = "Rp " + Math.round(totalJual).toLocaleString('id-ID');
+                document.getElementById('laporanBonusTim').innerText = "Rp " + Math.round(hakTim).toLocaleString('id-ID');
+
+                // Logika Status Setoran
+                if (sisaWajibSetor < 0) {
                     // DEPOSIT (Uang lebihan)
                     window.SISA_WAJIB_SETOR = 0;
                     labelSetor.innerText = `Kelebihan Setor (Deposit):`;
                     labelSetor.style.color = "#2ecc71";
-                    valSetor.innerText = "+ Rp " + Math.abs(selisihSetoran).toLocaleString('id-ID');
+                    valSetor.innerText = "+ Rp " + Math.abs(Math.round(sisaWajibSetor)).toLocaleString('id-ID');
                     valSetor.style.color = "#2ecc71";
-
-                    document.getElementById('laporanTotalJual').innerText = "Rp 0";
-                    document.getElementById('laporanBonusTim').innerText = "Rp 0";
-
+                } else if (sisaWajibSetor === 0) {
+                    // LUNAS
+                    window.SISA_WAJIB_SETOR = 0;
+                    labelSetor.innerText = `Tagihan Lunas (${persenPusat}%):`;
+                    labelSetor.style.color = "#2ecc71";
+                    valSetor.innerText = "Rp 0";
+                    valSetor.style.color = "#2ecc71";
                 } else {
-                    // ADA HUTANG / LUNAS
-                    window.SISA_WAJIB_SETOR = Math.round(selisihSetoran);
-                    
-                    let penjualanBelumLunas = 0;
-                    let bonusTimNom = 0;
-
-                    if (selisihSetoran > 0) {
-                        penjualanBelumLunas = selisihSetoran / (persenPusat / 100);
-                        bonusTimNom = penjualanBelumLunas * (persenTim / 100);
-                        labelSetor.innerText = `Sisa Wajib Setor (${persenPusat}%):`;
-                        labelSetor.style.color = "#cbd5e1";
-                        valSetor.style.color = "#ef4444";
-                    } else {
-                        labelSetor.innerText = `Tagihan Lunas:`;
-                        labelSetor.style.color = "#2ecc71";
-                        valSetor.style.color = "#2ecc71";
-                    }
-
-                    document.getElementById('laporanTotalJual').innerText = "Rp " + Math.round(penjualanBelumLunas).toLocaleString('id-ID');
-                    valSetor.innerText = "Rp " + Math.round(selisihSetoran).toLocaleString('id-ID');
-                    document.getElementById('laporanBonusTim').innerText = "Rp " + Math.round(bonusTimNom).toLocaleString('id-ID');
+                    // ADA HUTANG
+                    window.SISA_WAJIB_SETOR = Math.round(sisaWajibSetor);
+                    labelSetor.innerText = `Sisa Wajib Setor (${persenPusat}%):`;
+                    labelSetor.style.color = "#cbd5e1";
+                    valSetor.innerText = "Rp " + Math.round(sisaWajibSetor).toLocaleString('id-ID');
+                    valSetor.style.color = "#ef4444";
                 }
 
                 if(typeof window.loadRiwayatSetoranSultan === 'function') window.loadRiwayatSetoranSultan();
             } catch (e) {
+                console.error("Gagal Kalkulasi Akuntansi Tim: ", e);
                 document.getElementById('laporanTotalJual').innerText = "Gagal memuat data.";
                 document.getElementById('infoRekeningMaster').innerHTML = "Gagal memuat rekening.";
             }
