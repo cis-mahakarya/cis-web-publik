@@ -1506,13 +1506,13 @@
 
 		<!-- MODAL AKUNTANSI TIM (KHUSUS SULTAN/TEAM PUSAT) -->
       <div class='modal-overlay' id='modalAkuntansiTeam'>
-        <div class='modal-card' style='max-width: 500px; border:1px solid #f1c40f; max-height:85vh; overflow-y:auto;'>
+        <div class='modal-card' style='max-width: 550px; border:1px solid #f1c40f; max-height:85vh; overflow-y:auto;'>
           <button class='btn-close-modal' onclick='document.getElementById("modalAkuntansiTeam").style.display="none"' style='position:absolute; right:15px; top:15px; background:none; border:none; color:#ef4444; font-size:1.2rem; cursor:pointer;'><i class='fa-solid fa-xmark'></i></button>
           
-          <h3 style='color:#f1c40f; margin:0 0 15px 0; font-family:Orbitron;'><i class='fa-solid fa-chart-pie'></i> LAPORAN AKUNTANSI TIM</h3>
-          <p style='font-size:0.75rem; color:#94a3b8; margin-top:0;'>Manajemen Saldo Master & Kalkulasi Setoran Likuiditas Pusat.</p>
+          <h3 style='color:#f1c40f; margin:0 0 15px 0; font-family:Orbitron;'><i class='fa-solid fa-book'></i> BUKU KAS TIM</h3>
+          <p style='font-size:0.75rem; color:#94a3b8; margin-top:0;'>Rekapitulasi penjualan token, setoran, dan tagihan wajib.</p>
 
-          <!-- BRANKAS MASTER & EXCHANGE -->
+          <!-- BRANKAS MASTER -->
           <div style='background:linear-gradient(135deg, rgba(56, 189, 248, 0.1) 0%, rgba(2, 132, 199, 0.2) 100%); border:1px solid #38bdf8; padding:15px; border-radius:8px; margin-bottom:15px;'>
               <h4 style='color:#38bdf8; margin:0 0 10px 0; font-size:0.85rem;'><i class='fa-solid fa-vault'></i> BRANKAS TITIPAN PUSAT</h4>
               <div style='display:flex; justify-content:space-between; margin-bottom:10px;'>
@@ -1528,33 +1528,72 @@
               </div>
           </div>
           
-          <div style='background:rgba(241, 196, 15, 0.1); border:1px dashed #f1c40f; padding:15px; border-radius:8px; margin-bottom:15px;'>
-              <div style='display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; border-bottom:1px solid rgba(255,255,255,0.1); padding-bottom:5px;'>
-            <span style='font-size:0.75rem; color:#cbd5e1;'>Total Penjualan Token (P2P):<br>
-                <button onclick='let el=document.getElementById("rincianJualP2p"); el.style.display = el.style.display==="none" ? "block" : "none";' style='background:transparent; border:1px solid #00f2fe; color:#00f2fe; padding:3px 8px; border-radius:4px; font-size:0.65rem; cursor:pointer; margin-top:5px;'><i class='fa-solid fa-eye'></i> Lihat Rincian</button>
-            </span>
-            <b id='laporanTotalJual' style='color:#00f2fe; font-size:0.9rem;'>Rp 0</b>
-        </div>
-        <div id='rincianJualP2p' style='display:none; background:rgba(0,0,0,0.3); border:1px dashed #334155; padding:10px; border-radius:8px; margin-bottom:15px; font-size:0.75rem; max-height:150px; overflow-y:auto;'>
-            <!-- Rincian diisi dari JS -->
-        </div>
-              <div style='display:flex; justify-content:space-between; margin-bottom:10px; border-bottom:1px solid rgba(255,255,255,0.1); padding-bottom:5px;'>
-                  <span id='txtLabelSetor' style='font-size:0.75rem; color:#cbd5e1;'>Wajib Setor ke Master (70%):</span>
-                  <b id='laporanSetoranMaster' style='color:#ef4444; font-size:0.9rem;'>Rp 0</b>
+          <!-- FILTER BULAN BUKU -->
+          <div style='display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;'>
+              <select id='filterBulanBuku' class='input-dark no-icon' style='width:auto; border-color:#00f2fe; color:#00f2fe; padding:8px 12px; font-weight:bold; font-size:0.8rem;' onchange='window.kalkulasiAkuntansiTim()'>
+                  <option value=''>Memuat Bulan...</option>
+              </select>
+              <button onclick='window.kalkulasiAkuntansiTim()' class='btn-cyan' style='width:auto; background:#334155; padding:8px 15px; font-size:0.75rem; color:#fff;'><i class='fa-solid fa-rotate'></i> Refresh</button>
+          </div>
+
+          <!-- PAPAN SUMMARY (TRANSPARAN) -->
+          <div style='background:rgba(0,0,0,0.3); border:1px solid #334155; padding:15px; border-radius:8px; margin-bottom:15px;'>
+              <div style='display:flex; justify-content:space-between; margin-bottom:8px; border-bottom:1px dashed #334155; padding-bottom:8px;'>
+                  <span style='color:#cbd5e1; font-size:0.75rem;'><i class="fa-solid fa-clock-rotate-left"></i> Hutang Bulan Sebelumnya:</span>
+                  <b id='laporanHutangLalu' style='color:#f59e0b; font-size:0.85rem;'>Rp 0</b>
               </div>
-              <div style='display:flex; justify-content:space-between;'>
-                  <span id='txtLabelBonus' style='font-size:0.8rem; color:#f1c40f; font-weight:bold;'>Bonus / Hak Tim (30%):</span>
-                  <b id='laporanBonusTim' style='color:#2ecc71; font-family:Orbitron; font-size:1.1rem;'>Rp 0</b>
+              <div style='display:flex; justify-content:space-between; margin-bottom:8px;'>
+                  <span style='color:#cbd5e1; font-size:0.75rem;'>Penjualan (Kas Masuk) Bulan Ini:</span>
+                  <b id='laporanJualBulanIni' style='color:#00f2fe; font-size:0.85rem;'>Rp 0</b>
+              </div>
+              <div style='display:flex; justify-content:space-between; margin-bottom:8px;'>
+                  <span style='color:#cbd5e1; font-size:0.75rem;'>Hak Tim Bulan Ini (<span id='lblPersenTim'>30</span>%):</span>
+                  <b id='laporanHakTim' style='color:#2ecc71; font-size:0.85rem;'>Rp 0</b>
+              </div>
+              <div style='display:flex; justify-content:space-between; margin-bottom:8px; border-bottom:1px dashed #334155; padding-bottom:8px;'>
+                  <span style='color:#cbd5e1; font-size:0.75rem;'>Kewajiban Setor Pusat (<span id='lblPersenPusat'>70</span>%):</span>
+                  <b id='laporanWajibSetorPusat' style='color:#ef4444; font-size:0.85rem;'>Rp 0</b>
+              </div>
+              <div style='display:flex; justify-content:space-between; margin-bottom:8px;'>
+                  <span style='color:#cbd5e1; font-size:0.75rem; font-weight:bold;'>Total Tagihan (Lalu + Bulan Ini):</span>
+                  <b id='laporanTotalTagihan' style='color:#ef4444; font-size:0.95rem;'>Rp 0</b>
+              </div>
+              <div style='display:flex; justify-content:space-between; margin-bottom:8px; border-bottom:1px dashed #334155; padding-bottom:8px;'>
+                  <span style='color:#cbd5e1; font-size:0.75rem;'>Telah Disetor Bulan Ini:</span>
+                  <b id='laporanSudahSetor' style='color:#2ecc71; font-size:0.85rem;'>- Rp 0</b>
+              </div>
+              
+              <div style='display:flex; justify-content:space-between; align-items:center; background:rgba(239, 68, 68, 0.1); padding:10px; border-radius:6px; border:1px dashed #ef4444; margin-top:10px;'>
+                  <span style='color:#f87171; font-size:0.75rem; font-weight:bold;'>SISA TAGIHAN SAAT INI:</span>
+                  <b id='laporanSisaTagihan' style='color:#ef4444; font-size:1.15rem; font-family:Orbitron;'>Rp 0</b>
               </div>
           </div>
 
+          <!-- TABEL BUKU BESAR HARIAN -->
+          <h4 style='color:#f1c40f; margin:0 0 10px 0; font-size:0.8rem;'><i class='fa-solid fa-list'></i> RINCIAN HARIAN (BULAN INI)</h4>
+          <div class='table-responsive' style='max-height: 250px; overflow-y: auto; margin-bottom:15px; background:#0b0f19;'>
+              <table style='width:100%; border-collapse:collapse; font-size:0.7rem; text-align:left;'>
+                  <thead style='background:#1e293b; position:sticky; top:0;'>
+                      <tr>
+                          <th style='padding:8px 5px;'>Waktu</th>
+                          <th style='padding:8px 5px;'>Keterangan Transaksi</th>
+                          <th style='padding:8px 5px; text-align:right;'>Nominal Masuk</th>
+                          <th style='padding:8px 5px; text-align:right;'>Setoran Keluar</th>
+                      </tr>
+                  </thead>
+                  <tbody id='tblBukuBesarTim'>
+                      <tr><td colspan='4' style='text-align:center; padding:15px; color:#94a3b8;'>Pilih bulan untuk memuat data.</td></tr>
+                  </tbody>
+              </table>
+          </div>
+
+          <!-- FORM SETORAN -->
           <h4 style='color:#38bdf8; margin:0 0 10px 0; font-size:0.8rem;'><i class='fa-solid fa-building-columns'></i> REKENING TUJUAN PUSAT</h4>
           <div id='infoRekeningMaster' style='background:#0b0f19; padding:12px; border-radius:8px; border:1px dashed #38bdf8; font-size:0.8rem; color:#cbd5e1; margin-bottom:15px; text-align:center;'>
               <i class='fa-solid fa-spinner fa-spin'></i> Memuat rekening pusat...
           </div>
 
-          <h4 style='color:#2ecc71; margin:0 0 10px 0; font-size:0.8rem;'><i class='fa-solid fa-paper-plane'></i> FORM LAPORAN SETORAN TUNAI</h4>
-          <p style='font-size:0.7rem; color:#94a3b8; margin-top:0;'>Masukkan nominal Fiat (Rupiah) yang baru saja Anda transfer ke Rekening Pusat.</p>
+          <h4 style='color:#2ecc71; margin:0 0 10px 0; font-size:0.8rem;'><i class='fa-solid fa-paper-plane'></i> LAPORAN SETORAN TUNAI BARU</h4>
           <div class='input-group' style='margin-bottom:10px;'>
               <input class='input-dark no-icon' id='inpLaporSetoran' placeholder='Nominal Transfer (Cth: 1500000)' type='number' style='border-color:#2ecc71;'/>
           </div>
@@ -1562,15 +1601,8 @@
               <label style='font-size:0.7rem; color:#2ecc71;'><i class='fa-solid fa-camera'></i> Upload Bukti Transfer (Wajib)</label>
               <input type='file' id='inpFileSetoran' accept='image/*' class='input-dark no-icon' style='border-color:#2ecc71; padding:8px; font-size:0.75rem;'/>
           </div>
-          <button class='btn-cyan' onclick='window.kirimLaporanSetoran()' style='background:#2ecc71; color:#fff; margin-bottom:15px; font-size:0.85rem; padding:12px;'><i class='fa-solid fa-check-double'></i> KIRIM LAPORAN KE MASTER</button>
+          <button class='btn-cyan' onclick='window.kirimLaporanSetoran()' style='background:#2ecc71; color:#fff; font-size:0.85rem; padding:12px;'><i class='fa-solid fa-check-double'></i> KIRIM LAPORAN KE MASTER</button>
 
-          <button class='btn-cyan' onclick='window.kalkulasiAkuntansiTim()' style='background:#f1c40f; color:#000;'><i class='fa-solid fa-calculator'></i> HITUNG ULANG DATA</button>
-
-          <hr style='border:1px dashed #334155; margin:15px 0;'/>
-          <h4 style='color:#38bdf8; margin:0 0 10px 0; font-size:0.8rem;'><i class='fa-solid fa-clock-rotate-left'></i> Riwayat Laporan Terakhir</h4>
-          <div id='listRiwayatSetoranSultan' style='max-height:150px; min-height:50px; padding-bottom:20px; overflow-y:auto; font-size:0.75rem; padding-right:5px;'>
-              <div style='text-align:center; color:#94a3b8;'><i class='fa-solid fa-spinner fa-spin'></i> Memuat riwayat...</div>
-          </div>
         </div>
       </div>
 	
@@ -5817,10 +5849,7 @@ window.openAkuntansiTeamModal = () => {
         };
 
         window.kalkulasiAkuntansiTim = async () => {
-            document.getElementById('laporanTotalJual').innerText = "Menghitung...";
-            document.getElementById('laporanSetoranMaster').innerText = "Menghitung...";
-            document.getElementById('laporanBonusTim').innerText = "Menghitung...";
-            document.getElementById('infoRekeningMaster').innerHTML = "<i class='fa-solid fa-spinner fa-spin'></i> Memuat rekening pusat...";
+            document.getElementById('infoRekeningMaster').innerHTML = "<i class='fa-solid fa-spinner fa-spin'></i> Memuat rekening...";
             
             try {
                 // 1. Tarik Pengaturan Persentase dari Pusat
@@ -5828,6 +5857,10 @@ window.openAkuntansiTeamModal = () => {
                 const confSnap = await getDocs(query(collection(db, "System_Config"), where("tipe", "==", "TEAM_BONUS")));
                 if(!confSnap.empty) { persenTim = parseInt(confSnap.docs[0].data().persen_tim) || 30; }
                 let persenPusat = 100 - persenTim;
+
+                // Update Labels di HTML
+                let lblTim = document.getElementById('lblPersenTim'); if(lblTim) lblTim.innerText = persenTim;
+                let lblPusat = document.getElementById('lblPersenPusat'); if(lblPusat) lblPusat.innerText = persenPusat;
 
                 // 2. Tarik Data Rekening Master dari Pusat
                 const rekSnap = await getDocs(query(collection(db, "System_Config"), where("tipe", "==", "REKENING_MASTER")));
@@ -5838,116 +5871,167 @@ window.openAkuntansiTeamModal = () => {
                 <b style='color:#fff;'>${r.nama_bank}</b><br/>
                 <div style='display:flex; justify-content:center; align-items:center; gap:10px; margin:5px 0;'>
                     <span style='font-family:Orbitron; font-size:1.2rem; color:#f1c40f; font-weight:bold; letter-spacing:1px;'>${r.no_rek}</span>
-                    <button onclick='window.salinTeksP2P("${r.no_rek}")' style='background:#f1c40f; color:#0b0f19; border:none; padding:4px 10px; border-radius:6px; cursor:pointer; font-size:0.75rem; font-weight:bold; transition:0.2s;'><i class='fa-solid fa-copy'></i> COPY</button>
+                    <button onclick='window.salinTeksP2P("${r.no_rek}")' style='background:#f1c40f; color:#0b0f19; border:none; padding:4px 10px; border-radius:6px; cursor:pointer; font-size:0.75rem; font-weight:bold;'><i class='fa-solid fa-copy'></i> COPY</button>
                 </div>
-                <span style='color:#94a3b8; font-size:0.8rem;'>a/n ${r.atas_nama}</span>
-            `;
+                <span style='color:#94a3b8; font-size:0.8rem;'>a/n ${r.atas_nama}</span>`;
                 } else {
                     boxRek.innerHTML = "Rekening Pusat belum diatur.";
                 }
 
-                // 3. Cari semua penjualan P2P (Milik Tim)
-                const snap = await getDocs(query(collection(db, "P2P_Order"), where("penjual", "==", myEmail), where("status", "==", "SELESAI")));
-                let totalJual = 0;
-                let htmlRincian = "";
+                // 3. TARIK SEMUA BUKU BESAR (P2P, SWAP, SETORAN)
+                let allLedger = [];
 
-                snap.forEach(d => {
+                // A. Tarik Penjualan P2P
+                const snapP2P = await getDocs(query(collection(db, "P2P_Order"), where("penjual", "==", myEmail), where("status", "==", "SELESAI")));
+                snapP2P.forEach(d => {
                     let o = d.data();
-                    if (o.sumber_dana !== "MASTER") return; 
-
-                    let harga = o.total_harga || o.total_bayar_rp || 0;
-                    totalJual += harga; 
-    
-                    // PERBAIKAN WAKTU DAN NAMA PEMBELI
-                    let wktOrder = o.waktu_update || o.waktu_order;
-                    let tglOrder = wktOrder ? new Date(wktOrder.seconds * 1000).toLocaleString('id-ID') : '-';
-                    let pembeli = o.pembeli_user || o.pembeli || 'Member';
-    
-                    htmlRincian += `<div style="display:flex; justify-content:space-between; border-bottom:1px dashed #334155; padding:6px 0;">
-                    <span><b style="color:#e2e8f0;">${pembeli}</b><br><span style="font-size:0.6rem; color:#64748b;">${tglOrder}</span></span>
-                    <b style="color:#38bdf8;">Rp ${harga.toLocaleString('id-ID')}</b>
-                    </div>`;
-                });
-
-                // TAMBAHAN: Hitung juga Distribusi Token via SWAP
-                const snapSwap = await getDocs(query(collection(db, "Request_Withdraw"), where("email_pemohon", "==", myEmail), where("status", "==", "DISETUJUI")));
-                snapSwap.forEach(d => {
-                    let o = d.data();
-                    if (o.sumber_dana !== "MASTER") return; 
-                    
-                    let harga = o.nominal_rupiah || 0;
-                    totalJual += harga;
-                    
-                    // PERBAIKAN WAKTU DAN NAMA PEMBELI SWAP
-                    let wktRequest = o.waktu_request;
-                    let tglOrder = wktRequest ? new Date(wktRequest.seconds * 1000).toLocaleString('id-ID') : '-';
-                    let pembeli = o.target_username || 'Member';
-                    
-                    htmlRincian += `<div style="display:flex; justify-content:space-between; border-bottom:1px dashed #334155; padding:6px 0;">
-                        <span><b style="color:#e2e8f0;">${pembeli} (Swap)</b><br><span style="font-size:0.6rem; color:#64748b;">${tglOrder}</span></span>
-                        <b style="color:#f1c40f;">Rp ${harga.toLocaleString('id-ID')}</b>
-                    </div>`;
-                });
-
-                let boxRincian = document.getElementById('rincianJualP2p');
-                if(boxRincian) boxRincian.innerHTML = htmlRincian || "<div style='text-align:center; color:#94a3b8;'>Belum ada rincian penjualan selesai.</div>";
-                
-                // 4. Hitung Total Uang yang Sudah Disetor
-                const snapSetoran = await getDocs(query(collection(db, "Laporan_Setoran"), where("email", "==", myEmail)));
-                let totalSudahSetor = 0;
-                snapSetoran.forEach(d => {
-                    let sData = d.data();
-                    if (sData.status === "DISETUJUI" || sData.status === "PENDING") {
-                        totalSudahSetor += sData.nominal || 0;
+                    if (o.sumber_dana === "MASTER") {
+                        let wkt = o.waktu_update || o.waktu_order;
+                        let ms = wkt ? (wkt.seconds ? wkt.seconds * 1000 : wkt) : 0;
+                        allLedger.push({
+                            waktu: ms,
+                            jenis: "JUAL",
+                            nominal: o.total_harga || o.total_bayar_rp || 0,
+                            desc: `Jual Token P2P ke ${o.pembeli_user || 'Member'}`
+                        });
                     }
                 });
 
-                // 5. Kalkulasi Sisa Wajib Setor & Hak Tim (RUMUS BARU YANG PRESISI)
-                let hakPusat = totalJual * (persenPusat / 100);
-                let hakTim = totalJual * (persenTim / 100);
-                let sisaWajibSetor = hakPusat - totalSudahSetor;
+                // B. Tarik Pencairan Swap (Cetak Token)
+                const snapSwap = await getDocs(query(collection(db, "Request_Withdraw"), where("email_pemohon", "==", myEmail), where("status", "==", "DISETUJUI")));
+                snapSwap.forEach(d => {
+                    let o = d.data();
+                    if (o.sumber_dana === "MASTER") {
+                        let wkt = o.waktu_request;
+                        let ms = wkt ? (wkt.seconds ? wkt.seconds * 1000 : wkt) : 0;
+                        allLedger.push({
+                            waktu: ms,
+                            jenis: "JUAL",
+                            nominal: o.nominal_rupiah || 0,
+                            desc: `Swap Cetak Token (${o.target_username || 'Member'})`
+                        });
+                    }
+                });
 
-                // Identifikasi Label HTML
-                let labelSetor = document.getElementById('txtLabelSetor');
-                let valSetor = document.getElementById('laporanSetoranMaster');
-                let labelBonus = document.getElementById('txtLabelBonus');
+                // C. Tarik Bukti Setoran ke Pusat
+                const snapSetoran = await getDocs(query(collection(db, "Laporan_Setoran"), where("email", "==", myEmail)));
+                snapSetoran.forEach(d => {
+                    let o = d.data();
+                    if (o.status === "DISETUJUI" || o.status === "PENDING") {
+                        let wkt = o.waktu_lapor;
+                        let ms = wkt ? (wkt.seconds ? wkt.seconds * 1000 : wkt) : 0;
+                        allLedger.push({
+                            waktu: ms,
+                            jenis: "SETOR",
+                            nominal: o.nominal || 0,
+                            desc: o.status === "PENDING" ? `Setor ke Pusat (Menunggu ACC)` : `Setor ke Pusat (Lunas)`
+                        });
+                    }
+                });
+
+                // 4. SUSUN DATA KRONOLOGIS & DETEKSI BULAN BUKU
+                allLedger.sort((a,b) => a.waktu - b.waktu);
                 
-                // Update Text Persentase agar dinamis mengikuti database
-                if(labelBonus) labelBonus.innerText = `Bonus / Hak Tim (${persenTim}%):`;
+                let monthSet = new Set();
+                let nowD = new Date();
+                let currentMonthKey = nowD.getFullYear() + "-" + String(nowD.getMonth()+1).padStart(2, '0');
+                
+                // Masukkan bulan ini sebagai default
+                monthSet.add(currentMonthKey);
+                
+                allLedger.forEach(item => {
+                    if(item.waktu > 0) {
+                        let d = new Date(item.waktu);
+                        let mStr = d.getFullYear() + "-" + String(d.getMonth()+1).padStart(2, '0');
+                        item.monthKey = mStr;
+                        monthSet.add(mStr);
+                    }
+                });
 
-                // Update Total Jual
-                document.getElementById('laporanTotalJual').innerText = "Rp " + Math.round(totalJual).toLocaleString('id-ID');
-                document.getElementById('laporanBonusTim').innerText = "Rp " + Math.round(hakTim).toLocaleString('id-ID');
+                let sortedMonths = Array.from(monthSet).sort((a,b) => b.localeCompare(a)); // Urut menurun (Terbaru di atas)
 
-                // Logika Status Setoran
-                if (sisaWajibSetor < 0) {
-                    // DEPOSIT (Uang lebihan)
+                // Render Dropdown Bulan
+                let selFilter = document.getElementById('filterBulanBuku');
+                let selectedMonth = selFilter.value || currentMonthKey;
+                
+                let optHtml = "";
+                sortedMonths.forEach(m => {
+                    let [yyyy, mm] = m.split("-");
+                    let mName = new Date(yyyy, parseInt(mm)-1, 1).toLocaleString('id-ID', {month:'long', year:'numeric'});
+                    let isSel = m === selectedMonth ? "selected" : "";
+                    optHtml += `<option value="${m}" ${isSel}>${mName}</option>`;
+                });
+                selFilter.innerHTML = optHtml;
+                selectedMonth = selFilter.value; // Jika user mengubah pilihan
+
+                // 5. KALKULASI BERDASARKAN BULAN YANG DIPILIH
+                let hutangLalu = 0;
+                let jualBulanIni = 0;
+                let setorBulanIni = 0;
+                let htmlLedger = "";
+
+                allLedger.forEach(item => {
+                    if (item.monthKey < selectedMonth) {
+                        // CARRY FORWARD: Akumulasi data sebelum bulan yang dipilih
+                        if (item.jenis === "JUAL") {
+                            hutangLalu += (item.nominal * (persenPusat / 100)); // Hanya wajib setornya saja yang dihutang
+                        } else if (item.jenis === "SETOR") {
+                            hutangLalu -= item.nominal; // Mengurangi hutang
+                        }
+                    } else if (item.monthKey === selectedMonth) {
+                        // KAS BULAN INI: Tampilkan ke tabel
+                        let tglStr = new Date(item.waktu).toLocaleString('id-ID', {day:'2-digit', month:'short', hour:'2-digit', minute:'2-digit'});
+                        let inRp = "-"; let outRp = "-";
+                        
+                        if (item.jenis === "JUAL") {
+                            jualBulanIni += item.nominal;
+                            inRp = "+Rp " + item.nominal.toLocaleString('id-ID');
+                        } else if (item.jenis === "SETOR") {
+                            setorBulanIni += item.nominal;
+                            outRp = "-Rp " + item.nominal.toLocaleString('id-ID');
+                        }
+
+                        htmlLedger += `<tr style="border-bottom:1px solid #334155;">
+                            <td style="color:#94a3b8; white-space:nowrap;">${tglStr}</td>
+                            <td style="color:#e2e8f0; font-weight:bold;">${item.desc}</td>
+                            <td style="color:#00f2fe; font-weight:bold; text-align:right;">${inRp}</td>
+                            <td style="color:#ef4444; font-weight:bold; text-align:right;">${outRp}</td>
+                        </tr>`;
+                    }
+                });
+
+                // 6. RANGKUMAN FINAL
+                let hakTimBulanIni = jualBulanIni * (persenTim / 100);
+                let wajibSetorBulanIni = jualBulanIni * (persenPusat / 100);
+                let totalTagihan = hutangLalu + wajibSetorBulanIni;
+                let sisaTagihan = totalTagihan - setorBulanIni;
+
+                // Tembak angka ke layar
+                document.getElementById('laporanHutangLalu').innerText = (hutangLalu < 0 ? "- Rp " : "Rp ") + Math.abs(Math.round(hutangLalu)).toLocaleString('id-ID');
+                document.getElementById('laporanJualBulanIni').innerText = "Rp " + Math.round(jualBulanIni).toLocaleString('id-ID');
+                document.getElementById('laporanHakTim').innerText = "Rp " + Math.round(hakTimBulanIni).toLocaleString('id-ID');
+                document.getElementById('laporanWajibSetorPusat').innerText = "Rp " + Math.round(wajibSetorBulanIni).toLocaleString('id-ID');
+                document.getElementById('laporanTotalTagihan').innerText = "Rp " + Math.round(totalTagihan).toLocaleString('id-ID');
+                document.getElementById('laporanSudahSetor').innerText = "- Rp " + Math.round(setorBulanIni).toLocaleString('id-ID');
+                
+                let lblSisa = document.getElementById('laporanSisaTagihan');
+                if(sisaTagihan <= 0) {
+                    lblSisa.innerText = (sisaTagihan < 0 ? "+ Rp " : "Rp ") + Math.abs(Math.round(sisaTagihan)).toLocaleString('id-ID') + (sisaTagihan < 0 ? " (Deposit)" : " (Lunas)");
+                    lblSisa.style.color = "#2ecc71";
                     window.SISA_WAJIB_SETOR = 0;
-                    labelSetor.innerText = `Kelebihan Setor (Deposit):`;
-                    labelSetor.style.color = "#2ecc71";
-                    valSetor.innerText = "+ Rp " + Math.abs(Math.round(sisaWajibSetor)).toLocaleString('id-ID');
-                    valSetor.style.color = "#2ecc71";
-                } else if (sisaWajibSetor === 0) {
-                    // LUNAS
-                    window.SISA_WAJIB_SETOR = 0;
-                    labelSetor.innerText = `Tagihan Lunas (${persenPusat}%):`;
-                    labelSetor.style.color = "#2ecc71";
-                    valSetor.innerText = "Rp 0";
-                    valSetor.style.color = "#2ecc71";
                 } else {
-                    // ADA HUTANG
-                    window.SISA_WAJIB_SETOR = Math.round(sisaWajibSetor);
-                    labelSetor.innerText = `Sisa Wajib Setor (${persenPusat}%):`;
-                    labelSetor.style.color = "#cbd5e1";
-                    valSetor.innerText = "Rp " + Math.round(sisaWajibSetor).toLocaleString('id-ID');
-                    valSetor.style.color = "#ef4444";
+                    lblSisa.innerText = "Rp " + Math.round(sisaTagihan).toLocaleString('id-ID');
+                    lblSisa.style.color = "#ef4444";
+                    window.SISA_WAJIB_SETOR = Math.round(sisaTagihan); // Kunci bayar
                 }
 
-                if(typeof window.loadRiwayatSetoranSultan === 'function') window.loadRiwayatSetoranSultan();
+                if(htmlLedger === "") {
+                    htmlLedger = `<tr><td colspan="4" style="text-align:center; padding:15px; color:#94a3b8;">Tidak ada catatan di bulan ini.</td></tr>`;
+                }
+                document.getElementById('tblBukuBesarTim').innerHTML = htmlLedger;
+                
             } catch (e) {
                 console.error("Gagal Kalkulasi Akuntansi Tim: ", e);
-                document.getElementById('laporanTotalJual').innerText = "Gagal memuat data.";
-                document.getElementById('infoRekeningMaster').innerHTML = "Gagal memuat rekening.";
             }
         };
 
