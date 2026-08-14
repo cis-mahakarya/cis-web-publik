@@ -5296,18 +5296,19 @@ let isDeviceLocked = (window.CONFIG_DEVICE_LOCK === true && window.CONFIG_DEVICE
         });
         // --- END ---
 
-		// --- START: SAKLAR & LOGIKA STAKING 30 HARI ---
+		// --- START: SAKLAR SINKRONISASI SWAP USDT ---
         onSnapshot(query(collection(db, "System_Config"), where("tipe", "==", "STAKING_STATUS")), (snap) => {
-            const menuStaking = document.getElementById('menuStakingSidebar');
-            if(menuStaking) {
+            // Kabel ID sudah disamakan dengan HTML yang baru
+            const menuSwap = document.getElementById('menuSwapUsdtSidebar'); 
+            if(menuSwap) {
                 // Proteksi: Deteksi apakah akun ini adalah TIM
                 let isTim = (window.myProfileData && window.myProfileData.role && window.myProfileData.role.includes("TIM"));
                 
                 // Tampilkan hanya jika saklar Pusat ON DAN user BUKAN Tim
                 if(!snap.empty && snap.docs[0].data().is_active === true && !isTim) {
-                    menuStaking.style.display = 'flex';
+                    menuSwap.style.display = 'flex';
                 } else {
-                    menuStaking.style.display = 'none';
+                    menuSwap.style.display = 'none';
                 }
             }
         });
