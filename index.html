@@ -653,7 +653,7 @@
         
         <li id='menuPpobSidebar' onclick='window.openWalletModal("modalPPOB"); window.toggleSidebar();' style='display:none; color:#2ecc71;'><i class='fa-solid fa-mobile-screen-button'></i> <span>Pulsa & Listrik</span></li>
         
-        <li id='menuStakingSidebar' onclick='window.openStakingModal(); window.toggleSidebar();' style='display:none; color:#8b5cf6;'><i class='fa-solid fa-cubes'></i> <span>Verus Pool</span></li>
+        <li id='menuSwapUsdtSidebar' onclick='window.openWalletModal("modalSwapUsdt"); window.toggleSidebar();' style='display:none; color:#10b981;'><i class='fa-solid fa-circle-dollar-to-slot'></i> <span>Swap USDT (PPOB)</span></li>
 
 		<li id='menuAkuntansiTeam' onclick='window.openAkuntansiTeamModal(); window.toggleSidebar();' style='display:none; color:#f1c40f; border-top:1px solid #334155; padding-top:20px;'><i class='fa-solid fa-chart-pie'></i> <span style='font-weight:900; letter-spacing:1px;'>AKUNTANSI TIM (SULTAN)</span></li>
 		  
@@ -720,7 +720,10 @@
           <div class='top-stats-area'>
             <div class='vrsc-balance' id='displayVrsc'>0.00000000</div>
             <div class='vrsc-label'>VRSC (VerusCoin)</div>
-            <div class='idr-estimate'><span data-i18n='idrEst'>IDR Est: </span><span id='displayRupiah'>Rp 0</span></div>
+            <div style='display:flex; justify-content:center; gap:15px; margin-bottom:8px;'>
+                <div class='idr-estimate' style='margin:0;'><i class='fa-solid fa-wallet'></i> <span id='displayRupiah'>Rp 0</span></div>
+                <div class='idr-estimate' style='margin:0; color:#10b981;'><i class='fa-solid fa-circle-dollar-to-slot'></i> <span id='displayUsdt'>0.00 USDT</span></div>
+            </div>
             <div class='live-price'><i class='fa-solid fa-chart-line' style='color:#f39c12;'></i> 1 VRSC = <span id='displayLivePrice'>Rp 0</span></div>
           </div>
           
@@ -1251,59 +1254,56 @@
       </div>
       <!-- --- END --- -->
 
-		<!-- --- START: FORMULIR MODAL STAKING --- -->
-      <div class='modal-overlay' id='modalStaking' style='z-index: 10000;'>
-        <div class='modal-card' style='max-width: 450px; background: radial-gradient(circle at top right, #1e293b, #0b0f19); border: 1px solid #8b5cf6;'>
-          <div style='display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;'>
-            <h3 style='color:#a855f7; margin:0;'><i class='fa-solid fa-cubes'></i> VERUS POOL (30 HARI)</h3>
-            <i class='fa-solid fa-xmark' onclick='window.closeWalletModal("modalStaking")' style='cursor:pointer; color:#ef4444; font-size:1.2rem;'></i>
-          </div>
-          
-          <p style='font-size:0.75rem; color:#cbd5e1; margin-top:-5px;'>Alokasikan Saldo IDR Anda ke dalam Kolam Verus (Verus Pool) untuk transaksi PPOB. Dapatkan bagi hasil berdasarkan performa pasar Crypto Global 30 Hari ke depan!</p>
-          
-          <!-- Live Price Monitor -->
-          <div style='background:#020617; border:1px solid #334155; padding:15px; border-radius:10px; text-align:center; margin-bottom:15px;'>
-              <div style='font-size:0.7rem; color:#94a3b8; letter-spacing:1px; margin-bottom:5px;'>HARGA LIVE VRSC SAAT INI</div>
-              <div id='stakeLivePrice' style='font-family:Orbitron; font-size:1.5rem; color:#4ade80; font-weight:900;'>Rp 0</div>
-              <div style='font-size:0.7rem; color:#fbbf24; margin-top:5px;'><i class='fa-solid fa-chart-line'></i> Terkoneksi Market Global</div>
-          </div>
+		<!-- --- START: MODAL SWAP IDR KE USDT --- -->
+        <div class='modal-overlay' id='modalSwapUsdt' style='z-index: 10000;'>
+          <div class='modal-card' style='max-width: 400px; border:1px solid #10b981; background: radial-gradient(circle at top right, #064e3b, #0b0f19);'>
+            <button class='btn-close-modal' onclick='window.closeWalletModal("modalSwapUsdt")' style='position:absolute; right:15px; top:15px; background:none; border:none; color:#ef4444; font-size:1.2rem; cursor:pointer;'><i class='fa-solid fa-xmark'></i></button>
+            
+            <div style='text-align:center; margin-bottom:20px;'>
+                <i class='fa-solid fa-right-left' style='font-size:2rem; color:#10b981; margin-bottom:10px;'></i>
+                <h3 style='color:#10b981; margin:0; font-family:Orbitron;'>SWAP IDR TO USDT</h3>
+                <p style='font-size:0.75rem; color:#94a3b8; margin-top:5px;'>Tukar saldo Rupiah Anda menjadi USDT (Dolar) untuk transaksi PPOB secara instan.</p>
+            </div>
 
-          <div style='background:#1e293b; padding:15px; border-radius:8px; border:1px dashed #8b5cf6; margin-bottom:15px;'>
-			  <div style='display:flex; justify-content:space-between; text-align:center; margin-bottom:15px; border-bottom:1px solid #334155; padding-bottom:10px;'>
-                  <div style='flex:1; border-right:1px solid #334155;'>
-                      <span style='font-size:0.65rem; color:#2ecc71; font-weight:bold; letter-spacing:0.5px;'>SALDO DOMPET</span><br/>
-                      <span id='infoSaldoStaking' style='font-family:Orbitron; font-size:1.15rem; font-weight:900; color:#fff;'>Rp 0</span>
-                  </div>
-                  <div style='flex:1;'>
-                      <span style='font-size:0.65rem; color:#00f2fe; font-weight:bold; letter-spacing:0.5px;'>HASIL POOL (PPOB)</span><br/>
-                      <span id='infoSaldoHasilPool' style='font-family:Orbitron; font-size:1.15rem; font-weight:900; color:#fff;'>Rp 0</span>
-                  </div>
-              </div>
-              <label style='font-size:0.75rem; color:#a855f7; font-weight:bold;'>Nominal IDR yang akan dikunci:</label>
-              <input type='number' id='inpStakingRp' class='input-dark no-icon' placeholder='Contoh: 150000' style='border-color:#a855f7; font-size:1.2rem; font-weight:bold; color:#fff; text-align:center;' oninput='window.hitungEstimasiStaking()'>
-              
-              <div style='margin-top:15px; text-align:center;'>
-                  <span style='font-size:0.75rem; color:#94a3b8;'>Anda akan mengunci setara dengan:</span><br/>
-                  <b id='estStakingVrsc' style='font-family:Orbitron; font-size:1.2rem; color:#38bdf8;'>0.000000 VRSC</b>
-              </div>
-          </div>
-          
-          <div class='form-group' style='margin-bottom: 15px;'>
-              <input type='password' id='inpStakingPin' class='input-dark no-icon' placeholder='4-Digit PIN Transaksi' maxlength='4' style='text-align:center; font-weight:bold; letter-spacing:5px;'>
-          </div>
+            <div style='background:rgba(0,0,0,0.4); padding:15px; border-radius:8px; border:1px dashed #334155; margin-bottom:15px;'>
+                <div style='display:flex; justify-content:space-between; margin-bottom:5px;'>
+                    <span style='font-size:0.75rem; color:#94a3b8;'>Kurs Live USDT Saat Ini:</span>
+                    <span id='infoKursUsdt' style='font-size:0.8rem; color:#facc15; font-weight:bold;'><i class='fa-solid fa-spinner fa-spin'></i> Memuat...</span>
+                </div>
+                <div style='display:flex; justify-content:space-between;'>
+                    <span style='font-size:0.75rem; color:#94a3b8;'>Saldo IDR Tersedia:</span>
+                    <span id='infoMaxIdrSwap' style='font-size:0.8rem; color:#38bdf8; font-weight:bold;'>Rp 0</span>
+                </div>
+            </div>
 
-          <button class='btn-cyan' id='btnProsesStaking' onclick='window.eksekusiStaking()' style='background:linear-gradient(135deg, #a855f7, #6b21a8); color:#fff; width:100%; margin-bottom:10px;'><i class='fa-solid fa-anchor'></i> MASUKKAN KE VERUS POOL</button>
-          
-          <!-- Area Riwayat Staking -->
-          <hr style='border:1px dashed #334155; margin:15px 0;'/>
-          <h4 style='color:#e2e8f0; margin:0 0 10px 0; font-size:0.85rem;'><i class='fa-solid fa-list'></i> Kontrak Aktif Saya</h4>
-          <div id='listStakingAktif' style='max-height:150px; overflow-y:auto; font-size:0.75rem;'>
-              <div style='text-align:center; color:#94a3b8;'>Memuat kontrak...</div>
-          </div>
+            <div class='form-group' style='margin-bottom:15px;'>
+                <label style='color:#38bdf8; font-size:0.75rem; font-weight:bold;'><i class='fa-solid fa-wallet'></i> Jumlah IDR yang ingin di-Swap</label>
+                <div style='display:flex; align-items:center; background:#0b0f19; border:1px solid #38bdf8; border-radius:8px; padding:5px 10px; margin-top:5px;'>
+                    <span style='color:#38bdf8; font-weight:bold; margin-right:10px;'>Rp</span>
+                    <input type='number' id='inpSwapIdr' class='input-dark no-icon' placeholder='0' oninput='window.kalkulasiSwapUsdt()' style='border:none; padding:10px 0; font-size:1.2rem; flex:1; background:transparent;'>
+                </div>
+            </div>
 
+            <div style='text-align:center; margin:10px 0;'>
+                <i class='fa-solid fa-arrow-down' style='color:#64748b; font-size:1.2rem;'></i>
+            </div>
+
+            <div class='form-group' style='margin-bottom:15px;'>
+                <label style='color:#10b981; font-size:0.75rem; font-weight:bold;'><i class='fa-solid fa-circle-dollar-to-slot'></i> Estimasi USDT yang Didapat</label>
+                <div style='display:flex; align-items:center; background:#0b0f19; border:1px solid #10b981; border-radius:8px; padding:5px 10px; margin-top:5px;'>
+                    <input type='text' id='outSwapUsdt' class='input-dark no-icon' placeholder='0.00' readonly style='border:none; padding:10px 0; font-size:1.2rem; flex:1; color:#10b981; font-weight:bold; background:transparent;'>
+                    <span style='color:#10b981; font-weight:bold; margin-left:10px;'>USDT</span>
+                </div>
+            </div>
+            
+            <div class='form-group' style='margin-bottom: 15px;'>
+                <input type='password' id='inpSwapUsdtPin' class='input-dark no-icon' placeholder='4-Digit PIN Transaksi' maxlength='4' style='text-align:center; font-weight:bold; letter-spacing:5px; border-color:#f1c40f;'>
+            </div>
+
+            <button id='btnEksekusiSwap' class='btn-main' onclick='window.eksekusiSwapUsdt()' style='background:#10b981; color:#000; width:100%; margin-top:5px; padding:15px; font-size:1rem; font-weight:900;'><i class='fa-solid fa-bolt'></i> SWAP SEKARANG</button>
+          </div>
         </div>
-      </div>
-      <!-- --- END --- -->
+        <!-- --- END --- -->
 	
 		<!-- START: FORMULIR MODAL PPOB -->
       <div class='modal-overlay' id='modalPPOB'>
@@ -1313,8 +1313,9 @@
           <p style='font-size:0.75rem; color:#94a3b8; margin-top:0;'>Beli Pulsa & Token Listrik instan dengan Saldo Rupiah Anda.</p>
           
           <div style='background:rgba(46, 204, 113, 0.1); border:1px dashed #2ecc71; padding:10px; border-radius:8px; margin-bottom:15px; text-align:center;'>
-              <span style='font-size:0.75rem; color:#2ecc71; font-weight:bold;'>SALDO TERSEDIA</span><br/>
-              <span id='infoSaldoPpob' style='font-family:Orbitron; font-size:1.3rem; font-weight:900; color:#fff;'>Rp 0</span>
+              <span style='font-size:0.75rem; color:#2ecc71; font-weight:bold;'>SALDO USDT TERSEDIA</span><br/>
+              <span id='infoSaldoPpobUsdt' style='font-family:Orbitron; font-size:1.3rem; font-weight:900; color:#fff;'>0.00 USDT</span>
+              <div style='font-size:0.65rem; color:#94a3b8; margin-top:3px;'><i class='fa-solid fa-circle-info'></i> Otomatis dikonversi ke Rupiah saat beli PPOB</div>
           </div>
 
           <div class='input-group'>
