@@ -2159,7 +2159,8 @@
     window.fetchPrice = async () => {
         try {
             let simbolDan = String.fromCharCode(38);
-            const liveUrl = 'https://api.coingecko.com/api/v3/simple/price?ids=verus-coin' + simbolDan + 'vs_currencies=idr';
+            // Menarik 2 Harga Sekaligus: VerusCoin & Tether (USDT)
+            const liveUrl = 'https://api.coingecko.com/api/v3/simple/price?ids=verus-coin,tether' + simbolDan + 'vs_currencies=idr';
             const response = await fetch(liveUrl); 
             const data = await response.json();
             
@@ -2167,17 +2168,18 @@
                 vrscPriceRp = data['verus-coin'].idr; 
                 document.getElementById('displayLivePrice').innerHTML = "Rp " + vrscPriceRp.toLocaleString('id-ID') + " <span style='color:#2ecc71; font-size:0.6rem;'>(Live)</span>"; 
             }
+            if (data && data['tether'] && data['tether'].idr) {
+                window.usdtPriceRp = data['tether'].idr; // Menyimpan kurs USDT
+            }
         } catch(e) {
-            // JIKA SERVER GAGAL/LIMIT, GUNAKAN BEMPER HARGA CADANGAN
-            vrscPriceRp = 2500; // Harga patokan default
+            // BEMPER CADANGAN JIKA API LIMIT
+            vrscPriceRp = vrscPriceRp || 2500; 
+            window.usdtPriceRp = window.usdtPriceRp || 15500; // Standar Dolar
             try { 
                 const snap = await getDocs(query(collection(db, "System_Config"), where("tipe", "==", "GLOBAL_STATS"))); 
-                if(!snap.empty && snap.docs[0].data().harga_vrsc_pusat) { 
-                    vrscPriceRp = snap.docs[0].data().harga_vrsc_pusat; 
-                } 
+                if(!snap.empty && snap.docs[0].data().harga_vrsc_pusat) { vrscPriceRp = snap.docs[0].data().harga_vrsc_pusat; } 
             } catch(err) {}
             
-            // Tampilan HTML dipaksa update walaupun server CoinGecko error
             document.getElementById('displayLivePrice').innerHTML = "Rp " + vrscPriceRp.toLocaleString('id-ID') + " <span style='color:#f39c12; font-size:0.6rem;'>(Backup)</span>";
         }
         if(docId) { updateUI(); adjustDifficulty(); }
@@ -2264,21 +2266,28 @@
         let eTukar = document.getElementById('txtVrscBelumTukar'); if(eTukar) eTukar.innerText = "Rp " + Math.floor((myVrsc||0) * vrscPriceRp).toLocaleString('id-ID');
         let iCetak = document.getElementById('infoSaldoCetak'); if(iCetak) iCetak.innerText = "Rp " + (mySaldoRupiah||0).toLocaleString('id-ID');
         let iBeli = document.getElementById('infoSaldoBeliDaya'); if(iBeli) iBeli.innerText = "Rp " + (mySaldoRupiah||0).toLocaleString('id-ID');
+        
         // SINKRONISASI LAYAR BRANKAS MASTER TIM
         let elVrscM = document.getElementById('infoVrscMaster'); if(elVrscM) elVrscM.innerText = formatKripto(typeof myVrscMaster !== 'undefined' ? myVrscMaster : 0);
         let elIdrM = document.getElementById('infoIdrMaster'); if(elIdrM) elIdrM.innerText = "Rp " + (typeof myRupiahMaster !== 'undefined' ? myRupiahMaster : 0).toLocaleString('id-ID');
-		// --- START: SINKRON SALDO PPOB ---
-        let elPpob = document.getElementById('infoSaldoPpob'); if(elPpob) elPpob.innerText = "Rp " + (mySaldoPpob||0).toLocaleString('id-ID');
-        // --- END ---
-		// --- SINKRON SALDO & LIVE CHART STAKING ---
-        let elStaking = document.getElementById('infoSaldoStaking'); if(elStaking) elStaking.innerText = "Rp " + (mySaldoRupiah||0).toLocaleString('id-ID');
-		let elHasilPool = document.getElementById('infoSaldoHasilPool'); if(elHasilPool) elHasilPool.innerText = "Rp " + (mySaldoPpob||0).toLocaleString('id-ID');
-        if(document.getElementById('modalStaking').style.display === 'flex') { 
-            document.getElementById('stakeLivePrice').innerText = "Rp " + (window.vrscPriceRp || 2500).toLocaleString('id-ID'); 
-            window.hitungEstimasiStaking();
-            if(window.renderPnlStakingLokal) window.renderPnlStakingLokal(); // Update angka saja, tanpa tarik database!
+        
+        // --- SINKRON SALDO PPOB (USDT) ---
+        let elPpobUsdt = document.getElementById('infoSaldoPpobUsdt'); 
+        if(elPpobUsdt) elPpobUsdt.innerText = (window.mySaldoUsdt || 0).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2}) + " USDT";
+        
+        let topUsdt = document.getElementById('displayUsdt'); 
+        if(topUsdt) topUsdt.innerText = (window.mySaldoUsdt || 0).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2}) + " USDT";
+
+        // Update Modal Swap jika sedang terbuka
+        let modSwap = document.getElementById('modalSwapUsdt');
+        if(modSwap && modSwap.style.display === 'flex') {
+            document.getElementById('infoMaxIdrSwap').innerText = "Rp " + (mySaldoRupiah||0).toLocaleString('id-ID');
+            let kursUsdt = window.usdtPriceRp || 15500;
+            document.getElementById('infoKursUsdt').innerText = "Rp " + kursUsdt.toLocaleString('id-ID') + " / USDT";
+            if(typeof window.kalkulasiSwapUsdt === "function") window.kalkulasiSwapUsdt();
         }
-		let eSpd = document.getElementById('displaySpeed'); if(eSpd) eSpd.innerText = formatKripto(mySpeed || 0);
+
+        let eSpd = document.getElementById('displaySpeed'); if(eSpd) eSpd.innerText = formatKripto(mySpeed || 0);
         updateClaimTimer();
     }
 
