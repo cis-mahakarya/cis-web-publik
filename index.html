@@ -3248,6 +3248,80 @@
         } catch(e) {
             msg('msgPpob', "Gagal memproses transaksi.", "error");
         }
+        window.prosesPpob = async () => {
+        if(!myPin) return window.showToast("Buat PIN Transaksi di Profil dulu!");
+        
+        const jenis = document.getElementById('ppobJenis').value;
+        const target = document.getElementById('ppobTarget').value.trim();
+        const nomData = document.getElementById('ppobNominal').value;
+        const inputPin = document.getElementById('ppobPin').value;
+        const btn = document.getElementById('btnProsesPpob');
+
+        if(!target || !nomData || !inputPin) return msg('msgPpob', "Lengkapi semua form & PIN!", "error");
+        if(inputPin !== myPin) return msg('msgPpob', "PIN Transaksi Salah!", "error");
+
+        // hargaIdr adalah harga asli tagihan API dalam Rupiah
+        const [nominal, hargaIdr] = nomData.split('|').map(Number);
+
+        // Kalkulasi Konversi Harga IDR ke USDT
+        let kursUsdt = window.usdtPriceRp || 15500;
+        let hargaUsdt = hargaIdr / kursUsdt;
+
+        if((window.mySaldoUsdt || 0) < hargaUsdt) return msg('msgPpob', "Saldo USDT Anda tidak mencukupi! Silakan Swap IDR ke USDT terlebih dahulu.", "error");
+
+        btn.disabled = true; btn.innerHTML = "<i class='fa-solid fa-spinner fa-spin'></i> MEMPROSES...";
+
+        try {
+            // 1. Potong Saldo USDT secara presisi
+            window.mySaldoUsdt -= hargaUsdt;
+            await updateDoc(doc(db, "Akun_Publik", docId), { saldo_usdt: window.mySaldoUsdt });
+            updateUI();
+
+            // 2. Catat Mutasi User (Tampilkan potongan dalam satuan USDT)
+            await addDoc(collection(db, "Mutasi_Mining"), { 
+                email: myEmail, 
+                jenis: "OUT", 
+                deskripsi: `Beli ${jenis} ${nominal.toLocaleString('id-ID')} (${target})`, 
+                nominal: hargaUsdt, 
+                timestamp_local: Date.now() 
+            });
+
+            // 3. Catat di DB Transaksi PPOB (Tetap kirim harga IDR untuk diproses Master Node)
+            let finalStatusPpob = window.PPOB_AUTO_API ? "PENDING" : "MENUNGGU_ACC";
+            let finalSnPesan = window.PPOB_AUTO_API ? "Menunggu Diproses API..." : "Menunggu Antrean Manual Pusat...";
+
+            await addDoc(collection(db, "Transaksi_PPOB"), {
+                email: myEmail,
+                username: myUsername,
+                jenis: jenis,
+                target: target,
+                nominal: nominal,
+                harga_bayar: hargaIdr, 
+                sn: finalSnPesan, 
+                status: finalStatusPpob,
+                waktu: serverTimestamp()
+            });
+
+            // 4. Catat Mutasi Pusat
+            await addDoc(collection(db, "Mutasi_Pusat"), { 
+                jenis: "PPOB_IN", 
+                nominal: hargaIdr, 
+                deskripsi: `PPOB [${finalStatusPpob}]: ${myUsername} Beli ${jenis} ${nominal}`, 
+                waktu: serverTimestamp() 
+            });
+
+            msg('msgPpob', "Pesanan Berhasil Diterima!", "ok");
+            setTimeout(() => {
+                document.getElementById('msgPpob').style.display = 'none';
+                document.getElementById('ppobTarget').value = '';
+                document.getElementById('ppobPin').value = '';
+                window.closeWalletModal('modalPPOB');
+                window.showToast("Pesanan PPOB Diterima & Sedang Diproses!");
+            }, 2500);
+
+        } catch(e) {
+            msg('msgPpob', "Gagal memproses transaksi.", "error");
+        }
         btn.disabled = false; btn.innerHTML = "<i class='fa-solid fa-shopping-cart'></i> PROSES PEMBELIAN";
     };
     // --- END ---
@@ -5167,7 +5241,7 @@
                   localStorage.setItem("cisMinerEmail", myEmail);
 
                   mySaldoRupiah = data.saldo_rupiah || 0;
-                  mySaldoPpob = data.saldo_ppob || 0; 
+                  window.mySaldoUsdt = data.saldo_usdt || 0; 
                   myVrscMaster = data.saldo_vrsc_master || 0;   // SINKRON BRANKAS MASTER
                   myRupiahMaster = data.saldo_rupiah_master || 0; // SINKRON BRANKAS MASTER
                   window.STATUS_AKUN_USER = data.status_akun || "INACTIVE";
