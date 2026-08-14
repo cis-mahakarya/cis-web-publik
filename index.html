@@ -653,7 +653,7 @@
         
         <li id='menuPpobSidebar' onclick='window.openWalletModal("modalPPOB"); window.toggleSidebar();' style='display:none; color:#2ecc71;'><i class='fa-solid fa-mobile-screen-button'></i> <span>Pulsa & Listrik</span></li>
         
-        <li id='menuSwapUsdtSidebar' onclick='window.openWalletModal("modalSwapUsdt"); window.toggleSidebar();' style='display:none; color:#10b981;'><i class='fa-solid fa-circle-dollar-to-slot'></i> <span>Swap USDT (PPOB)</span></li>
+        <li id='menuSwapUsdtSidebar' onclick='<li id='menuSwapUsdtSidebar' onclick='window.openSwapModal(); window.toggleSidebar();' style='display:none; color:#10b981;'><i class='fa-solid fa-circle-dollar-to-slot'></i> <span>Swap USDT (PPOB)</span></li>' style='display:none; color:#10b981;'><i class='fa-solid fa-circle-dollar-to-slot'></i> <span>Swap USDT (PPOB)</span></li>
 
 		<li id='menuAkuntansiTeam' onclick='window.openAkuntansiTeamModal(); window.toggleSidebar();' style='display:none; color:#f1c40f; border-top:1px solid #334155; padding-top:20px;'><i class='fa-solid fa-chart-pie'></i> <span style='font-weight:900; letter-spacing:1px;'>AKUNTANSI TIM (SULTAN)</span></li>
 		  
@@ -2059,7 +2059,7 @@
     let isMining = false; let miningInt = null; let unsubSnapshot = null;
     let unsubNotifGlobal = null; let unsubNotifPersonal = null;
     let globalNotifs = []; let personalNotifs = [];
-    let vrscPriceRp = 2500; let myPin = ""; let lastCheckin = 0; let lastTickMs = Date.now();
+    let vrscPriceRp = 2500; window.usdtPriceRp = 15500; let myPin = ""; let lastCheckin = 0; let lastTickMs = Date.now();
     let claimTimerInt = null; 
 
     let netMultiplier = 1.0; let simulatedPing = 24;
@@ -3072,6 +3072,73 @@
         btn.innerHTML = `<i class='fa-solid fa-exchange-alt'></i> TUKAR`;
     };
 
+	// --- START: MESIN SWAP IDR TO USDT ---
+        window.openSwapModal = () => {
+            document.getElementById('modalSwapUsdt').style.display = 'flex';
+            let kursUsdt = window.usdtPriceRp || 15500;
+            document.getElementById('infoKursUsdt').innerText = "Rp " + kursUsdt.toLocaleString('id-ID') + " / USDT";
+            document.getElementById('infoMaxIdrSwap').innerText = "Rp " + (mySaldoRupiah||0).toLocaleString('id-ID');
+            document.getElementById('inpSwapIdr').value = "";
+            document.getElementById('outSwapUsdt').value = "";
+            document.getElementById('inpSwapUsdtPin').value = "";
+        };
+
+        window.kalkulasiSwapUsdt = () => {
+            let rp = parseFloat(document.getElementById('inpSwapIdr').value) || 0;
+            let hargaUsdt = window.usdtPriceRp || 15500;
+            let usdtDapat = rp / hargaUsdt;
+            document.getElementById('outSwapUsdt').value = usdtDapat.toFixed(2);
+        };
+
+        window.eksekusiSwapUsdt = async () => {
+            let rp = parseInt(document.getElementById('inpSwapIdr').value) || 0;
+            let pin = document.getElementById('inpSwapUsdtPin').value;
+            let hargaUsdt = window.usdtPriceRp || 15500;
+            
+            if(rp < 10000) return window.showToast("Minimal Swap Rp 10.000");
+            if(rp > (mySaldoRupiah || 0)) return window.showToast("Saldo Rupiah tidak cukup!");
+            if(pin !== myPin) return window.showToast("PIN Transaksi Salah!");
+
+            let estimasiUsdt = rp / hargaUsdt;
+            let konfirmasi = `Tukar Rp ${rp.toLocaleString('id-ID')} menjadi ${estimasiUsdt.toFixed(2)} USDT?\n\nKurs Pasar Live: Rp ${hargaUsdt.toLocaleString('id-ID')} / USDT\nLanjutkan?`;
+            
+            if(!confirm(konfirmasi)) return;
+
+            let btn = document.getElementById('btnEksekusiSwap');
+            btn.innerHTML = "<i class='fa-solid fa-spinner fa-spin'></i> MEMPROSES SWAP..."; btn.disabled = true;
+
+            try {
+                // 1. Kalkulasi Pemotongan IDR & Penambahan USDT
+                mySaldoRupiah -= rp;
+                window.mySaldoUsdt = (window.mySaldoUsdt || 0) + estimasiUsdt;
+                
+                // 2. Simpan ke Database
+                await updateDoc(doc(db, "Akun_Publik", docId), {
+                    saldo_rupiah: mySaldoRupiah,
+                    saldo_usdt: window.mySaldoUsdt
+                });
+                localStorage.setItem("cisSaldoRp", mySaldoRupiah);
+
+                // 3. Catat Mutasi
+                await addDoc(collection(db, "Mutasi_Mining"), { 
+                    email: myEmail, jenis: "OUT", 
+                    deskripsi: `SWAP: Beli ${estimasiUsdt.toFixed(2)} USDT`, 
+                    nominal: rp, timestamp_local: Date.now() 
+                });
+
+                window.showToast(`SWAP BERHASIL! +${estimasiUsdt.toFixed(2)} USDT Masuk ke Dompet.`);
+                document.getElementById('inpSwapIdr').value = "";
+                document.getElementById('inpSwapUsdtPin').value = "";
+                window.closeWalletModal("modalSwapUsdt");
+                updateUI();
+                
+            } catch(e) {
+                alert("Gagal memproses Swap. Cek koneksi server.");
+            }
+            btn.innerHTML = "<i class='fa-solid fa-bolt'></i> SWAP SEKARANG"; btn.disabled = false;
+        };
+        // --- END MESIN SWAP ---
+		  
 	// --- START: LOGIKA TRANSAKSI PPOB ---
     window.ubahFormPpob = () => {
         const jenis = document.getElementById('ppobJenis').value;
