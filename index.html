@@ -653,7 +653,7 @@
         
         <li id='menuPpobSidebar' onclick='window.openWalletModal("modalPPOB"); window.toggleSidebar();' style='display:none; color:#2ecc71;'><i class='fa-solid fa-mobile-screen-button'></i> <span>Pulsa & Listrik</span></li>
         
-        <li id='menuSwapUsdtSidebar' onclick='window.openWalletModal("modalSwapUsdt"); window.toggleSidebar();' style='display:none; color:#10b981;'><i class='fa-solid fa-circle-dollar-to-slot'></i> <span>Swap USDT (PPOB)</span></li>
+        <li id='menuSwapUsdtSidebar' onclick='window.openSwapModal(); window.toggleSidebar();' style='display:none; color:#10b981;'><i class='fa-solid fa-circle-dollar-to-slot'></i> <span>Swap USDT (PPOB)</span></li>
 
 		<li id='menuAkuntansiTeam' onclick='window.openAkuntansiTeamModal(); window.toggleSidebar();' style='display:none; color:#f1c40f; border-top:1px solid #334155; padding-top:20px;'><i class='fa-solid fa-chart-pie'></i> <span style='font-weight:900; letter-spacing:1px;'>AKUNTANSI TIM (SULTAN)</span></li>
 		  
@@ -2059,7 +2059,7 @@
     let isMining = false; let miningInt = null; let unsubSnapshot = null;
     let unsubNotifGlobal = null; let unsubNotifPersonal = null;
     let globalNotifs = []; let personalNotifs = [];
-    let vrscPriceRp = 2500; let myPin = ""; let lastCheckin = 0; let lastTickMs = Date.now();
+    let vrscPriceRp = 2500; window.usdtPriceRp = 15500; let myPin = ""; let lastCheckin = 0; let lastTickMs = Date.now();
     let claimTimerInt = null; 
 
     let netMultiplier = 1.0; let simulatedPing = 24;
@@ -2159,13 +2159,16 @@
     window.fetchPrice = async () => {
         try {
             let simbolDan = String.fromCharCode(38);
-            const liveUrl = 'https://api.coingecko.com/api/v3/simple/price?ids=verus-coin' + simbolDan + 'vs_currencies=idr';
+            const liveUrl = 'https://api.coingecko.com/api/v3/simple/price?ids=verus-coin,tether' + simbolDan + 'vs_currencies=idr';
             const response = await fetch(liveUrl); 
             const data = await response.json();
             
             if (data && data['verus-coin'] && data['verus-coin'].idr) { 
                 vrscPriceRp = data['verus-coin'].idr; 
                 document.getElementById('displayLivePrice').innerHTML = "Rp " + vrscPriceRp.toLocaleString('id-ID') + " <span style='color:#2ecc71; font-size:0.6rem;'>(Live)</span>"; 
+            }
+            if (data && data['tether'] && data['tether'].idr) {
+                window.usdtPriceRp = data['tether'].idr;
             }
         } catch(e) {
             // JIKA SERVER GAGAL/LIMIT, GUNAKAN BEMPER HARGA CADANGAN
@@ -2267,18 +2270,22 @@
         // SINKRONISASI LAYAR BRANKAS MASTER TIM
         let elVrscM = document.getElementById('infoVrscMaster'); if(elVrscM) elVrscM.innerText = formatKripto(typeof myVrscMaster !== 'undefined' ? myVrscMaster : 0);
         let elIdrM = document.getElementById('infoIdrMaster'); if(elIdrM) elIdrM.innerText = "Rp " + (typeof myRupiahMaster !== 'undefined' ? myRupiahMaster : 0).toLocaleString('id-ID');
-		// --- START: SINKRON SALDO PPOB ---
-        let elPpob = document.getElementById('infoSaldoPpob'); if(elPpob) elPpob.innerText = "Rp " + (mySaldoPpob||0).toLocaleString('id-ID');
-        // --- END ---
-		// --- SINKRON SALDO & LIVE CHART STAKING ---
-        let elStaking = document.getElementById('infoSaldoStaking'); if(elStaking) elStaking.innerText = "Rp " + (mySaldoRupiah||0).toLocaleString('id-ID');
-		let elHasilPool = document.getElementById('infoSaldoHasilPool'); if(elHasilPool) elHasilPool.innerText = "Rp " + (mySaldoPpob||0).toLocaleString('id-ID');
-        if(document.getElementById('modalStaking').style.display === 'flex') { 
-            document.getElementById('stakeLivePrice').innerText = "Rp " + (window.vrscPriceRp || 2500).toLocaleString('id-ID'); 
-            window.hitungEstimasiStaking();
-            if(window.renderPnlStakingLokal) window.renderPnlStakingLokal(); // Update angka saja, tanpa tarik database!
+		// --- SINKRON SALDO PPOB (USDT) ---
+        let elPpobUsdt = document.getElementById('infoSaldoPpobUsdt'); 
+        if(elPpobUsdt) elPpobUsdt.innerText = (window.mySaldoUsdt || 0).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2}) + " USDT";
+        
+        let topUsdt = document.getElementById('displayUsdt'); 
+        if(topUsdt) topUsdt.innerText = (window.mySaldoUsdt || 0).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2}) + " USDT";
+
+        let modSwap = document.getElementById('modalSwapUsdt');
+        if(modSwap && modSwap.style.display === 'flex') {
+            document.getElementById('infoMaxIdrSwap').innerText = "Rp " + (mySaldoRupiah||0).toLocaleString('id-ID');
+            let kursUsdt = window.usdtPriceRp || 15500;
+            document.getElementById('infoKursUsdt').innerText = "Rp " + kursUsdt.toLocaleString('id-ID') + " / USDT";
+            if(typeof window.kalkulasiSwapUsdt === "function") window.kalkulasiSwapUsdt();
         }
-		let eSpd = document.getElementById('displaySpeed'); if(eSpd) eSpd.innerText = formatKripto(mySpeed || 0);
+
+        let eSpd = document.getElementById('displaySpeed'); if(eSpd) eSpd.innerText = formatKripto(mySpeed || 0);
         updateClaimTimer();
     }
 
@@ -3062,6 +3069,70 @@
         btn.disabled = false; 
         btn.innerHTML = `<i class='fa-solid fa-exchange-alt'></i> TUKAR`;
     };
+
+		  // --- START: MESIN SWAP IDR TO USDT ---
+    window.openSwapModal = () => {
+        document.getElementById('modalSwapUsdt').style.display = 'flex';
+        let kursUsdt = window.usdtPriceRp || 15500;
+        document.getElementById('infoKursUsdt').innerText = "Rp " + kursUsdt.toLocaleString('id-ID') + " / USDT";
+        document.getElementById('infoMaxIdrSwap').innerText = "Rp " + (mySaldoRupiah||0).toLocaleString('id-ID');
+        document.getElementById('inpSwapIdr').value = "";
+        document.getElementById('outSwapUsdt').value = "";
+        document.getElementById('inpSwapUsdtPin').value = "";
+    };
+
+    window.kalkulasiSwapUsdt = () => {
+        let rp = parseFloat(document.getElementById('inpSwapIdr').value) || 0;
+        let hargaUsdt = window.usdtPriceRp || 15500;
+        let usdtDapat = rp / hargaUsdt;
+        document.getElementById('outSwapUsdt').value = usdtDapat.toFixed(2);
+    };
+
+    window.eksekusiSwapUsdt = async () => {
+        let rp = parseInt(document.getElementById('inpSwapIdr').value) || 0;
+        let pin = document.getElementById('inpSwapUsdtPin').value;
+        let hargaUsdt = window.usdtPriceRp || 15500;
+        
+        if(rp < 10000) return window.showToast("Minimal Swap Rp 10.000");
+        if(rp > (mySaldoRupiah || 0)) return window.showToast("Saldo Rupiah tidak cukup!");
+        if(pin !== myPin) return window.showToast("PIN Transaksi Salah!");
+
+        let estimasiUsdt = rp / hargaUsdt;
+        let konfirmasi = `Tukar Rp ${rp.toLocaleString('id-ID')} menjadi ${estimasiUsdt.toFixed(2)} USDT?\n\nKurs Pasar Live: Rp ${hargaUsdt.toLocaleString('id-ID')} / USDT\nLanjutkan?`;
+        
+        if(!confirm(konfirmasi)) return;
+
+        let btn = document.getElementById('btnEksekusiSwap');
+        btn.innerHTML = "<i class='fa-solid fa-spinner fa-spin'></i> MEMPROSES SWAP..."; btn.disabled = true;
+
+        try {
+            mySaldoRupiah -= rp;
+            window.mySaldoUsdt = (window.mySaldoUsdt || 0) + estimasiUsdt;
+            
+            await updateDoc(doc(db, "Akun_Publik", docId), {
+                saldo_rupiah: mySaldoRupiah,
+                saldo_usdt: window.mySaldoUsdt
+            });
+            localStorage.setItem("cisSaldoRp", mySaldoRupiah);
+
+            await addDoc(collection(db, "Mutasi_Mining"), { 
+                email: myEmail, jenis: "OUT", 
+                deskripsi: `SWAP: Beli ${estimasiUsdt.toFixed(2)} USDT`, 
+                nominal: rp, timestamp_local: Date.now() 
+            });
+
+            window.showToast(`SWAP BERHASIL! +${estimasiUsdt.toFixed(2)} USDT Masuk ke Dompet.`);
+            document.getElementById('inpSwapIdr').value = "";
+            document.getElementById('inpSwapUsdtPin').value = "";
+            window.closeWalletModal("modalSwapUsdt");
+            updateUI();
+            
+        } catch(e) {
+            alert("Gagal memproses Swap. Cek koneksi server.");
+        }
+        btn.innerHTML = "<i class='fa-solid fa-bolt'></i> SWAP SEKARANG"; btn.disabled = false;
+    };
+    // --- END MESIN SWAP ---
 
 	// --- START: LOGIKA TRANSAKSI PPOB ---
     window.ubahFormPpob = () => {
