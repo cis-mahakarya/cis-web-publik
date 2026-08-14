@@ -3190,29 +3190,33 @@
         if(!target || !nomData || !inputPin) return msg('msgPpob', "Lengkapi semua form & PIN!", "error");
         if(inputPin !== myPin) return msg('msgPpob', "PIN Transaksi Salah!", "error");
 
-        const [nominal, harga] = nomData.split('|').map(Number);
+        // hargaIdr adalah harga asli tagihan API dalam Rupiah
+        const [nominal, hargaIdr] = nomData.split('|').map(Number);
 
-        if(mySaldoPpob < harga) return msg('msgPpob', "Saldo PPOB Anda tidak mencukupi! Silakan lakukan Staking 30 Hari untuk mendapatkan Saldo PPOB.", "error");
+        // Kalkulasi Konversi Harga IDR ke USDT
+        let kursUsdt = window.usdtPriceRp || 15500;
+        let hargaUsdt = hargaIdr / kursUsdt;
+
+        if((window.mySaldoUsdt || 0) < hargaUsdt) return msg('msgPpob', "Saldo USDT Anda tidak mencukupi! Silakan Swap IDR ke USDT terlebih dahulu.", "error");
 
         btn.disabled = true; btn.innerHTML = "<i class='fa-solid fa-spinner fa-spin'></i> MEMPROSES...";
 
         try {
-            // 1. Potong Saldo PPOB
-            mySaldoPpob -= harga;
-            await updateDoc(doc(db, "Akun_Publik", docId), { saldo_ppob: mySaldoPpob });
-            localStorage.setItem("cisSaldoRp", mySaldoRupiah);
+            // 1. Potong Saldo USDT secara presisi
+            window.mySaldoUsdt -= hargaUsdt;
+            await updateDoc(doc(db, "Akun_Publik", docId), { saldo_usdt: window.mySaldoUsdt });
             updateUI();
 
-            // 2. Catat Mutasi User
+            // 2. Catat Mutasi User (Tampilkan potongan dalam satuan USDT)
             await addDoc(collection(db, "Mutasi_Mining"), { 
                 email: myEmail, 
                 jenis: "OUT", 
                 deskripsi: `Beli ${jenis} ${nominal.toLocaleString('id-ID')} (${target})`, 
-                nominal: harga, 
+                nominal: hargaUsdt, 
                 timestamp_local: Date.now() 
             });
 
-            // 3. Catat di DB Transaksi PPOB
+            // 3. Catat di DB Transaksi PPOB (Tetap kirim harga IDR untuk diproses Master Node)
             let finalStatusPpob = window.PPOB_AUTO_API ? "PENDING" : "MENUNGGU_ACC";
             let finalSnPesan = window.PPOB_AUTO_API ? "Menunggu Diproses API..." : "Menunggu Antrean Manual Pusat...";
 
@@ -3222,16 +3226,16 @@
                 jenis: jenis,
                 target: target,
                 nominal: nominal,
-                harga_bayar: harga,
+                harga_bayar: hargaIdr, 
                 sn: finalSnPesan, 
                 status: finalStatusPpob,
                 waktu: serverTimestamp()
             });
 
-            // 4. Catat Mutasi Pusat (Untuk Kalkulator Likuiditas)
+            // 4. Catat Mutasi Pusat
             await addDoc(collection(db, "Mutasi_Pusat"), { 
                 jenis: "PPOB_IN", 
-                nominal: harga, 
+                nominal: hargaIdr, 
                 deskripsi: `PPOB [${finalStatusPpob}]: ${myUsername} Beli ${jenis} ${nominal}`, 
                 waktu: serverTimestamp() 
             });
