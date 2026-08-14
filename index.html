@@ -2054,7 +2054,7 @@
     window.IS_FREEMIUM = false; window.STATUS_AKUN_USER = "INACTIVE"; window.BONUS_SPEED_REG = 0;
 
     let docId = null; let myEmail = ""; let myUsername = ""; let myPass = ""; let myReferredBy = "";
-    let myVrsc = 0; let mySpeed = 0; let expTime = 0; let expTimeMesin = 0; let edUser = 0; let edEmail = 0; let mySaldoRupiah = 0; let mySaldoPpob = 0; 
+    let myVrsc = 0; let mySpeed = 0; let expTime = 0; let expTimeMesin = 0; let edUser = 0; let edEmail = 0; let mySaldoRupiah = 0; window.mySaldoUsdt = 0; 
     let myVrscMaster = 0; let myRupiahMaster = 0; // BRANKAS KHUSUS TIM 
     let isMining = false; let miningInt = null; let unsubSnapshot = null;
     let unsubNotifGlobal = null; let unsubNotifPersonal = null;
@@ -2159,7 +2159,8 @@
     window.fetchPrice = async () => {
         try {
             let simbolDan = String.fromCharCode(38);
-            const liveUrl = 'https://api.coingecko.com/api/v3/simple/price?ids=verus-coin' + simbolDan + 'vs_currencies=idr';
+            // Menarik 2 Harga Sekaligus: VerusCoin & Tether (USDT)
+            const liveUrl = 'https://api.coingecko.com/api/v3/simple/price?ids=verus-coin,tether' + simbolDan + 'vs_currencies=idr';
             const response = await fetch(liveUrl); 
             const data = await response.json();
             
@@ -2167,17 +2168,18 @@
                 vrscPriceRp = data['verus-coin'].idr; 
                 document.getElementById('displayLivePrice').innerHTML = "Rp " + vrscPriceRp.toLocaleString('id-ID') + " <span style='color:#2ecc71; font-size:0.6rem;'>(Live)</span>"; 
             }
+            if (data && data['tether'] && data['tether'].idr) {
+                window.usdtPriceRp = data['tether'].idr; // Menyimpan kurs USDT
+            }
         } catch(e) {
-            // JIKA SERVER GAGAL/LIMIT, GUNAKAN BEMPER HARGA CADANGAN
-            vrscPriceRp = 2500; // Harga patokan default
+            // BEMPER CADANGAN JIKA API LIMIT
+            vrscPriceRp = vrscPriceRp || 2500; 
+            window.usdtPriceRp = window.usdtPriceRp || 15500; // Standar Dolar
             try { 
                 const snap = await getDocs(query(collection(db, "System_Config"), where("tipe", "==", "GLOBAL_STATS"))); 
-                if(!snap.empty && snap.docs[0].data().harga_vrsc_pusat) { 
-                    vrscPriceRp = snap.docs[0].data().harga_vrsc_pusat; 
-                } 
+                if(!snap.empty && snap.docs[0].data().harga_vrsc_pusat) { vrscPriceRp = snap.docs[0].data().harga_vrsc_pusat; } 
             } catch(err) {}
             
-            // Tampilan HTML dipaksa update walaupun server CoinGecko error
             document.getElementById('displayLivePrice').innerHTML = "Rp " + vrscPriceRp.toLocaleString('id-ID') + " <span style='color:#f39c12; font-size:0.6rem;'>(Backup)</span>";
         }
         if(docId) { updateUI(); adjustDifficulty(); }
@@ -2270,17 +2272,22 @@
 		// --- START: SINKRON SALDO PPOB ---
         let elPpob = document.getElementById('infoSaldoPpob'); if(elPpob) elPpob.innerText = "Rp " + (mySaldoPpob||0).toLocaleString('id-ID');
         // --- END ---
-		// --- SINKRON SALDO & LIVE CHART STAKING ---
-        let elStaking = document.getElementById('infoSaldoStaking'); if(elStaking) elStaking.innerText = "Rp " + (mySaldoRupiah||0).toLocaleString('id-ID');
-		let elHasilPool = document.getElementById('infoSaldoHasilPool'); if(elHasilPool) elHasilPool.innerText = "Rp " + (mySaldoPpob||0).toLocaleString('id-ID');
-        if(document.getElementById('modalStaking').style.display === 'flex') { 
-            document.getElementById('stakeLivePrice').innerText = "Rp " + (window.vrscPriceRp || 2500).toLocaleString('id-ID'); 
-            window.hitungEstimasiStaking();
-            if(window.renderPnlStakingLokal) window.renderPnlStakingLokal(); // Update angka saja, tanpa tarik database!
+
+		// --- SINKRON SALDO PPOB (USDT) ---
+        let elPpobUsdt = document.getElementById('infoSaldoPpobUsdt'); 
+        if(elPpobUsdt) elPpobUsdt.innerText = (window.mySaldoUsdt || 0).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2}) + " USDT";
+        
+        let topUsdt = document.getElementById('displayUsdt'); 
+        if(topUsdt) topUsdt.innerText = (window.mySaldoUsdt || 0).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2}) + " USDT";
+
+        // Update Modal Swap jika sedang terbuka
+        let modSwap = document.getElementById('modalSwapUsdt');
+        if(modSwap && modSwap.style.display === 'flex') {
+            document.getElementById('infoMaxIdrSwap').innerText = "Rp " + (mySaldoRupiah||0).toLocaleString('id-ID');
+            let kursUsdt = window.usdtPriceRp || 15500;
+            document.getElementById('infoKursUsdt').innerText = "Rp " + kursUsdt.toLocaleString('id-ID') + " / USDT";
+            if(typeof window.kalkulasiSwapUsdt === "function") window.kalkulasiSwapUsdt();
         }
-		let eSpd = document.getElementById('displaySpeed'); if(eSpd) eSpd.innerText = formatKripto(mySpeed || 0);
-        updateClaimTimer();
-    }
 
     window.kirimPesanPusat = async () => {
         let textarea = document.getElementById('chatPesan');
@@ -4985,7 +4992,7 @@
               expTimeMesin = Math.max(...d.daftar_mesin.map(m => m.expired_kontrak));
           }
 
-          mySaldoRupiah = d.saldo_rupiah || 0; edUser = d.edit_user || 0; edEmail = d.edit_email || 0;
+          mySaldoRupiah = d.saldo_rupiah || 0; window.mySaldoUsdt = d.saldo_usdt || 0; edUser = d.edit_user || 0; edEmail = d.edit_email || 0;
           
           localStorage.setItem("cisMinerDocId", docId); localStorage.setItem("cisMinerEmail", myEmail); localStorage.setItem("cisMinerUser", myUsername); localStorage.setItem("cisVrsc", myVrsc); localStorage.setItem("cisSpeed", mySpeed); localStorage.setItem("cisExp", expTime); localStorage.setItem("cisSaldoRp", mySaldoRupiah);
           
@@ -5029,7 +5036,7 @@
                   localStorage.setItem("cisMinerEmail", myEmail);
 
                   mySaldoRupiah = data.saldo_rupiah || 0;
-                  mySaldoPpob = data.saldo_ppob || 0; 
+                  window.mySaldoUsdt = data.saldo_usdt || 0; 
                   myVrscMaster = data.saldo_vrsc_master || 0;   // SINKRON BRANKAS MASTER
                   myRupiahMaster = data.saldo_rupiah_master || 0; // SINKRON BRANKAS MASTER
                   window.STATUS_AKUN_USER = data.status_akun || "INACTIVE";
@@ -5313,193 +5320,62 @@ let isDeviceLocked = (window.CONFIG_DEVICE_LOCK === true && window.CONFIG_DEVICE
             }
         });
 
-        window.openStakingModal = () => {
-            window.closeWalletModal('modalPPOB'); // Tutup modal lain jika terbuka
-            document.getElementById('modalStaking').style.display = 'flex';
-            document.getElementById('stakeLivePrice').innerText = "Rp " + (window.vrscPriceRp || 2500).toLocaleString('id-ID');
-            document.getElementById('inpStakingRp').value = "";
-            document.getElementById('inpStakingPin').value = "";
-            document.getElementById('estStakingVrsc').innerText = "0.000000 VRSC";
-            window.loadRiwayatStakingUser();
+        // --- START: MESIN SWAP IDR TO USDT ---
+        window.kalkulasiSwapUsdt = () => {
+            let rp = parseFloat(document.getElementById('inpSwapIdr').value) || 0;
+            let hargaUsdt = window.usdtPriceRp || 15500;
+            let usdtDapat = rp / hargaUsdt;
+            document.getElementById('outSwapUsdt').value = usdtDapat.toFixed(2);
         };
 
-        window.hitungEstimasiStaking = () => {
-            let rp = parseFloat(document.getElementById('inpStakingRp').value) || 0;
-            let harga = window.vrscPriceRp || 2500;
-            let vrsc = rp / harga;
-            document.getElementById('estStakingVrsc').innerText = vrsc.toFixed(6) + " VRSC";
-        };
-
-        window.eksekusiStaking = async () => {
-            let rp = parseInt(document.getElementById('inpStakingRp').value) || 0;
-            let pin = document.getElementById('inpStakingPin').value;
-            let harga = window.vrscPriceRp || 2500;
+        window.eksekusiSwapUsdt = async () => {
+            let rp = parseInt(document.getElementById('inpSwapIdr').value) || 0;
+            let pin = document.getElementById('inpSwapUsdtPin').value;
+            let hargaUsdt = window.usdtPriceRp || 15500;
             
-            if(rp < 10000) return window.showToast("Minimal Staking Rp 10.000");
+            if(rp < 10000) return window.showToast("Minimal Swap Rp 10.000");
             if(rp > (mySaldoRupiah || 0)) return window.showToast("Saldo Rupiah tidak cukup!");
             if(pin !== myPin) return window.showToast("PIN Transaksi Salah!");
 
-            let confirmMsg = `Anda akan mengunci Rp ${rp.toLocaleString('id-ID')} selama 30 Hari.\n\nSistem mencatat kontrak Anda sebagai: ${(rp/harga).toFixed(6)} VRSC.\nNanti saat cair, Rupiah Anda mengikuti harga VRSC 30 hari ke depan (Bisa naik/turun).\n\nLanjutkan?`;
-            if(!confirm(confirmMsg)) return;
+            let estimasiUsdt = rp / hargaUsdt;
+            let konfirmasi = `Tukar Rp ${rp.toLocaleString('id-ID')} menjadi ${estimasiUsdt.toFixed(2)} USDT?\n\nKurs Pasar Live: Rp ${hargaUsdt.toLocaleString('id-ID')} / USDT\nLanjutkan?`;
+            
+            if(!confirm(konfirmasi)) return;
 
-            let btn = document.getElementById('btnProsesStaking');
-            btn.innerHTML = "<i class='fa-solid fa-spinner fa-spin'></i> MEMPROSES..."; btn.disabled = true;
+            let btn = document.getElementById('btnEksekusiSwap');
+            btn.innerHTML = "<i class='fa-solid fa-spinner fa-spin'></i> MEMPROSES SWAP..."; btn.disabled = true;
 
             try {
-                let lockedVrsc = rp / harga;
-                let tglCair = Date.now() + (30 * 86400000); // 30 Hari dari sekarang
-
-                // 1. Potong Saldo IDR Lokal & DB
+                // 1. Kalkulasi Pemotongan IDR & Penambahan USDT
                 mySaldoRupiah -= rp;
+                window.mySaldoUsdt = (window.mySaldoUsdt || 0) + estimasiUsdt;
+                
+                // 2. Simpan ke Database
                 await updateDoc(doc(db, "Akun_Publik", docId), {
-                    saldo_rupiah: mySaldoRupiah
+                    saldo_rupiah: mySaldoRupiah,
+                    saldo_usdt: window.mySaldoUsdt
                 });
                 localStorage.setItem("cisSaldoRp", mySaldoRupiah);
-
-                // 2. Buat Kontrak di Database Baru
-                await addDoc(collection(db, "Data_Staking"), {
-                    email: myEmail,
-                    username: myUsername,
-                    modal_idr: rp,
-                    harga_masuk_vrsc: harga,
-                    jumlah_vrsc_locked: lockedVrsc,
-                    waktu_mulai: serverTimestamp(),
-                    waktu_cair_ms: tglCair,
-                    status: "LOCKED"
-                });
 
                 // 3. Catat Mutasi
                 await addDoc(collection(db, "Mutasi_Mining"), { 
                     email: myEmail, jenis: "OUT", 
-                    deskripsi: `STAKING: Kunci Saldo 30 Hari`, 
+                    deskripsi: `SWAP: Beli ${estimasiUsdt.toFixed(2)} USDT`, 
                     nominal: rp, timestamp_local: Date.now() 
                 });
 
-                window.showToast("Staking Berhasil! Saldo dikunci 30 Hari.");
+                window.showToast(`SWAP BERHASIL! +${estimasiUsdt.toFixed(2)} USDT Masuk ke Dompet.`);
+                document.getElementById('inpSwapIdr').value = "";
+                document.getElementById('inpSwapUsdtPin').value = "";
+                window.closeWalletModal("modalSwapUsdt");
                 updateUI();
-                window.openStakingModal(); // Refresh UI
+                
             } catch(e) {
-                alert("Gagal memproses Staking. Cek koneksi.");
+                alert("Gagal memproses Swap. Cek koneksi server.");
             }
-            btn.innerHTML = "<i class='fa-solid fa-lock'></i> KUNCI SALDO 30 HARI"; btn.disabled = false;
+            btn.innerHTML = "<i class='fa-solid fa-bolt'></i> SWAP SEKARANG"; btn.disabled = false;
         };
-
-        window.dataStakingLokal = []; // Memori penyimpanan sementara
-        // --- MESIN PENCAIR STAKING OTOMATIS (JALAN DI BACKGROUND) ---
-        setInterval(async () => {
-            if(!myEmail || window.dataStakingLokal.length === 0) return;
-            
-            let now = Date.now();
-            let hargaLive = window.vrscPriceRp || 2500;
-            
-            for (let x of window.dataStakingLokal) {
-                if (x.status === "LOCKED" && now >= x.waktu_cair_ms) {
-                    try {
-                        // 1. Hitung Nilai Pencairan (Berdasarkan Harga Live)
-                        let nilaiCairIdr = Math.floor(x.jumlah_vrsc_locked * hargaLive);
-                        
-                        // 2. Tambahkan ke Saldo PPOB User
-                        mySaldoPpob += nilaiCairIdr;
-                        await updateDoc(doc(db, "Akun_Publik", docId), { saldo_ppob: mySaldoPpob });
-                        
-                        // 3. Ubah Status Kontrak Menjadi CAIR
-                        await updateDoc(doc(db, "Data_Staking", x.id), { 
-                            status: "CAIR",
-                            harga_keluar_vrsc: hargaLive,
-                            nilai_cair_idr: nilaiCairIdr
-                        });
-
-                        // 4. Catat Mutasi Pemasukan PPOB
-                        await addDoc(collection(db, "Mutasi_Mining"), { 
-                            email: myEmail, jenis: "IN", 
-                            deskripsi: `CAIR STAKING: Masuk ke Saldo PPOB`, 
-                            nominal: nilaiCairIdr, timestamp_local: Date.now() 
-                        });
-
-                        // 5. Beri Notifikasi ke User
-                        window.showToast(`🎉 STAKING MATANG! Rp ${nilaiCairIdr.toLocaleString('id-ID')} masuk ke Saldo PPOB.`);
-                        
-                        // 6. Refresh Data Lokal agar tidak looping berulang
-                        window.loadRiwayatStakingUser();
-                        updateUI();
-                    } catch(e) { console.log("Gagal mencairkan staking: ", e); }
-                }
-            }
-        }, 10000); // Mengecek setiap 10 detik
-        // --- END MESIN ---
-        window.loadRiwayatStakingUser = async () => {
-            const listEl = document.getElementById('listStakingAktif');
-            if(document.getElementById('modalStaking').style.display === 'none') return; 
-            
-            // Munculkan loading HANYA jika layarnya masih kosong
-            if(listEl.innerHTML.includes("Tidak ada kontrak") || listEl.innerHTML.trim() === "") {
-                listEl.innerHTML = "<div style='text-align:center; color:#94a3b8; padding:10px;'><i class='fa-solid fa-spinner fa-spin'></i> Menghitung Nilai Live Pasar...</div>";
-            }
-            
-            try {
-                const snap = await getDocs(query(collection(db, "Data_Staking"), where("email", "==", myEmail), where("status", "==", "LOCKED")));
-                window.dataStakingLokal = []; // Kosongkan memori lama
-                snap.forEach(d => window.dataStakingLokal.push({id: d.id, ...d.data()}));
-                window.renderPnlStakingLokal(); // Panggil fungsi render visual
-            } catch(e) {
-                listEl.innerHTML = "<div style='text-align:center; color:#ef4444;'>Gagal memuat data live.</div>";
-            }
-        };
-
-        window.renderPnlStakingLokal = () => {
-            const listEl = document.getElementById('listStakingAktif');
-            if(!listEl) return;
-            
-            let html = "";
-            window.dataStakingLokal.forEach(x => {
-                let tgl = new Date(x.waktu_cair_ms).toLocaleDateString('id-ID');
-                let liveHarga = window.vrscPriceRp || 2500; 
-                let estimasiIdrLive = x.jumlah_vrsc_locked * liveHarga;
-                let selisih = estimasiIdrLive - x.modal_idr;
-                let persen = (selisih / x.modal_idr) * 100;
-
-                let warnaProfit = "#94a3b8"; 
-                let iconProfit = "<i class='fa-solid fa-minus'></i>";
-                let teksProfit = "Tetap";
-
-                if (selisih > 0) {
-                    warnaProfit = "#2ecc71"; 
-                    iconProfit = "<i class='fa-solid fa-arrow-trend-up'></i>";
-                    teksProfit = `+Rp ${Math.abs(selisih).toLocaleString('id-ID')} (${persen.toFixed(2)}%)`;
-                } else if (selisih < 0) {
-                    warnaProfit = "#ef4444"; 
-                    iconProfit = "<i class='fa-solid fa-arrow-trend-down'></i>";
-                    teksProfit = `-Rp ${Math.abs(selisih).toLocaleString('id-ID')} (${persen.toFixed(2)}%)`;
-                }
-
-                html += `
-                <div style='background:#0f172a; padding:12px; border-radius:8px; border:1px solid ${warnaProfit}; margin-bottom:10px; box-shadow: 0 4px 6px rgba(0,0,0,0.3); transition:0.3s;'>
-                    <div style='display:flex; justify-content:space-between; margin-bottom:8px; border-bottom:1px dashed #334155; padding-bottom:8px;'>
-                        <div>
-                            <span style='font-size:0.65rem; color:#94a3b8;'>Aset Terkunci:</span><br/>
-                            <b style='color:#38bdf8; font-family:Orbitron;'>${x.jumlah_vrsc_locked.toFixed(6)} VRSC</b>
-                        </div>
-                        <div style='text-align:right;'>
-                            <span class='badge' style='background:rgba(245, 158, 11, 0.2); color:#fbbf24; border:1px solid #fbbf24; font-size:0.6rem;'>LOCKED 30 HARI</span><br/>
-                            <span style='font-size:0.65rem; color:#cbd5e1;'>Cair: ${tgl}</span>
-                        </div>
-                    </div>
-                    <div style='display:flex; justify-content:space-between; align-items:center;'>
-                        <div>
-                            <span style='font-size:0.65rem; color:#94a3b8;'>Modal Awal:</span><br/>
-                            <b style='color:#e2e8f0; font-size:0.8rem;'>Rp ${x.modal_idr.toLocaleString('id-ID')}</b>
-                        </div>
-                        <div style='text-align:right;'>
-                            <span style='font-size:0.65rem; color:${warnaProfit};'>Nilai Live Saat Ini:</span><br/>
-                            <b style='color:${warnaProfit}; font-family:Orbitron; font-size:0.95rem; text-shadow:0 0 10px ${warnaProfit}40;'>Rp ${Math.floor(estimasiIdrLive).toLocaleString('id-ID')}</b><br/>
-                            <span style='font-size:0.65rem; color:${warnaProfit}; font-weight:bold;'>${iconProfit} ${teksProfit}</span>
-                        </div>
-                    </div>
-                </div>`;
-            });
-            
-            listEl.innerHTML = html === "" ? "<div style='text-align:center; color:#94a3b8; padding:10px;'>Tidak ada kontrak aktif.</div>" : html;
-        };
+        // --- END MESIN SWAP ---
 		
         window.fetchPrice();
         initSession().then(() => {
