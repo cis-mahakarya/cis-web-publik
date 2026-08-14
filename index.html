@@ -2275,7 +2275,11 @@
         if(elPpobUsdt) elPpobUsdt.innerText = (window.mySaldoUsdt || 0).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2}) + " USDT";
         
         let topUsdt = document.getElementById('displayUsdt'); 
-        if(topUsdt) topUsdt.innerText = (window.mySaldoUsdt || 0).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2}) + " USDT";
+        if(topUsdt) {
+            let kursUsdt = window.usdtPriceRp || 15500;
+            let estimasiUsdt = ((myVrsc || 0) * vrscPriceRp) / kursUsdt;
+            topUsdt.innerText = estimasiUsdt.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2}) + " USDT";
+        }
 
         let modSwap = document.getElementById('modalSwapUsdt');
         if(modSwap && modSwap.style.display === 'flex') {
