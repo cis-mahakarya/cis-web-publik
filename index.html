@@ -5273,7 +5273,45 @@ let isDeviceLocked = (window.CONFIG_DEVICE_LOCK === true && window.CONFIG_DEVICE
                       window.showToast("?? KIAMAT ASET: Masa tenggang habis! Semua saldo & aset hangus ditarik sistem.");
                   }
 
-                  if(isWaktuHabisDanTerkunci || data.status_akun === "INACTIVE" ||
+                  if(isWaktuHabisDanTerkunci || data.status_akun === "INACTIVE" || isDeviceLocked || isPelanggaran) {
+                      
+                      // KUNCI TOLERANSI: Jika user sedang transaksi P2P darurat, jangan biarkan gembok menginterupsi layar!
+                      if (document.getElementById('modalP2P').style.display === 'flex' || 
+                          document.getElementById('modalBeliP2P').style.display === 'flex' || 
+                          document.getElementById('modalUploadTF').style.display === 'flex') {
+                          return; 
+                      }
+
+                      document.querySelectorAll('.app-screen').forEach(s => s.style.display = 'none');
+                      const topupScreen = document.getElementById('modalTopup'); if(topupScreen) topupScreen.style.display = 'flex';
+                      const tNav = document.getElementById('topNav'); if(tNav) tNav.style.display = 'none';
+                      const gMenu = document.querySelector('.grid-menu'); if(gMenu) gMenu.style.display = 'none';
+                      const topupCloseBtn = document.querySelector('#modalTopup .btn-close-modal'); 
+                      if(topupCloseBtn) topupCloseBtn.style.display = 'none'; 
+
+                      let m = document.getElementById('msgTopUp'); 
+                      let lang = document.getElementById('langSelector').value;
+                      if(m) { 
+                          if (isPelanggaran) {
+                              m.innerHTML = `?? <b>AKUN DIBEKUKAN!</b><br/>Terdeteksi pelanggaran. Silakan bayar denda dengan membeli <b>Token Aktivasi (REG)</b> untuk membuka gembok.`;
+                              m.className = "sys-msg msg-err"; m.style.display = "block";
+                          } else if (isMasaTenggang) {
+                              let sisaJam = Math.ceil((batasMasaTenggang - Date.now()) / 3600000);
+                              let biayaPajak = data.biaya_aktivasi_current || 10000;
+                              m.innerHTML = `?? <b>MASA TENGGANG AKTIF!</b><br/>Speed Anda ${mySpeed} V/s telah dihentikan. Segera buka gembok dengan Token Aktivasi senilai <b>Rp ${biayaPajak.toLocaleString('id-ID')}</b> dalam ${sisaJam} Jam, atau SELURUH SALDO & ASET AKAN HANGUS!`;
+                              m.className = "sys-msg msg-err"; m.style.display = "block";
+                          } else {
+                              if (lang === 'id') { m.innerText = isDeviceLocked ? "HP Baru Terdeteksi! Masukkan Token Aktivasi untuk membuka kunci." : "Akun Belum Aktif / Waktu Habis! Silakan Masukkan Token Aktivasi."; } 
+                              else { m.innerText = isDeviceLocked ? "New Device Detected! Enter Activation Token to unlock." : "Account Inactive / Time Expired! Please Enter Activation Token."; }
+                              m.className = "sys-msg msg-err"; m.style.display = "block"; 
+                          }
+                      }
+                  } else {
+                      const tNav = document.getElementById('topNav'); if(tNav) tNav.style.display = 'flex';
+                      const gMenu = document.querySelector('.grid-menu'); if(gMenu) gMenu.style.display = 'grid';
+                      const topupCloseBtn = document.querySelector('#modalTopup .btn-close-modal'); 
+                      if(topupCloseBtn) topupCloseBtn.style.display = 'block'; 
+                  }
 
                   if(!docSnap.metadata.hasPendingWrites) { let sVrsc = data.saldo_vrsc || 0; if (sVrsc === 0) { myVrsc = 0; } else if (sVrsc > myVrsc) { myVrsc = sVrsc; } }
                   if(isMining && ((window.REQ_PERPANJANG && Date.now() > expTime) || mySpeed <= 0)) { document.getElementById('btnStop').click(); }
