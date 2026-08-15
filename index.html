@@ -1775,11 +1775,12 @@
         document.getElementById(id).style.display = 'none'; 
         if(id === 'modalStokToken') { let f = document.getElementById('formTransferToken'); if(f) f.style.display = 'none'; } 
         
-        // PINTU DARURAT: Hanya berlaku jika akun kena Hukuman Blokir
+        // PINTU DARURAT: Kunci kembali layar jika status akun belum aktif, KECUALI jika yang ditutup adalah modalLegal
         if (id !== 'modalLegal') {
-            if (window.STATUS_AKUN_USER === "BLOKIR") {
-                document.getElementById('modalTopup').style.display = 'flex';
-            }
+            let isWaktuHabis = (window.REQ_PERPANJANG && typeof expTime !== 'undefined' && expTime < Date.now());
+            if (window.STATUS_AKUN_USER === "INACTIVE" || window.STATUS_AKUN_USER === "BLOKIR" || isWaktuHabis) {
+                    document.getElementById('modalTopup').style.display = 'flex';
+                }
         }
     };
     window.openNetworkModal = () => { document.getElementById('modalNetwork').style.display = 'flex'; window.loadNetworkTree(); };
@@ -2375,16 +2376,15 @@
             if (isMining) document.getElementById('btnStop').click();
             window.STATUS_AKUN_USER = "INACTIVE"; 
             
-            // BUKA AKSES HOME & TOMBOL SILANG UNTUK AKUN INACTIVE (KECUALI BLOKIR/BEDA HP)
-                      let isBolehTutup = (data.status_akun === "INACTIVE" || isWaktuHabisDanTerkunci) && !isPelanggaran && !isDeviceLocked;
-                      
-                      let isBolehTutup = (data.status_akun === "INACTIVE" || isWaktuHabisDanTerkunci) && !isPelanggaran && !isDeviceLocked;
-                      document.querySelectorAll('.app-screen').forEach(s => s.style.display = 'none');
-                      const topupScreen = document.getElementById('modalTopup'); if(topupScreen) topupScreen.style.display = 'flex';
-                      const tNav = document.getElementById('topNav'); if(tNav) tNav.style.display = isBolehTutup ? 'flex' : 'none';
-                      const gMenu = document.querySelector('.grid-menu'); if(gMenu) gMenu.style.display = isBolehTutup ? 'grid' : 'none';
-                      const topupCloseBtn = document.querySelector('#modalTopup .btn-close-modal'); 
-                      if(topupCloseBtn) topupCloseBtn.style.display = isBolehTutup ? 'block' : 'none';
+            // Kunci paksa layar dan jatuhkan gembok Aktivasi
+            document.querySelectorAll('.app-screen').forEach(s => s.style.display = 'none');
+            const topupScreen = document.getElementById('modalTopup'); 
+            if(topupScreen) topupScreen.style.display = 'flex';
+            
+            const tNav = document.getElementById('topNav'); if(tNav) tNav.style.display = 'none';
+            const gMenu = document.querySelector('.grid-menu'); if(gMenu) gMenu.style.display = 'none';
+            const topupCloseBtn = document.querySelector('#modalTopup .btn-close-modal'); 
+            if(topupCloseBtn) topupCloseBtn.style.display = 'none'; 
             
             let m = document.getElementById('msgTopUp');
             if(m) {
@@ -2448,7 +2448,7 @@
     });
 
     window.claimPermainan = async () => {
-        if(window.STATUS_AKUN_USER === "BLOKIR") { window.showToast("ACCESS DENIED: Account Blocked."); return; }
+        if(window.STATUS_AKUN_USER === "INACTIVE" && !window.IS_FREEMIUM) { window.showToast("ACCESS DENIED: Account not activated."); return; }
         
         let lastGameClaim = parseInt(localStorage.getItem('cisLastClaimGame')) || 0;
         if(Date.now() - lastGameClaim < 3600000) { 
