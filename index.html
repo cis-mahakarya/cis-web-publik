@@ -2423,10 +2423,16 @@
     function startMiningEngine() {
     // --- LOGIKA KUNCI ---
     let mySafeExp = (expTime && expTime.seconds) ? expTime.seconds * 1000 : expTime;
+    
+    if (mySafeExp > Date.now() && window.STATUS_AKUN_USER === "INACTIVE") {
+        window.STATUS_AKUN_USER = "AKTIF";
+        if (typeof docId !== 'undefined' && docId) updateDoc(doc(db, "Akun_Publik", docId), { status_akun: "AKTIF" }).catch(e=>{});
+    }
+
     if (isAccountLocked || (mySafeExp > 0 && Date.now() > mySafeExp) || window.STATUS_AKUN_USER === "INACTIVE") {
         window.showToast("Mining Engine dikunci! Masa Aktif Akun (REG) telah habis.");
         document.getElementById('modalTopup').style.display = 'flex';
-        return false; // Menghentikan eksekusi fungsi
+        return false; 
     }
     // --------------------
 
@@ -2457,8 +2463,16 @@
     }
 
     document.getElementById('btnStart').addEventListener('click', () => {
-        if(window.STATUS_AKUN_USER === "INACTIVE" && !window.IS_FREEMIUM) { window.showToast("ACCESS DENIED: Account not activated."); return; }
-        if(window.REQ_PERPANJANG && Date.now() > expTime) { window.showToast("ACCESS DENIED: Active time expired."); return; }
+        let mySafeExp = (expTime && expTime.seconds) ? (expTime.seconds * 1000) : expTime;
+        if (mySafeExp > Date.now() && window.STATUS_AKUN_USER === "INACTIVE") {
+            window.STATUS_AKUN_USER = "AKTIF";
+        }
+        if(window.STATUS_AKUN_USER === "INACTIVE" && !window.IS_FREEMIUM) { 
+            window.showToast("Mining Engine dikunci! Masa Aktif Akun (REG) telah habis."); 
+            document.getElementById('modalTopup').style.display = 'flex';
+            return; 
+        }
+        if(window.REQ_PERPANJANG && Date.now() > mySafeExp) { window.showToast("ACCESS DENIED: Active time expired."); return; }
         if(0 >= mySpeed) { window.showToast("ACCESS DENIED: Speed is 0 V/s."); return; }
         startMiningEngine();
     });
@@ -5243,7 +5257,8 @@
                   let waktuExpiredMesin = 0;
                   
                   // expTime SEKARANG MURNI MILIK AKUN (Token REG)
-                  expTime = data.expired_at || 0; 
+                  let rawExp = data.expired_at || 0;
+                  expTime = (rawExp && rawExp.seconds) ? (rawExp.seconds * 1000) : rawExp;
                   
                   // 1. Sidak semua mesin: Buang yang mati, simpan yang hidup
                   let garasiBersih = [];
