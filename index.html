@@ -2046,7 +2046,7 @@
     window.openChatModal = () => { document.getElementById('chatModal').style.display = 'flex'; };
     window.closeChatModal = () => { document.getElementById('chatModal').style.display = 'none'; };
     
-    function msg(id, text, type) { const b = document.getElementById(id); b.innerText = text; b.className = "sys-msg " + (type === "ok" ? "msg-ok" : "msg-err"); b.style.display = "block"; }
+    function msg(id, text, type) { const b = document.getElementById(id); b.innerHTML = text; b.className = "sys-msg " + (type === "ok" ? "msg-ok" : "msg-err"); b.style.display = "block"; }
 
     let REWARD_CLAIM_PERMAINAN = 50; let BONUS_CLAIM_PERMAINAN = 0; let WAKTU_MULAI_BONUS = "00:00"; let WAKTU_SELESAI_BONUS = "00:00";
     let EVENT_AKTIF = false; let EVENT_TIPE = "COIN"; let EVENT_COIN = 0; let EVENT_SPEED = 0; let EVENT_HARI_AKTIF = 0; let EVENT_HARI_SPEED = 0; let EVENT_BATAS = 0;
