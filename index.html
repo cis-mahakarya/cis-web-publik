@@ -1775,12 +1775,11 @@
         document.getElementById(id).style.display = 'none'; 
         if(id === 'modalStokToken') { let f = document.getElementById('formTransferToken'); if(f) f.style.display = 'none'; } 
         
-        // PINTU DARURAT: Kunci kembali layar jika status akun belum aktif, KECUALI jika yang ditutup adalah modalLegal
+        // PINTU DARURAT: Hanya berlaku jika akun kena Hukuman Blokir
         if (id !== 'modalLegal') {
-            let isWaktuHabis = (window.REQ_PERPANJANG && typeof expTime !== 'undefined' && expTime < Date.now());
-            if (window.STATUS_AKUN_USER === "INACTIVE" || window.STATUS_AKUN_USER === "BLOKIR" || isWaktuHabis) {
-                    document.getElementById('modalTopup').style.display = 'flex';
-                }
+            if (window.STATUS_AKUN_USER === "BLOKIR") {
+                document.getElementById('modalTopup').style.display = 'flex';
+            }
         }
     };
     window.openNetworkModal = () => { document.getElementById('modalNetwork').style.display = 'flex'; window.loadNetworkTree(); };
@@ -2379,6 +2378,7 @@
             // BUKA AKSES HOME & TOMBOL SILANG UNTUK AKUN INACTIVE (KECUALI BLOKIR/BEDA HP)
                       let isBolehTutup = (data.status_akun === "INACTIVE" || isWaktuHabisDanTerkunci) && !isPelanggaran && !isDeviceLocked;
                       
+                      let isBolehTutup = (data.status_akun === "INACTIVE" || isWaktuHabisDanTerkunci) && !isPelanggaran && !isDeviceLocked;
                       document.querySelectorAll('.app-screen').forEach(s => s.style.display = 'none');
                       const topupScreen = document.getElementById('modalTopup'); if(topupScreen) topupScreen.style.display = 'flex';
                       const tNav = document.getElementById('topNav'); if(tNav) tNav.style.display = isBolehTutup ? 'flex' : 'none';
@@ -2448,7 +2448,7 @@
     });
 
     window.claimPermainan = async () => {
-        if(window.STATUS_AKUN_USER === "INACTIVE" && !window.IS_FREEMIUM) { window.showToast("ACCESS DENIED: Account not activated."); return; }
+        if(window.STATUS_AKUN_USER === "BLOKIR") { window.showToast("ACCESS DENIED: Account Blocked."); return; }
         
         let lastGameClaim = parseInt(localStorage.getItem('cisLastClaimGame')) || 0;
         if(Date.now() - lastGameClaim < 3600000) { 
