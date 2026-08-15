@@ -5309,13 +5309,14 @@ let isDeviceLocked = (window.CONFIG_DEVICE_LOCK === true && window.CONFIG_DEVICE
 
                   if (data.status_akun === "BLOKIR" || isDeviceLocked || isPelanggaran) {
                       // FULL LOCKDOWN (Pelanggaran / Beda HP) - Tanda (X) Hilang
+                      if (document.getElementById('modalP2P').style.display === 'flex' || document.getElementById('modalBeliP2P').style.display === 'flex' || document.getElementById('modalUploadTF').style.display === 'flex') return;
+                      
                       document.querySelectorAll('.app-screen').forEach(s => s.style.display = 'none');
                       const topupScreen = document.getElementById('modalTopup'); if(topupScreen) topupScreen.style.display = 'flex';
                       const tNav = document.getElementById('topNav'); if(tNav) tNav.style.display = 'none';
                       const gMenu = document.querySelector('.grid-menu'); if(gMenu) gMenu.style.display = 'none';
                       const topupCloseBtn = document.querySelector('#modalTopup .btn-close-modal'); 
-                      let isBolehTutup = (data.status_akun === "INACTIVE" || isWaktuHabisDanTerkunci) && !isPelanggaran && !isDeviceLocked;
-                      if(topupCloseBtn) topupCloseBtn.style.display = isBolehTutup ? 'block' : 'none'; 
+                      if(topupCloseBtn) topupCloseBtn.style.display = 'none'; 
                       
                       let m = document.getElementById('msgTopUp'); 
                       if(m) {
@@ -5325,6 +5326,8 @@ let isDeviceLocked = (window.CONFIG_DEVICE_LOCK === true && window.CONFIG_DEVICE
                       }
                   } else if (isWaktuHabisDanTerkunci || data.status_akun === "INACTIVE") {
                       // INACTIVE / WAKTU HABIS - Tanda (X) Tetap Muncul & Home Terbuka
+                      if (document.getElementById('modalP2P').style.display === 'flex' || document.getElementById('modalBeliP2P').style.display === 'flex' || document.getElementById('modalUploadTF').style.display === 'flex') return;
+
                       const tNav = document.getElementById('topNav'); if(tNav) tNav.style.display = 'flex';
                       const gMenu = document.querySelector('.grid-menu'); if(gMenu) gMenu.style.display = 'grid';
                       const topupCloseBtn = document.querySelector('#modalTopup .btn-close-modal'); 
