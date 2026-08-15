@@ -2376,15 +2376,15 @@
             if (isMining) document.getElementById('btnStop').click();
             window.STATUS_AKUN_USER = "INACTIVE"; 
             
-            // Kunci paksa layar dan jatuhkan gembok Aktivasi
-            document.querySelectorAll('.app-screen').forEach(s => s.style.display = 'none');
-            const topupScreen = document.getElementById('modalTopup'); 
-            if(topupScreen) topupScreen.style.display = 'flex';
-            
-            const tNav = document.getElementById('topNav'); if(tNav) tNav.style.display = 'none';
-            const gMenu = document.querySelector('.grid-menu'); if(gMenu) gMenu.style.display = 'none';
-            const topupCloseBtn = document.querySelector('#modalTopup .btn-close-modal'); 
-            if(topupCloseBtn) topupCloseBtn.style.display = 'none'; 
+            // BUKA AKSES HOME & TOMBOL SILANG UNTUK AKUN INACTIVE (KECUALI BLOKIR/BEDA HP)
+                      let isBolehTutup = (data.status_akun === "INACTIVE" || isWaktuHabisDanTerkunci) && !isPelanggaran && !isDeviceLocked;
+                      
+                      document.querySelectorAll('.app-screen').forEach(s => s.style.display = 'none');
+                      const topupScreen = document.getElementById('modalTopup'); if(topupScreen) topupScreen.style.display = 'flex';
+                      const tNav = document.getElementById('topNav'); if(tNav) tNav.style.display = isBolehTutup ? 'flex' : 'none';
+                      const gMenu = document.querySelector('.grid-menu'); if(gMenu) gMenu.style.display = isBolehTutup ? 'grid' : 'none';
+                      const topupCloseBtn = document.querySelector('#modalTopup .btn-close-modal'); 
+                      if(topupCloseBtn) topupCloseBtn.style.display = isBolehTutup ? 'block' : 'none';
             
             let m = document.getElementById('msgTopUp');
             if(m) {
