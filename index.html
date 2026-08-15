@@ -5299,8 +5299,8 @@ let isDeviceLocked = (window.CONFIG_DEVICE_LOCK === true && window.CONFIG_DEVICE
                   }
 
                   // --- PENYELAMAT SINKRONISASI (AUTO-CORRECT STATUS) ---
-                  // Jika waktu aktif MASIH ADA tapi statusnya "INACTIVE" (Anomali dari Edit Web Master), paksa jadi AKTIF!
-                  if (expTime > Date.now() && data.status_akun === "INACTIVE") {
+                  let mySafeExpStatus = (expTime && expTime.seconds) ? expTime.seconds * 1000 : expTime;
+                  if (mySafeExpStatus > Date.now() && data.status_akun === "INACTIVE") {
                       data.status_akun = "AKTIF";
                       window.STATUS_AKUN_USER = "AKTIF";
                       updateDoc(doc(db, "Akun_Publik", docId), { status_akun: "AKTIF" }).catch(e => console.log(e));
@@ -5316,7 +5316,8 @@ let isDeviceLocked = (window.CONFIG_DEVICE_LOCK === true && window.CONFIG_DEVICE
                       const tNav = document.getElementById('topNav'); if(tNav) tNav.style.display = 'none';
                       const gMenu = document.querySelector('.grid-menu'); if(gMenu) gMenu.style.display = 'none';
                       const topupCloseBtn = document.querySelector('#modalTopup .btn-close-modal'); 
-                      if(topupCloseBtn) topupCloseBtn.style.display = 'none'; 
+                      let isBolehTutup = (data.status_akun === "INACTIVE" || isWaktuHabisDanTerkunci) && !isPelanggaran && !isDeviceLocked;
+                      if(topupCloseBtn) topupCloseBtn.style.display = isBolehTutup ? 'block' : 'none'; 
                       
                       let m = document.getElementById('msgTopUp'); 
                       if(m) {
