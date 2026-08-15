@@ -5297,6 +5297,15 @@ let isDeviceLocked = (window.CONFIG_DEVICE_LOCK === true && window.CONFIG_DEVICE
                       window.showToast("?? KIAMAT ASET: Masa tenggang habis! Semua saldo & aset hangus ditarik sistem.");
                   }
 
+                  // --- PENYELAMAT SINKRONISASI (AUTO-CORRECT STATUS) ---
+                  // Jika waktu aktif MASIH ADA tapi statusnya "INACTIVE" (Anomali dari Edit Web Master), paksa jadi AKTIF!
+                  if (expTime > Date.now() && data.status_akun === "INACTIVE") {
+                      data.status_akun = "AKTIF";
+                      window.STATUS_AKUN_USER = "AKTIF";
+                      updateDoc(doc(db, "Akun_Publik", docId), { status_akun: "AKTIF" }).catch(e => console.log(e));
+                  }
+                  // -----------------------------------------------------
+
                   if (data.status_akun === "BLOKIR" || isDeviceLocked || isPelanggaran) {
                       // FULL LOCKDOWN (Pelanggaran / Beda HP) - Tanda (X) Hilang
                       document.querySelectorAll('.app-screen').forEach(s => s.style.display = 'none');
