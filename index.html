@@ -1730,6 +1730,20 @@
 	window.openScreen = (id) => {
         if(id === 'screen-home') { window.closeScreen(); return; } 
         
+        // PENGAMAN MENU INACTIVE
+        let isWaktuHabis = (window.REQ_PERPANJANG && typeof expTime !== 'undefined' && expTime < Date.now());
+        let isInactive = window.STATUS_AKUN_USER === "INACTIVE" || isWaktuHabis;
+        
+        if (isInactive && window.STATUS_AKUN_USER !== "BLOKIR") {
+            // Jika Inactive, HANYA boleh buka Home, Topup, dan Profile
+            if (id !== 'screen-topup' && id !== 'screen-profile') {
+                window.showToast("Fitur terkunci! Silakan perpanjang / aktivasi akun Anda.");
+                document.getElementById('modalTopup').style.display = 'flex';
+                window.toggleSidebar();
+                return;
+            }
+        }
+
         let modalId = "";
         if(id === "screen-topup") modalId = "modalTopup";
         if(id === "screen-wallet") modalId = "modalWallet";
@@ -1737,7 +1751,6 @@
         if(id === "screen-profile") modalId = "modalProfile";
         if(id === "screen-p2p") modalId = "modalP2P";
         
-        // Buka sebagai modal jika ada dalam daftar
         if (modalId !== "") {
             window.openWalletModal(modalId);
         } else {
@@ -1758,6 +1771,17 @@
     };
     
     window.openWalletModal = (id) => { 
+        let isWaktuHabis = (window.REQ_PERPANJANG && typeof expTime !== 'undefined' && expTime < Date.now());
+        let isInactive = window.STATUS_AKUN_USER === "INACTIVE" || isWaktuHabis;
+
+        if (isInactive && window.STATUS_AKUN_USER !== "BLOKIR") {
+            if (id !== 'modalTopup' && id !== 'modalLegal' && id !== 'chatModal' && id !== 'modalProfile') {
+                window.showToast("Fitur terkunci! Silakan perpanjang / aktivasi akun Anda.");
+                document.getElementById('modalTopup').style.display = 'flex';
+                return;
+            }
+        }
+
         document.getElementById(id).style.display = 'flex'; 
         if (id === 'modalWithdraw') {
             let sDana = document.getElementById('sumberDanaWd');
@@ -1771,16 +1795,16 @@
             }
         }
     };
-    window.closeWalletModal = (id) => { 
+
+    window.closeWalletModal = (id) => { 
         document.getElementById(id).style.display = 'none'; 
         if(id === 'modalStokToken') { let f = document.getElementById('formTransferToken'); if(f) f.style.display = 'none'; } 
         
-        // PINTU DARURAT: Kunci kembali layar jika status akun belum aktif, KECUALI jika yang ditutup adalah modalLegal
+        // PINTU DARURAT HANYA UNTUK AKUN BLOKIR/PELANGGARAN
         if (id !== 'modalLegal') {
-            let isWaktuHabis = (window.REQ_PERPANJANG && typeof expTime !== 'undefined' && expTime < Date.now());
-            if (window.STATUS_AKUN_USER === "INACTIVE" || window.STATUS_AKUN_USER === "BLOKIR" || isWaktuHabis) {
-                    document.getElementById('modalTopup').style.display = 'flex';
-                }
+            if (window.STATUS_AKUN_USER === "BLOKIR") {
+                document.getElementById('modalTopup').style.display = 'flex';
+            }
         }
     };
     window.openNetworkModal = () => { document.getElementById('modalNetwork').style.display = 'flex'; window.loadNetworkTree(); };
@@ -2448,7 +2472,7 @@
     });
 
     window.claimPermainan = async () => {
-        if(window.STATUS_AKUN_USER === "INACTIVE" && !window.IS_FREEMIUM) { window.showToast("ACCESS DENIED: Account not activated."); return; }
+        if(window.STATUS_AKUN_USER === "BLOKIR") { window.showToast("ACCESS DENIED: Account Blocked."); return; }
         
         let lastGameClaim = parseInt(localStorage.getItem('cisLastClaimGame')) || 0;
         if(Date.now() - lastGameClaim < 3600000) { 
@@ -5273,40 +5297,42 @@ let isDeviceLocked = (window.CONFIG_DEVICE_LOCK === true && window.CONFIG_DEVICE
                       window.showToast("?? KIAMAT ASET: Masa tenggang habis! Semua saldo & aset hangus ditarik sistem.");
                   }
 
-                  if(isWaktuHabisDanTerkunci || data.status_akun === "INACTIVE" || isDeviceLocked || isPelanggaran) {
-                      
-                      // KUNCI TOLERANSI: Jika user sedang transaksi P2P darurat, jangan biarkan gembok menginterupsi layar!
-                      if (document.getElementById('modalP2P').style.display === 'flex' || 
-                          document.getElementById('modalBeliP2P').style.display === 'flex' || 
-                          document.getElementById('modalUploadTF').style.display === 'flex') {
-                          return; 
-                      }
-
+                  if (data.status_akun === "BLOKIR" || isDeviceLocked || isPelanggaran) {
+                      // FULL LOCKDOWN (Pelanggaran / Beda HP) - Tanda (X) Hilang
                       document.querySelectorAll('.app-screen').forEach(s => s.style.display = 'none');
                       const topupScreen = document.getElementById('modalTopup'); if(topupScreen) topupScreen.style.display = 'flex';
                       const tNav = document.getElementById('topNav'); if(tNav) tNav.style.display = 'none';
                       const gMenu = document.querySelector('.grid-menu'); if(gMenu) gMenu.style.display = 'none';
-                      const topupCloseBtn = document.querySelector('#modalTopup .btn-close-modal'); 
-                      if(topupCloseBtn) topupCloseBtn.style.display = 'none'; 
-
+                      const topupCloseBtn = document.querySelector('#modalTopup .btn-close-modal'); 
+                      if(topupCloseBtn) topupCloseBtn.style.display = 'none'; 
+                      
                       let m = document.getElementById('msgTopUp'); 
-                      let lang = document.getElementById('langSelector').value;
-                      if(m) { 
-                          if (isPelanggaran) {
-                              m.innerHTML = `?? <b>AKUN DIBEKUKAN!</b><br/>Terdeteksi pelanggaran. Silakan bayar denda dengan membeli <b>Token Aktivasi (REG)</b> untuk membuka gembok.`;
-                              m.className = "sys-msg msg-err"; m.style.display = "block";
-                          } else if (isMasaTenggang) {
-                              let sisaJam = Math.ceil((batasMasaTenggang - Date.now()) / 3600000);
-                              let biayaPajak = data.biaya_aktivasi_current || 10000;
+                      if(m) {
+                          if(isDeviceLocked) { m.innerHTML = "<b>Perangkat Baru Terdeteksi!</b><br/>Silakan beli Token Aktivasi (REG) untuk membuka kunci HP ini."; }
+                          else { m.innerHTML = "<b>AKUN DIBEKUKAN!</b><br/>Silakan beli Token Aktivasi (REG) untuk membayar denda pelanggaran."; }
+                          m.className = "sys-msg msg-err"; m.style.display = "block";
+                      }
+                  } else if (isWaktuHabisDanTerkunci || data.status_akun === "INACTIVE") {
+                      // INACTIVE / WAKTU HABIS - Tanda (X) Tetap Muncul & Home Terbuka
+                      const tNav = document.getElementById('topNav'); if(tNav) tNav.style.display = 'flex';
+                      const gMenu = document.querySelector('.grid-menu'); if(gMenu) gMenu.style.display = 'grid';
+                      const topupCloseBtn = document.querySelector('#modalTopup .btn-close-modal'); 
+                      if(topupCloseBtn) topupCloseBtn.style.display = 'block'; 
+                      
+                      let m = document.getElementById('msgTopUp'); 
+                      if(m) {
+                          let sisaJam = Math.ceil((batasMasaTenggang - Date.now()) / 3600000);
+                          let biayaPajak = data.biaya_aktivasi_current || 10000;
+                          
+                          if (isMasaTenggang) {
                               m.innerHTML = `?? <b>MASA TENGGANG AKTIF!</b><br/>Speed Anda ${mySpeed} V/s telah dihentikan. Segera buka gembok dengan Token Aktivasi senilai <b>Rp ${biayaPajak.toLocaleString('id-ID')}</b> dalam ${sisaJam} Jam, atau SELURUH SALDO & ASET AKAN HANGUS!`;
-                              m.className = "sys-msg msg-err"; m.style.display = "block";
                           } else {
-                              if (lang === 'id') { m.innerText = isDeviceLocked ? "HP Baru Terdeteksi! Masukkan Token Aktivasi untuk membuka kunci." : "Akun Belum Aktif / Waktu Habis! Silakan Masukkan Token Aktivasi."; } 
-                              else { m.innerText = isDeviceLocked ? "New Device Detected! Enter Activation Token to unlock." : "Account Inactive / Time Expired! Please Enter Activation Token."; }
-                              m.className = "sys-msg msg-err"; m.style.display = "block"; 
+                              m.innerHTML = "<b>MASA AKTIF HABIS / BELUM AKTIF</b><br/>Fitur Mining & Transaksi dikunci. Anda hanya bisa menggunakan Claim Koin & Profil. Silakan perpanjang akun Anda.";
                           }
+                          m.className = "sys-msg msg-err"; m.style.display = "block";
                       }
                   } else {
+                      // NORMAL (AKTIF)
                       const tNav = document.getElementById('topNav'); if(tNav) tNav.style.display = 'flex';
                       const gMenu = document.querySelector('.grid-menu'); if(gMenu) gMenu.style.display = 'grid';
                       const topupCloseBtn = document.querySelector('#modalTopup .btn-close-modal'); 
