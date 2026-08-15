@@ -2423,8 +2423,9 @@
     function startMiningEngine() {
     // --- LOGIKA KUNCI ---
     let mySafeExp = (expTime && expTime.seconds) ? expTime.seconds * 1000 : expTime;
-    if (isAccountLocked || (mySafeExp > 0 && Date.now() > mySafeExp)) {
-        alert("Waktu aktif akun Anda telah habis! Mining Engine diblokir. Silakan perpanjang akun Anda.");
+    if (isAccountLocked || (mySafeExp > 0 && Date.now() > mySafeExp) || window.STATUS_AKUN_USER === "INACTIVE") {
+        window.showToast("Mining Engine dikunci! Masa Aktif Akun (REG) telah habis.");
+        document.getElementById('modalTopup').style.display = 'flex';
         return false; // Menghentikan eksekusi fungsi
     }
     // --------------------
@@ -5313,7 +5314,8 @@ let isDeviceLocked = (window.CONFIG_DEVICE_LOCK === true && window.CONFIG_DEVICE
                       const tNav = document.getElementById('topNav'); if(tNav) tNav.style.display = 'none';
                       const gMenu = document.querySelector('.grid-menu'); if(gMenu) gMenu.style.display = 'none';
                       const topupCloseBtn = document.querySelector('#modalTopup .btn-close-modal'); 
-                      if(topupCloseBtn) topupCloseBtn.style.display = 'none'; 
+                      let isBolehTutup = (data.status_akun === "INACTIVE" || isWaktuHabisDanTerkunci) && !isPelanggaran && !isDeviceLocked;
+                      if(topupCloseBtn) topupCloseBtn.style.display = isBolehTutup ? 'block' : 'none'; 
                       
                       let m = document.getElementById('msgTopUp'); 
                       if(m) {
