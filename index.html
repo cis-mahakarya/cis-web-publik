@@ -666,7 +666,11 @@
         <li id='menuSwapUsdtSidebar' onclick='window.openSwapModal(); window.toggleSidebar();' style='display:none; color:#10b981;'><i class='fa-solid fa-circle-dollar-to-slot'></i> <span>Swap USDT (PPOB)</span></li>
 
 		<li id='menuAkuntansiTeam' onclick='window.openAkuntansiTeamModal(); window.toggleSidebar();' style='display:none; color:#f1c40f; border-top:1px solid #334155; padding-top:20px;'><i class='fa-solid fa-chart-pie'></i> <span style='font-weight:900; letter-spacing:1px;'>AKUNTANSI TIM (SULTAN)</span></li>
-		  
+		
+        <!-- SUNTIKAN PORTAL MASTER PUSAT -->
+        <li id='menuPortalMaster' onclick='window.location.href="master.html";' style='display:none; color:#38bdf8; border-top:1px dashed #334155; padding-top:15px;'><i class='fa-solid fa-satellite-dish'></i> <span style='font-weight:900; letter-spacing:1px;'>PORTAL MASTER PUSAT</span></li>
+        <!-- END SUNTIKAN PORTAL -->
+
 		<li onclick='window.logoutUser()' style='color:#ef4444; border-top:1px solid #1e293b; margin-top:10px;'><i class='fa-solid fa-power-off'></i> <span data-i18n='menuLogout'>Logout</span></li>
       </ul>
     </div>
@@ -5041,6 +5045,12 @@
                         let d = snap.docs[0].data();
                         window.ANTI_HACK_ACTIVE = d.is_antihack === true;
                         
+                        // SUNTIKAN RADAR PORTAL TIM
+                        window.IS_PORTAL_TEAM_ACTIVE = d.is_portal_team_active === true;
+                        let menuPortal = document.getElementById('menuPortalMaster');
+                        let isTimRole = (window.myProfileData && window.myProfileData.role && window.myProfileData.role.includes("TIM"));
+                        if (menuPortal) menuPortal.style.display = (isTimRole && window.IS_PORTAL_TEAM_ACTIVE) ? 'flex' : 'none';
+                        
                         let isTimeExpired = false;
                         if(d.target_launch) {
                             let targetTime = new Date(d.target_launch).getTime();
@@ -5273,10 +5283,12 @@
 
 				  // RADAR TIM PUSAT (SULTAN) & KUNCI STAKING
                   const menuTim = document.getElementById('menuAkuntansiTeam');
+                  const menuPortalMaster = document.getElementById('menuPortalMaster'); // KONEKSI PORTAL
                   const menuStaking = document.getElementById('menuStakingSidebar');
                   
                   if (data.role && data.role.includes("TIM")) {
                       if (menuTim) menuTim.style.display = 'flex';
+                      if (menuPortalMaster) menuPortalMaster.style.display = window.IS_PORTAL_TEAM_ACTIVE ? 'flex' : 'none'; // DIKONTROL DARI PUSAT
                       if (menuStaking) menuStaking.style.display = 'none'; // Gembok mati Staking untuk Tim
                       
                       // KAWAT BERDURI (LOCKDOWN): Matikan Fitur Pribadi untuk TIM
