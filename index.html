@@ -1314,7 +1314,8 @@
       <div class='modal-overlay' id='modalPPOB'>
         <div class='modal-card' style='max-width: 450px;'>
           <button class='btn-close-modal' onclick='window.closeWalletModal("modalPPOB")' style='position:absolute; right:15px; top:15px; background:none; border:none; color:#ef4444; font-size:1.2rem; cursor:pointer;'><i class='fa-solid fa-xmark'></i></button>
-          <h3 style='color:#2ecc71; margin:0 0 15px 0;'><i class='fa-solid fa-bolt'></i> LAYANAN PPOB</h3>
+          <h3 style='color:#2ecc71; margin:0 0 5px 0;'><i class='fa-solid fa-bolt'></i> LAYANAN PPOB</h3>
+          <div id='indikatorAksesVIP' style='font-size:0.65rem; color:#f1c40f; background:rgba(0,0,0,0.5); padding:5px 8px; border-radius:4px; display:inline-block; margin-bottom:15px;'><i class='fa-solid fa-clock'></i> Akses Layanan: <b id='sisaWaktuLayananVIP'>Menghitung...</b></div>
           <p style='font-size:0.75rem; color:#94a3b8; margin-top:0;'>Beli Pulsa & Token Listrik instan dengan Saldo Rupiah Anda.</p>
           
           <div style='background:rgba(46, 204, 113, 0.1); border:1px dashed #2ecc71; padding:10px; border-radius:8px; margin-bottom:15px; text-align:center;'>
@@ -5513,27 +5514,106 @@ let isDeviceLocked = (window.CONFIG_DEVICE_LOCK === true && window.CONFIG_DEVICE
     muatPengumumanKlaim();
     // ---------------------------------------------
 
-		// --- START: PENGAMAT SAKLAR PPOB DARI MASTER PUSAT ---
+		// --- START: RADAR GEMBOK BERLAPIS (PPOB & STAKING) ---
         window.PPOB_MARKUP = 0; 
-        window.PPOB_AUTO_API = false; // Memori saklar otomatis
-        onSnapshot(query(collection(db, "System_Config"), where("tipe", "==", "PPOB_CONFIG")), (snap) => {
-            const menuPpobSidebar = document.getElementById('menuPpobSidebar');
-            if(menuPpobSidebar) {
-                if(!snap.empty) {
-                    let d = snap.docs[0].data();
-                    window.PPOB_MARKUP = parseFloat(d.markup) || 0; 
-                    window.PPOB_AUTO_API = d.is_auto_api === true; // Simpan keputusan Pusat
-                    
-                    if(d.is_active === true) { menuPpobSidebar.style.display = 'flex'; } 
-                    else { menuPpobSidebar.style.display = 'none'; }
-                    
-                    if(typeof window.ubahFormPpob === "function") window.ubahFormPpob(); 
-                } else {
-                    menuPpobSidebar.style.display = 'none';
+        window.PPOB_AUTO_API = false;
+        window.SYARAT_MIN_SPEED_PPOB = 0;
+        window.GLOBAL_PPOB_ACTIVE = false;
+        window.GLOBAL_STAKING_ACTIVE = false;
+
+        // Evaluasi Syarat Jaringan & Buka/Tutup Menu
+        window.evaluasiAksesVIPLayanan = async () => {
+            const menuPpob = document.getElementById('menuPpobSidebar');
+            const menuSwap = document.getElementById('menuSwapUsdtSidebar'); // Menu Staking (Dinamai Swap di HTML)
+            let isTim = (window.myProfileData && window.myProfileData.role && window.myProfileData.role.includes("TIM"));
+            
+            // Lapis 1: Jika Saklar Pusat MATI atau user adalah TIM, sembunyikan!
+            if (menuSwap) menuSwap.style.display = (!window.GLOBAL_STAKING_ACTIVE || isTim) ? 'none' : 'flex';
+            if (menuPpob) menuPpob.style.display = (!window.GLOBAL_PPOB_ACTIVE) ? 'none' : 'flex';
+
+            // Jika Pusat mengaktifkan, lakukan Cek Syarat Ekosistem
+            if (window.GLOBAL_PPOB_ACTIVE || (window.GLOBAL_STAKING_ACTIVE && !isTim)) {
+                // 1. Cek Nyawa Akun (Token REG)
+                let mySafeExp = (expTime && expTime.seconds) ? expTime.seconds * 1000 : expTime;
+                if (Date.now() > mySafeExp || window.STATUS_AKUN_USER === "INACTIVE") {
+                    if (menuPpob) menuPpob.style.display = 'none';
+                    if (menuSwap) menuSwap.style.display = 'none';
+                    return; // Mati Total
                 }
+
+                // 2. Cek Pembelian Pribadi User (Punya mesin >= Minimal)
+                let userLolosPribadi = false;
+                if (window.myProfileData && window.myProfileData.daftar_mesin) {
+                    window.myProfileData.daftar_mesin.forEach(m => {
+                        if ((m.nominal_beli || 0) >= window.SYARAT_MIN_SPEED_PPOB) userLolosPribadi = true;
+                    });
+                }
+
+                // 3. Cek Jaringan Referral (Punya 2 Downline yg juga lolos)
+                let downlineLolos = 0;
+                try {
+                    const snapDL = await getDocs(query(collection(db, "Akun_Publik"), where("referred_by", "==", myUsername)));
+                    snapDL.forEach(d => {
+                        let dlData = d.data();
+                        let dlPunyaMesinValid = false;
+                        if(dlData.daftar_mesin) {
+                            dlData.daftar_mesin.forEach(m => {
+                                if ((m.nominal_beli || 0) >= window.SYARAT_MIN_SPEED_PPOB) dlPunyaMesinValid = true;
+                            });
+                        }
+                        if (dlPunyaMesinValid) downlineLolos++;
+                    });
+                } catch(e) {}
+
+                // 4. Kalkulasi Bonus Hari & Total Durasi Akses
+                let kelipatanDua = Math.floor(downlineLolos / 2);
+                let bonusHariMs = kelipatanDua * 10 * 86400000; // +10 Hari per 2 orang
+                
+                // Ambil Durasi Mesin Tertua
+                let currentExpMesin = expTimeMesin > 0 ? expTimeMesin : (parseInt(localStorage.getItem("cisExpMesin")) || 0);
+                let waktuAksesPPOB = currentExpMesin + bonusHariMs;
+
+                // 5. Kesimpulan Akses
+                let bolehAkses = userLolosPribadi && (downlineLolos >= 2) && (Date.now() < waktuAksesPPOB);
+
+                // Eksekusi Tampilan Menu Utama
+                if (menuPpob) menuPpob.style.display = bolehAkses ? 'flex' : 'none';
+                if (menuSwap) menuSwap.style.display = (bolehAkses && !isTim) ? 'flex' : 'none';
+
+                // Render Info Teks ke dalam Dalaman Modal
+                let sisaMs = waktuAksesPPOB - Date.now();
+                let teksSisa = "EXPIRED!";
+                if (bolehAkses && sisaMs > 0) {
+                    let d = Math.floor(sisaMs / 86400000);
+                    let h = Math.floor((sisaMs % 86400000) / 3600000);
+                    teksSisa = `${d} Hari ${h} Jam`;
+                }
+
+                let elAksesInfo = document.getElementById('sisaWaktuLayananVIP');
+                if(elAksesInfo) elAksesInfo.innerText = teksSisa;
             }
+        };
+
+        onSnapshot(query(collection(db, "System_Config"), where("tipe", "==", "PPOB_CONFIG")), (snap) => {
+            if(!snap.empty) {
+                let d = snap.docs[0].data();
+                window.PPOB_MARKUP = parseFloat(d.markup) || 0; 
+                window.PPOB_AUTO_API = d.is_auto_api === true; 
+                window.GLOBAL_PPOB_ACTIVE = d.is_active === true;
+                window.SYARAT_MIN_SPEED_PPOB = d.min_beli_speed || 0;
+                
+                if(typeof window.ubahFormPpob === "function") window.ubahFormPpob(); 
+                window.evaluasiAksesVIPLayanan(); // Cek berlapis
+            } else { window.GLOBAL_PPOB_ACTIVE = false; window.evaluasiAksesVIPLayanan(); }
         });
-        // --- END ---
+
+        onSnapshot(query(collection(db, "System_Config"), where("tipe", "==", "STAKING_STATUS")), (snap) => {
+            if(!snap.empty) {
+                window.GLOBAL_STAKING_ACTIVE = snap.docs[0].data().is_active === true;
+                window.evaluasiAksesVIPLayanan(); // Cek berlapis
+            } else { window.GLOBAL_STAKING_ACTIVE = false; window.evaluasiAksesVIPLayanan(); }
+        });
+		// --- END RADAR GEMBOK BERLAPIS ---
 
 		// --- START: SAKLAR SINKRONISASI SWAP USDT ---
         onSnapshot(query(collection(db, "System_Config"), where("tipe", "==", "STAKING_STATUS")), (snap) => {
