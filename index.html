@@ -5579,80 +5579,112 @@ let isDeviceLocked = (window.CONFIG_DEVICE_LOCK === true && window.CONFIG_DEVICE
         window.SYARAT_MIN_SPEED_PPOB = 0;
         window.GLOBAL_PPOB_ACTIVE = false;
         window.GLOBAL_STAKING_ACTIVE = false;
+        
+        window.banyakDownlineValid = 0; 
 
-        // Evaluasi Syarat Jaringan & Buka/Tutup Menu
+        // 1. FUNGSI PENGECEKAN SYARAT VIP (REAL-TIME)
+        window.cekSyaratVIP = async () => {
+            if (!window.myProfileData) return { lolos: false, pesan: "Sistem sedang memuat data..." };
+
+            let mySafeExp = (expTime && expTime.seconds) ? expTime.seconds * 1000 : expTime;
+            if (Date.now() > mySafeExp || window.STATUS_AKUN_USER === "INACTIVE") {
+                return { lolos: false, pesan: "Masa Aktif Akun (REG) habis! Silakan perpanjang." };
+            }
+
+            // A. Cek Total Pembelian Pribadi
+            let totalBeliPribadi = window.myProfileData.total_pembelian_mesin || 0;
+            if (totalBeliPribadi === 0 && window.myProfileData.daftar_mesin) {
+                window.myProfileData.daftar_mesin.forEach(m => { 
+                    if (m.nominal_beli) totalBeliPribadi += Number(m.nominal_beli); 
+                });
+            }
+
+            if (totalBeliPribadi < window.SYARAT_MIN_SPEED_PPOB) {
+                return { lolos: false, pesan: `Wajib Upgrade Speed min. Rp ${window.SYARAT_MIN_SPEED_PPOB.toLocaleString('id-ID')}!` };
+            }
+
+            // B. Cek Pasukan (Downline Valid) - Langsung ke Database (Tanpa Cache 30 detik)
+            let downlineLolos = 0;
+            try {
+                const snapDL = await getDocs(query(collection(db, "Akun_Publik"), where("referred_by", "==", myUsername)));
+                snapDL.forEach(d => {
+                    let dlData = d.data();
+                    let totalBeliDL = dlData.total_pembelian_mesin || 0;
+                    if (totalBeliDL === 0 && dlData.daftar_mesin) {
+                        dlData.daftar_mesin.forEach(m => { 
+                            if (m.nominal_beli) totalBeliDL += Number(m.nominal_beli); 
+                        });
+                    }
+                    if (totalBeliDL >= window.SYARAT_MIN_SPEED_PPOB) downlineLolos++;
+                });
+            } catch(e) {}
+            window.banyakDownlineValid = downlineLolos;
+
+            if (downlineLolos < 2) {
+                return { lolos: false, pesan: `Butuh 2 Referral Aktif. Saat ini: ${downlineLolos} Referral.` };
+            }
+
+            // C. Kalkulasi Bonus Waktu
+            let kelipatanDua = Math.floor(downlineLolos / 2);
+            let bonusHariMs = kelipatanDua * 10 * 86400000;
+            
+            let historiExpTerjauh = window.myProfileData.histori_exp_mesin_terjauh || 0;
+            let currentExpMesin = expTimeMesin > 0 ? expTimeMesin : (parseInt(localStorage.getItem("cisExpMesin")) || 0);
+            
+            let baseExp = Math.max(historiExpTerjauh, currentExpMesin);
+            let waktuAksesPPOB = baseExp + bonusHariMs;
+
+            if (Date.now() > waktuAksesPPOB) {
+                return { lolos: false, pesan: `Durasi Akses Habis! Tambah Referral baru.` };
+            }
+
+            return { lolos: true, waktuAksesPPOB: waktuAksesPPOB, jumlahRef: downlineLolos };
+        };
+
+        // 2. CEGATAN KLIK MENU (MODAL)
+        const originalOpenWalletModal = window.openWalletModal;
+        window.openWalletModal = async (id) => {
+            if (id === 'modalPPOB' || id === 'modalStaking') {
+                let hasil = await window.cekSyaratVIP();
+                if (!hasil.lolos) return window.showToast("🔒 AKSES DITOLAK: " + hasil.pesan);
+            }
+            originalOpenWalletModal(id);
+        };
+
+        const originalOpenSwapModal = window.openSwapModal;
+        window.openSwapModal = async () => {
+            let hasil = await window.cekSyaratVIP();
+            if (!hasil.lolos) return window.showToast("🔒 AKSES DITOLAK: " + hasil.pesan);
+            if(typeof originalOpenSwapModal === "function") originalOpenSwapModal();
+        };
+
+        // 3. EVALUASI VISUAL MENU (Hanya Mengganti Teks, TIDAK Menghilangkan Menu)
         window.evaluasiAksesVIPLayanan = async () => {
             const menuPpob = document.getElementById('menuPpobSidebar');
-            const menuSwap = document.getElementById('menuSwapUsdtSidebar'); // Menu Staking (Dinamai Swap di HTML)
+            const menuSwap = document.getElementById('menuSwapUsdtSidebar');
             let isTim = (window.myProfileData && window.myProfileData.role && window.myProfileData.role.includes("TIM"));
             
-            // Lapis 1: Jika Saklar Pusat MATI atau user adalah TIM, sembunyikan!
+            // Menu SELALU TAMPIL asalkan Master Pusat MENG-ON-KAN nya
             if (menuSwap) menuSwap.style.display = (!window.GLOBAL_STAKING_ACTIVE || isTim) ? 'none' : 'flex';
             if (menuPpob) menuPpob.style.display = (!window.GLOBAL_PPOB_ACTIVE) ? 'none' : 'flex';
 
-            // Jika Pusat mengaktifkan, lakukan Cek Syarat Ekosistem
-            if (window.GLOBAL_PPOB_ACTIVE || (window.GLOBAL_STAKING_ACTIVE && !isTim)) {
-                // 1. Cek Nyawa Akun (Token REG)
-                let mySafeExp = (expTime && expTime.seconds) ? expTime.seconds * 1000 : expTime;
-                if (Date.now() > mySafeExp || window.STATUS_AKUN_USER === "INACTIVE") {
-                    if (menuPpob) menuPpob.style.display = 'none';
-                    if (menuSwap) menuSwap.style.display = 'none';
-                    return; // Mati Total
-                }
-
-                // 2. Cek Pembelian Pribadi User (Punya mesin >= Minimal)
-                let userLolosPribadi = false;
-                if (window.myProfileData && window.myProfileData.daftar_mesin) {
-                    window.myProfileData.daftar_mesin.forEach(m => {
-                        if ((m.nominal_beli || 0) >= window.SYARAT_MIN_SPEED_PPOB) userLolosPribadi = true;
-                    });
-                }
-
-                // 3. Cek Jaringan Referral (Punya 2 Downline yg juga lolos)
-                let downlineLolos = 0;
-                try {
-                    const snapDL = await getDocs(query(collection(db, "Akun_Publik"), where("referred_by", "==", myUsername)));
-                    snapDL.forEach(d => {
-                        let dlData = d.data();
-                        let dlPunyaMesinValid = false;
-                        if(dlData.daftar_mesin) {
-                            dlData.daftar_mesin.forEach(m => {
-                                if ((m.nominal_beli || 0) >= window.SYARAT_MIN_SPEED_PPOB) dlPunyaMesinValid = true;
-                            });
-                        }
-                        if (dlPunyaMesinValid) downlineLolos++;
-                    });
-                } catch(e) {}
-
-                // 4. Kalkulasi Bonus Hari & Total Durasi Akses
-                let kelipatanDua = Math.floor(downlineLolos / 2);
-                let bonusHariMs = kelipatanDua * 10 * 86400000; // +10 Hari per 2 orang
-                
-                // Ambil Durasi Mesin Tertua
-                let currentExpMesin = expTimeMesin > 0 ? expTimeMesin : (parseInt(localStorage.getItem("cisExpMesin")) || 0);
-                let waktuAksesPPOB = currentExpMesin + bonusHariMs;
-
-                // 5. Kesimpulan Akses
-                let bolehAkses = userLolosPribadi && (downlineLolos >= 2) && (Date.now() < waktuAksesPPOB);
-
-                // Eksekusi Tampilan Menu Utama
-                if (menuPpob) menuPpob.style.display = bolehAkses ? 'flex' : 'none';
-                if (menuSwap) menuSwap.style.display = (bolehAkses && !isTim) ? 'flex' : 'none';
-
-                // Render Info Teks ke dalam Dalaman Modal
-                let sisaMs = waktuAksesPPOB - Date.now();
-                let teksSisa = "EXPIRED!";
-                if (bolehAkses && sisaMs > 0) {
+            let hasil = await window.cekSyaratVIP();
+            let elAksesInfo = document.getElementById('sisaWaktuLayananVIP');
+            if(elAksesInfo) {
+                if (!hasil.lolos) {
+                    elAksesInfo.innerText = "Akses Terkunci (Cek Syarat)";
+                    elAksesInfo.style.color = "#ef4444";
+                } else {
+                    let sisaMs = hasil.waktuAksesPPOB - Date.now();
                     let d = Math.floor(sisaMs / 86400000);
                     let h = Math.floor((sisaMs % 86400000) / 3600000);
-                    teksSisa = `${d} Hari ${h} Jam`;
+                    elAksesInfo.innerText = `${d} Hari ${h} Jam (+Bonus dari ${hasil.jumlahRef} Downline)`;
+                    elAksesInfo.style.color = "#f1c40f";
                 }
-
-                let elAksesInfo = document.getElementById('sisaWaktuLayananVIP');
-                if(elAksesInfo) elAksesInfo.innerText = teksSisa;
             }
         };
 
+        // 4. RADAR LISTENER FIREBASE
         onSnapshot(query(collection(db, "System_Config"), where("tipe", "==", "PPOB_CONFIG")), (snap) => {
             if(!snap.empty) {
                 let d = snap.docs[0].data();
@@ -5662,14 +5694,14 @@ let isDeviceLocked = (window.CONFIG_DEVICE_LOCK === true && window.CONFIG_DEVICE
                 window.SYARAT_MIN_SPEED_PPOB = d.min_beli_speed || 0;
                 
                 if(typeof window.ubahFormPpob === "function") window.ubahFormPpob(); 
-                window.evaluasiAksesVIPLayanan(); // Cek berlapis
+                window.evaluasiAksesVIPLayanan(); 
             } else { window.GLOBAL_PPOB_ACTIVE = false; window.evaluasiAksesVIPLayanan(); }
         });
 
         onSnapshot(query(collection(db, "System_Config"), where("tipe", "==", "STAKING_STATUS")), (snap) => {
             if(!snap.empty) {
                 window.GLOBAL_STAKING_ACTIVE = snap.docs[0].data().is_active === true;
-                window.evaluasiAksesVIPLayanan(); // Cek berlapis
+                window.evaluasiAksesVIPLayanan(); 
             } else { window.GLOBAL_STAKING_ACTIVE = false; window.evaluasiAksesVIPLayanan(); }
         });
 		// --- END RADAR GEMBOK BERLAPIS ---
