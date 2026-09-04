@@ -3295,6 +3295,17 @@
         const inputPin = document.getElementById('ppobPin').value;
         const btn = document.getElementById('btnProsesPpob');
 
+        // Khusus QRIS, tangkap file gambarnya
+        let fileQris = null;
+        if (jenis === 'QRIS') {
+            const inpFile = document.getElementById('inpQrisFile');
+            if (inpFile && inpFile.files.length > 0) {
+                fileQris = inpFile.files[0];
+            } else {
+                return msg('msgPpob', "Wajib upload Foto/Scan Barcode QRIS!", "error");
+            }
+        }
+
         if(!target || !nomData || !inputPin) return msg('msgPpob', "Lengkapi semua form & PIN!", "error");
         if(inputPin !== myPin) return msg('msgPpob', "PIN Transaksi Salah!", "error");
 
@@ -3310,6 +3321,16 @@
         btn.disabled = true; btn.innerHTML = "<i class='fa-solid fa-spinner fa-spin'></i> MEMPROSES...";
 
         try {
+            let urlBuktiQris = "";
+            
+            // Jika QRIS, upload foto dulu ke Storage Firebase
+            if (fileQris) {
+                btn.innerHTML = "<i class='fa-solid fa-cloud-arrow-up fa-bounce'></i> UPLOAD BUKTI QRIS...";
+                const storageRef = ref(storage, 'bukti_qris/' + myUsername + '_' + Date.now());
+                const uploadTask = await uploadBytesResumable(storageRef, fileQris);
+                urlBuktiQris = await getDownloadURL(uploadTask.ref);
+            }
+
             // 1. Potong Saldo USDT secara presisi
             window.mySaldoUsdt -= hargaUsdt;
             await updateDoc(doc(db, "Akun_Publik", docId), { saldo_usdt: window.mySaldoUsdt });
@@ -3324,11 +3345,11 @@
                 timestamp_local: Date.now() 
             });
 
-            // 3. Catat di DB Transaksi PPOB (Tetap kirim harga IDR untuk diproses Master Node)
+            // 3. Catat di DB Transaksi PPOB (Kirim harga IDR untuk diproses Master Node)
             let finalStatusPpob = window.PPOB_AUTO_API ? "PENDING" : "MENUNGGU_ACC";
             let finalSnPesan = window.PPOB_AUTO_API ? "Menunggu Diproses API..." : "Menunggu Antrean Manual Pusat...";
 
-            await addDoc(collection(db, "Transaksi_PPOB"), {
+            let payloadTransaksi = {
                 email: myEmail,
                 username: myUsername,
                 jenis: jenis,
@@ -3338,7 +3359,14 @@
                 sn: finalSnPesan, 
                 status: finalStatusPpob,
                 waktu: serverTimestamp()
-            });
+            };
+            
+            // Jika ada foto QRIS, sisipkan linknya ke database!
+            if (urlBuktiQris !== "") {
+                payloadTransaksi.bukti_qris = urlBuktiQris;
+            }
+
+            await addDoc(collection(db, "Transaksi_PPOB"), payloadTransaksi);
 
             // 4. Catat Mutasi Pusat
             await addDoc(collection(db, "Mutasi_Pusat"), { 
@@ -3353,12 +3381,14 @@
                 document.getElementById('msgPpob').style.display = 'none';
                 document.getElementById('ppobTarget').value = '';
                 document.getElementById('ppobPin').value = '';
+                if (document.getElementById('inpQrisFile')) document.getElementById('inpQrisFile').value = '';
                 window.closeWalletModal('modalPPOB');
                 window.showToast("Pesanan PPOB Diterima & Sedang Diproses!");
             }, 2500);
 
         } catch(e) {
-            msg('msgPpob', "Gagal memproses transaksi.", "error");
+            console.error(e);
+            msg('msgPpob', "Gagal memproses transaksi. Pastikan foto tidak terlalu besar.", "error");
         }
         btn.disabled = false; btn.innerHTML = "<i class='fa-solid fa-shopping-cart'></i> PROSES PEMBELIAN";
     };
