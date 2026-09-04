@@ -1321,7 +1321,8 @@
           <div style='background:rgba(46, 204, 113, 0.1); border:1px dashed #2ecc71; padding:10px; border-radius:8px; margin-bottom:15px; text-align:center;'>
               <span style='font-size:0.75rem; color:#2ecc71; font-weight:bold;'>SALDO USDT TERSEDIA</span><br/>
               <span id='infoSaldoPpobUsdt' style='font-family:Orbitron; font-size:1.3rem; font-weight:900; color:#fff;'>0.00 USDT</span>
-              <div style='font-size:0.65rem; color:#94a3b8; margin-top:3px;'><i class='fa-solid fa-circle-info'></i> Otomatis dikonversi ke Rupiah saat beli PPOB</div>
+              <div id='infoSaldoPpobIdr' style='font-size:0.85rem; color:#f1c40f; font-weight:bold; margin-top:3px;'>~ Rp 0</div>
+              <div style='font-size:0.65rem; color:#94a3b8; margin-top:5px;'><i class='fa-solid fa-circle-info'></i> Otomatis dikonversi ke Rupiah saat beli PPOB</div>
           </div>
 
           <div class='input-group'>
@@ -2316,7 +2317,14 @@
         let elPpobUsdt = document.getElementById('infoSaldoPpobUsdt'); 
         if(elPpobUsdt) elPpobUsdt.innerText = (window.mySaldoUsdt || 0).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2}) + " USDT";
         
-        let topUsdt = document.getElementById('displayUsdt'); 
+        let elPpobIdr = document.getElementById('infoSaldoPpobIdr');
+        if(elPpobIdr) {
+            let kursUsdt = window.usdtPriceRp || 15500;
+            let estimasiIdrPpob = (window.mySaldoUsdt || 0) * kursUsdt;
+            elPpobIdr.innerText = "~ Rp " + Math.floor(estimasiIdrPpob).toLocaleString('id-ID');
+        }
+        
+        let topUsdt = document.getElementById('displayUsdt');
         if(topUsdt) {
             let kursUsdt = window.usdtPriceRp || 15500;
             let estimasiUsdt = ((myVrsc || 0) * vrscPriceRp) / kursUsdt;
