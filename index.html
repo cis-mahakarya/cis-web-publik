@@ -1326,13 +1326,25 @@
 
           <div class='input-group'>
               <select class='input-dark no-icon' id='ppobJenis' onchange='window.ubahFormPpob()'>
-                  <option value='PULSA'>Pulsa Reguler (All Operator)</option>
+                  <option value='PULSA'>Pulsa Reguler (Semua Operator)</option>
+                  <option value='KUOTA'>Paket Kuota Internet</option>
                   <option value='PLN'>Token Listrik (PLN Prabayar)</option>
+                  <option value='EWALLET'>Top Up E-Wallet (DANA/OVO/GoPay/Shopee)</option>
+                  <option value='GAME'>Voucher Game (ML/FF/PUBG)</option>
+                  <option value='TIKTOK'>Koin TikTok (Live Gift)</option>
+                  <option value='QRIS'>Pembayaran Barcode QRIS</option>
               </select>
           </div>
 
           <div class='input-group'>
-              <input class='input-dark no-icon' id='ppobTarget' type='number' placeholder='Nomor HP Tujuan...' style='border-color:#38bdf8;'/>
+              <input class='input-dark no-icon' id='ppobTarget' type='text' placeholder='Nomor HP Tujuan...' style='border-color:#38bdf8;'/>
+              <!-- Form Khusus Scan QRIS -->
+              <div id='boxUploadQris' style='display:none; margin-top:10px; background:rgba(168, 85, 247, 0.1); padding:10px; border-radius:8px; border:1px dashed #a855f7; text-align:center;'>
+                  <label style='font-size:0.75rem; color:#c084fc; cursor:pointer;'>
+                      <i class='fa-solid fa-qrcode fa-beat'></i> <b>UPLOAD FOTO / SCAN BUKTI QRIS</b><br/>
+                      <input type='file' id='inpQrisFile' accept='image/*' style='margin-top:8px; font-size:0.7rem; width:100%; border:1px solid #a855f7; padding:5px; border-radius:5px;'>
+                  </label>
+              </div>
           </div>
 
           <div class='input-group'>
@@ -3183,46 +3195,85 @@
     };
     // --- END MESIN SWAP ---
 
-	// --- START: LOGIKA TRANSAKSI PPOB ---
+	// --- START: LOGIKA TRANSAKSI SUPER PPOB & HIBURAN ---
     window.ubahFormPpob = () => {
         const jenis = document.getElementById('ppobJenis').value;
         const target = document.getElementById('ppobTarget');
         const nominal = document.getElementById('ppobNominal');
+        const boxQris = document.getElementById('boxUploadQris');
         
-        // Ambil markup yang dikirim dari Web Master
         let markup = window.PPOB_MARKUP || 0; 
+        boxQris.style.display = 'none'; // Sembunyikan box QRIS secara default
         
         if (jenis === 'PULSA') {
             target.placeholder = 'Nomor HP Tujuan...';
-            
-            // Modal dasar Digiflazz + Keuntungan (Markup)
-            let harga10 = 10500 + markup;
-            let harga20 = 20500 + markup;
-            let harga50 = 50500 + markup;
-            let harga100 = 100500 + markup;
-
+            let h10 = 10500 + markup; let h20 = 20500 + markup; let h50 = 50500 + markup; let h100 = 100500 + markup;
             nominal.innerHTML = `
                 <option value=''>-- Pilih Nominal Pulsa --</option>
-                <option value='10000|${harga10}'>Pulsa 10.000 (Harga: Rp ${harga10.toLocaleString('id-ID')})</option>
-                <option value='20000|${harga20}'>Pulsa 20.000 (Harga: Rp ${harga20.toLocaleString('id-ID')})</option>
-                <option value='50000|${harga50}'>Pulsa 50.000 (Harga: Rp ${harga50.toLocaleString('id-ID')})</option>
-                <option value='100000|${harga100}'>Pulsa 100.000 (Harga: Rp ${harga100.toLocaleString('id-ID')})</option>
+                <option value='10000|${h10}'>Pulsa 10.000 (Harga: Rp ${h10.toLocaleString('id-ID')})</option>
+                <option value='20000|${h20}'>Pulsa 20.000 (Harga: Rp ${h20.toLocaleString('id-ID')})</option>
+                <option value='50000|${h50}'>Pulsa 50.000 (Harga: Rp ${h50.toLocaleString('id-ID')})</option>
+                <option value='100000|${h100}'>Pulsa 100.000 (Harga: Rp ${h100.toLocaleString('id-ID')})</option>
             `;
-        } else {
+        } else if (jenis === 'KUOTA') {
+            target.placeholder = 'Nomor HP Tujuan...';
+            let hk1 = 15000 + markup; let hk2 = 35000 + markup; let hk3 = 55000 + markup;
+            nominal.innerHTML = `
+                <option value=''>-- Pilih Paket Kuota Internet --</option>
+                <option value='KUOTA_KECIL|${hk1}'>Kuota 1GB-3GB (Harga: Rp ${hk1.toLocaleString('id-ID')})</option>
+                <option value='KUOTA_SEDANG|${hk2}'>Kuota 5GB-8GB (Harga: Rp ${hk2.toLocaleString('id-ID')})</option>
+                <option value='KUOTA_BESAR|${hk3}'>Kuota 10GB-15GB (Harga: Rp ${hk3.toLocaleString('id-ID')})</option>
+            `;
+        } else if (jenis === 'PLN') {
             target.placeholder = 'Nomor Meter / ID Pelanggan PLN...';
-            
-            // Modal dasar Digiflazz + Keuntungan (Markup)
-            let harga20 = 20500 + markup;
-            let harga50 = 50500 + markup;
-            let harga100 = 100500 + markup;
-            let harga200 = 200500 + markup;
-
+            let hl20 = 20500 + markup; let hl50 = 50500 + markup; let hl100 = 100500 + markup; let hl200 = 200500 + markup;
             nominal.innerHTML = `
                 <option value=''>-- Pilih Nominal Token Listrik --</option>
-                <option value='20000|${harga20}'>Token 20.000 (Harga: Rp ${harga20.toLocaleString('id-ID')})</option>
-                <option value='50000|${harga50}'>Token 50.000 (Harga: Rp ${harga50.toLocaleString('id-ID')})</option>
-                <option value='100000|${harga100}'>Token 100.000 (Harga: Rp ${harga100.toLocaleString('id-ID')})</option>
-                <option value='200000|${harga200}'>Token 200.000 (Harga: Rp ${harga200.toLocaleString('id-ID')})</option>
+                <option value='20000|${hl20}'>Token 20.000 (Harga: Rp ${hl20.toLocaleString('id-ID')})</option>
+                <option value='50000|${hl50}'>Token 50.000 (Harga: Rp ${hl50.toLocaleString('id-ID')})</option>
+                <option value='100000|${hl100}'>Token 100.000 (Harga: Rp ${hl100.toLocaleString('id-ID')})</option>
+                <option value='200000|${hl200}'>Token 200.000 (Harga: Rp ${hl200.toLocaleString('id-ID')})</option>
+            `;
+        } else if (jenis === 'EWALLET') {
+            target.placeholder = 'Contoh: DANA 0812xxxx / OVO 0812...';
+            let he20 = 21000 + markup; let he50 = 51000 + markup; let he100 = 101500 + markup;
+            nominal.innerHTML = `
+                <option value=''>-- Pilih Nominal E-Wallet --</option>
+                <option value='SALDO_20K|${he20}'>Saldo 20.000 (Harga: Rp ${he20.toLocaleString('id-ID')})</option>
+                <option value='SALDO_50K|${he50}'>Saldo 50.000 (Harga: Rp ${he50.toLocaleString('id-ID')})</option>
+                <option value='SALDO_100K|${he100}'>Saldo 100.000 (Harga: Rp ${he100.toLocaleString('id-ID')})</option>
+            `;
+        } else if (jenis === 'GAME') {
+            target.placeholder = 'ID Game (Contoh: ML 12345678)';
+            let hg1 = 15000 + markup; let hg2 = 30000 + markup; let hg3 = 50000 + markup;
+            nominal.innerHTML = `
+                <option value=''>-- Pilih Voucher Game --</option>
+                <option value='GAME_KECIL|${hg1}'>Paket Diamonds/UC Kecil (Rp ${hg1.toLocaleString('id-ID')})</option>
+                <option value='GAME_SEDANG|${hg2}'>Paket Diamonds/UC Sedang (Rp ${hg2.toLocaleString('id-ID')})</option>
+                <option value='GAME_BESAR|${hg3}'>Paket Diamonds/UC Besar (Rp ${hg3.toLocaleString('id-ID')})</option>
+            `;
+        } else if (jenis === 'TIKTOK') {
+            target.placeholder = 'Username TikTok (Contoh: @SultanCIS)';
+            let ht1 = 16500 + markup; let ht2 = 33000 + markup; let ht3 = 165000 + markup;
+            nominal.innerHTML = `
+                <option value=''>-- Pilih Koin TikTok --</option>
+                <option value='TIKTOK_70|${ht1}'>70 Koin TikTok (Rp ${ht1.toLocaleString('id-ID')})</option>
+                <option value='TIKTOK_140|${ht2}'>140 Koin TikTok (Rp ${ht2.toLocaleString('id-ID')})</option>
+                <option value='TIKTOK_700|${ht3}'>700 Koin TikTok (Rp ${ht3.toLocaleString('id-ID')})</option>
+            `;
+        } else if (jenis === 'QRIS') {
+            target.placeholder = 'NMID QRIS (Angka di bawah Barcode)';
+            boxQris.style.display = 'block'; // Tampilkan tombol upload foto QRIS
+            
+            // Untuk QRIS, kita buat range pembayaran + Biaya Admin
+            let adminQris = 1000 + markup;
+            let hq1 = 10000 + adminQris; let hq2 = 25000 + adminQris; let hq3 = 50000 + adminQris; let hq4 = 100000 + adminQris;
+            nominal.innerHTML = `
+                <option value=''>-- Pilih Nominal Bayar QRIS --</option>
+                <option value='QRIS_10K|${hq1}'>Bayar Belanja Rp 10.000 (+ Fee Admin)</option>
+                <option value='QRIS_25K|${hq2}'>Bayar Belanja Rp 25.000 (+ Fee Admin)</option>
+                <option value='QRIS_50K|${hq3}'>Bayar Belanja Rp 50.000 (+ Fee Admin)</option>
+                <option value='QRIS_100K|${hq4}'>Bayar Belanja Rp 100.000 (+ Fee Admin)</option>
             `;
         }
     };
