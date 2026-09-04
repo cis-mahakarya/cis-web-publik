@@ -3261,7 +3261,7 @@
                 <option value='GAME_BESAR|${hg3}'>Paket Diamonds/UC Besar (Rp ${hg3.toLocaleString('id-ID')})</option>
             `;
         } else if (jenis === 'TIKTOK') {
-            target.placeholder = 'Username TikTok (Contoh: @SultanCIS)';
+            target.placeholder = 'Nomor HP Akun TikTok (Cth: 0812...)';
             let ht1 = 16500 + markup; let ht2 = 33000 + markup; let ht3 = 165000 + markup;
             nominal.innerHTML = `
                 <option value=''>-- Pilih Koin TikTok --</option>
@@ -5672,7 +5672,7 @@ let isDeviceLocked = (window.CONFIG_DEVICE_LOCK === true && window.CONFIG_DEVICE
             let elAksesInfo = document.getElementById('sisaWaktuLayananVIP');
             if(elAksesInfo) {
                 if (!hasil.lolos) {
-                    elAksesInfo.innerText = "Akses Terkunci (Cek Syarat)";
+                    elAksesInfo.innerText = "Terkunci: " + hasil.pesan;
                     elAksesInfo.style.color = "#ef4444";
                 } else {
                     let sisaMs = hasil.waktuAksesPPOB - Date.now();
