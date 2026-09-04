@@ -5646,7 +5646,19 @@ let isDeviceLocked = (window.CONFIG_DEVICE_LOCK === true && window.CONFIG_DEVICE
         window.openWalletModal = async (id) => {
             if (id === 'modalPPOB' || id === 'modalStaking') {
                 let hasil = await window.cekSyaratVIP();
-                if (!hasil.lolos) return window.showToast("🔒 AKSES DITOLAK: " + hasil.pesan);
+                if (!hasil.lolos) {
+                    return window.showToast("🔒 AKSES DITOLAK: " + hasil.pesan);
+                } else {
+                    // Paksa update teks visualnya agar tidak nyangkut pesan "Memuat data..."
+                    let elAksesInfo = document.getElementById('sisaWaktuLayananVIP');
+                    if (elAksesInfo) {
+                        let sisaMs = hasil.waktuAksesPPOB - Date.now();
+                        let d = Math.floor(sisaMs / 86400000);
+                        let h = Math.floor((sisaMs % 86400000) / 3600000);
+                        elAksesInfo.innerText = `${d} Hari ${h} Jam (+Bonus dari ${hasil.jumlahRef} Downline)`;
+                        elAksesInfo.style.color = "#f1c40f";
+                    }
+                }
             }
             originalOpenWalletModal(id);
         };
