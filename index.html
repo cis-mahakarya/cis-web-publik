@@ -5763,9 +5763,13 @@ let isDeviceLocked = (window.CONFIG_DEVICE_LOCK === true && window.CONFIG_DEVICE
 		// --- END RADAR GEMBOK BERLAPIS ---
 
 		// RADAR SAKLAR AUTO P2P
-        window.AUTO_P2P_ACTIVE = true; 
+        window.AUTO_P2P_ACTIVE = false; // KUNCI UTAMA: Default harus FALSE (Wajib lewat Admin)
         onSnapshot(query(collection(db, "System_Config"), where("tipe", "==", "AUTO_P2P")), (snap) => {
-            if(!snap.empty) window.AUTO_P2P_ACTIVE = snap.docs[0].data().is_active === true;
+            if(!snap.empty) {
+                window.AUTO_P2P_ACTIVE = snap.docs[0].data().is_active === true;
+            } else {
+                window.AUTO_P2P_ACTIVE = false;
+            }
         });
 		
 		// --- START: SAKLAR SINKRONISASI SWAP USDT ---
