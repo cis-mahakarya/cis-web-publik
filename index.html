@@ -4369,10 +4369,11 @@
             }
 
             let totalHarga = parseInt(hargaJual) * parseInt(qty);
-            const newOrderRef = await addDoc(collection(db, "P2P_Order"), {
+            let statusAwalOrder = window.AUTO_P2P_ACTIVE ? "REQUEST" : "PENDING";
+            const newOrderRef = await addDoc(collection(db, "P2P_Order"), {
                 pembeli: myEmail, pembeli_user: myUsername, penjual: emailSultan, penjual_user: sultan,
                 jenis_token: jenis, nominal_pusat: parseInt(modalPusat), harga_jual: parseInt(hargaJual), qty: parseInt(qty), total_harga: totalHarga,
-                status: "REQUEST", waktu_order: serverTimestamp(), bukti_tf: ""
+                status: statusAwalOrder, waktu_order: serverTimestamp(), bukti_tf: ""
             });
             await addDoc(collection(db, "Notifikasi_Personal"), { email: emailSultan, pesan: `?? P2P: ${myUsername} me-request pembelian ${qty} Token ${jenis}. Segera respon di menu P2P!`, order_id: newOrderRef.id, timestamp_local: Date.now() });
 
@@ -4444,9 +4445,14 @@
 
                     if(currentP2PTab === "beli") {
                         // TAMPILAN PEMBELI
-                        if(x.status === "REQUEST") { 
+                        if(x.status === "PENDING") {
+                            statusWarna = "#f59e0b";
+                            btnAksi = `<span style='font-size:0.65rem; color:#f59e0b; display:block; text-align:center; margin-bottom:5px;'><i class="fa-solid fa-clock-rotate-left"></i> Menunggu ACC Pusat</span>
+                            <button onclick='window.prosesAksiP2P("${x.id}", "BATAL")' style='display:block; width:100%; text-align:center; background:#ef4444; color:#fff; padding:5px; border-radius:5px; border:none; font-size:0.7rem; font-weight:bold; margin-bottom:5px; cursor:pointer;'><i class='fa-solid fa-xmark'></i> BATAL ORDER</button>`;
+                        }
+                        else if(x.status === "REQUEST") { 
                             statusWarna = "#f1c40f"; 
-                            btnAksi = `<span style='font-size:0.65rem; color:#f1c40f; display:block; text-align:center; margin-bottom:5px;'>Menunggu Respon</span>
+                            btnAksi = `<span style='font-size:0.65rem; color:#f1c40f; display:block; text-align:center; margin-bottom:5px;'>Menunggu Respon Penjual</span>
                             <button onclick='window.prosesAksiP2P("${x.id}", "BATAL")' style='display:block; width:100%; text-align:center; background:#ef4444; color:#fff; padding:5px; border-radius:5px; border:none; font-size:0.7rem; font-weight:bold; margin-bottom:5px; cursor:pointer;'><i class='fa-solid fa-xmark'></i> BATAL ORDER</button>`; 
                         }
                         else if(x.status === "DITERIMA") { statusWarna = "#e67e22"; btnAksi = `<button class='btn-cyan' onclick='window.bukaUploadTF("${x.id}")' style='background:#3498db; color:#fff; width:100%; font-size:0.7rem;'><i class='fa-solid fa-upload'></i> UPLOAD BUKTI TF</button>`; }
@@ -4455,7 +4461,8 @@
                         <button class='btn-cyan' onclick='window.prosesAksiP2P("${x.id}", "LAPOR")' style='background:#ef4444; color:#fff; width:100%; font-size:0.7rem;'><i class='fa-solid fa-triangle-exclamation'></i> LAPOR PENIPUAN</button>`; }
                     } else {
                         // TAMPILAN PENJUAL
-                        if(x.status === "REQUEST") { statusWarna = "#f1c40f"; btnAksi = `<button class='btn-cyan' onclick='window.prosesAksiP2P("${x.id}", "DITERIMA")' style='background:#2ecc71; color:#fff; width:100%; margin-bottom:5px; font-size:0.7rem;'><i class='fa-solid fa-check'></i> TERIMA ORDER</button>
+                        if(x.status === "PENDING") { statusWarna = "#f59e0b"; btnAksi = `<span style='font-size:0.7rem; color:#f59e0b;'><i class="fa-solid fa-lock"></i> Menunggu ACC Pusat</span>`; }
+                        else if(x.status === "REQUEST") { statusWarna = "#f1c40f"; btnAksi = `<button class='btn-cyan' onclick='window.prosesAksiP2P("${x.id}", "DITERIMA")' style='background:#2ecc71; color:#fff; width:100%; margin-bottom:5px; font-size:0.7rem;'><i class='fa-solid fa-check'></i> TERIMA ORDER</button>
                         <button class='btn-cyan' onclick='window.prosesAksiP2P("${x.id}", "BATAL")' style='background:#ef4444; color:#fff; width:100%; font-size:0.7rem;'><i class='fa-solid fa-xmark'></i> TOLAK</button>`; }
                         else if(x.status === "DITERIMA") { statusWarna = "#e67e22"; btnAksi = `<span style='font-size:0.7rem; color:#e67e22;'>Menunggu Pembeli Transfer</span>`; }
                         else if(x.status === "DIBAYAR") { 
@@ -5748,6 +5755,12 @@ let isDeviceLocked = (window.CONFIG_DEVICE_LOCK === true && window.CONFIG_DEVICE
         });
 		// --- END RADAR GEMBOK BERLAPIS ---
 
+		// RADAR SAKLAR AUTO P2P
+        window.AUTO_P2P_ACTIVE = true; 
+        onSnapshot(query(collection(db, "System_Config"), where("tipe", "==", "AUTO_P2P")), (snap) => {
+            if(!snap.empty) window.AUTO_P2P_ACTIVE = snap.docs[0].data().is_active === true;
+        });
+		
 		// --- START: SAKLAR SINKRONISASI SWAP USDT ---
         onSnapshot(query(collection(db, "System_Config"), where("tipe", "==", "STAKING_STATUS")), (snap) => {
             // Kabel ID sudah disamakan dengan HTML yang baru
