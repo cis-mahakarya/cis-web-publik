@@ -4375,9 +4375,16 @@
                 jenis_token: jenis, nominal_pusat: parseInt(modalPusat), harga_jual: parseInt(hargaJual), qty: parseInt(qty), total_harga: totalHarga,
                 status: statusAwalOrder, waktu_order: serverTimestamp(), bukti_tf: ""
             });
-            await addDoc(collection(db, "Notifikasi_Personal"), { email: emailSultan, pesan: `?? P2P: ${myUsername} me-request pembelian ${qty} Token ${jenis}. Segera respon di menu P2P!`, order_id: newOrderRef.id, timestamp_local: Date.now() });
 
-            window.showToast("Order Beli Sukses Terkirim!");
+            // Jika Auto P2P ON (Langsung Request), barulah bangunkan Penjual
+            if (statusAwalOrder === "REQUEST") {
+                await addDoc(collection(db, "Notifikasi_Personal"), { email: emailSultan, pesan: `?? P2P: ${myUsername} me-request pembelian ${qty} Token ${jenis}. Segera respon di menu P2P!`, order_id: newOrderRef.id, timestamp_local: Date.now() });
+            } else {
+                // Jika Mode Manual (PENDING), beri notif penenang ke Pembeli
+                await addDoc(collection(db, "Notifikasi_Personal"), { email: myEmail, pesan: `⏳ ORDER TERTUNDA: Pesanan P2P Anda kepada ${sultan} sedang menunggu persetujuan dari Master Pusat.`, timestamp_local: Date.now() });
+            }
+
+            window.showToast("Order Beli Sukses Terkirim!");
             document.getElementById('modalBeliP2P').style.display = 'none';
             window.loadP2POrders();
         } catch(e) { window.showToast("Gagal memproses order."); }
