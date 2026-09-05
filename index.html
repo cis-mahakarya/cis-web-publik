@@ -1327,13 +1327,7 @@
 
           <div class='input-group'>
               <select class='input-dark no-icon' id='ppobJenis' onchange='window.ubahFormPpob()'>
-                  <option value='PULSA'>Pulsa Reguler (Semua Operator)</option>
-                  <option value='KUOTA'>Paket Kuota Internet</option>
-                  <option value='PLN'>Token Listrik (PLN Prabayar)</option>
-                  <option value='EWALLET'>Top Up E-Wallet (DANA/OVO/GoPay/Shopee)</option>
-                  <option value='GAME'>Voucher Game (ML/FF/PUBG)</option>
-                  <option value='TIKTOK'>Koin TikTok (Live Gift)</option>
-                  <option value='QRIS'>Pembayaran Barcode QRIS</option>
+                  <option value=''>Memuat Layanan...</option>
               </select>
           </div>
 
@@ -5740,7 +5734,7 @@ let isDeviceLocked = (window.CONFIG_DEVICE_LOCK === true && window.CONFIG_DEVICE
             }
         };
 
-        // 4. RADAR LISTENER FIREBASE
+        // 4. RADAR LISTENER FIREBASE (PPOB & RENDER MENU ON/OFF)
         onSnapshot(query(collection(db, "System_Config"), where("tipe", "==", "PPOB_CONFIG")), (snap) => {
             if(!snap.empty) {
                 let d = snap.docs[0].data();
@@ -5748,6 +5742,24 @@ let isDeviceLocked = (window.CONFIG_DEVICE_LOCK === true && window.CONFIG_DEVICE
                 window.PPOB_AUTO_API = d.is_auto_api === true; 
                 window.GLOBAL_PPOB_ACTIVE = d.is_active === true;
                 window.SYARAT_MIN_SPEED_PPOB = d.min_beli_speed || 0;
+
+                // RENDER MENU DROPDOWN SECARA DINAMIS
+                const sel = document.getElementById('ppobJenis');
+                if (sel) {
+                    let html = "<option value=''>-- Pilih Layanan --</option>";
+                    // Jika data tidak ada/belum disetting pusat (undefined !== false), anggap TRUE (Tampil)
+                    if(d.menu_pulsa !== false) html += "<option value='PULSA'>Pulsa Reguler (Semua Operator)</option>";
+                    if(d.menu_kuota !== false) html += "<option value='KUOTA'>Paket Kuota Internet</option>";
+                    if(d.menu_pln !== false) html += "<option value='PLN'>Token Listrik (PLN Prabayar)</option>";
+                    if(d.menu_ewallet !== false) html += "<option value='EWALLET'>Top Up E-Wallet (DANA/OVO/GoPay/Shopee)</option>";
+                    if(d.menu_game !== false) html += "<option value='GAME'>Voucher Game (ML/FF/PUBG)</option>";
+                    if(d.menu_tiktok !== false) html += "<option value='TIKTOK'>Koin TikTok (Live Gift)</option>";
+                    if(d.menu_qris !== false) html += "<option value='QRIS'>Pembayaran Barcode QRIS</option>";
+                    
+                    let valLama = sel.value; // Tahan pilihan user agar tidak kerest
+                    sel.innerHTML = html;
+                    if (valLama && html.includes(`value='${valLama}'`)) sel.value = valLama;
+                }
                 
                 if(typeof window.ubahFormPpob === "function") window.ubahFormPpob(); 
                 window.evaluasiAksesVIPLayanan(); 
