@@ -1749,7 +1749,7 @@
         
         if (isInactive && window.STATUS_AKUN_USER !== "BLOKIR") {
             // Jika Inactive, HANYA boleh buka Home, Topup, dan Profile
-            if (id !== 'screen-topup' && id !== 'screen-profile') {
+            if (id !== 'screen-topup' && id !== 'screen-profile' && id !== 'screen-p2p') {
                 window.showToast("Fitur terkunci! Silakan perpanjang / aktivasi akun Anda.");
                 document.getElementById('modalTopup').style.display = 'flex';
                 window.toggleSidebar();
@@ -1788,7 +1788,7 @@
         let isInactive = window.STATUS_AKUN_USER === "INACTIVE" || isWaktuHabis;
 
         if (isInactive && window.STATUS_AKUN_USER !== "BLOKIR") {
-            if (id !== 'modalTopup' && id !== 'modalLegal' && id !== 'chatModal' && id !== 'modalProfile') {
+            if (id !== 'modalTopup' && id !== 'modalLegal' && id !== 'chatModal' && id !== 'modalProfile' && id !== 'modalP2P' && id !== 'modalBeliP2P' && id !== 'modalUploadTF') {
                 window.showToast("Fitur terkunci! Silakan perpanjang / aktivasi akun Anda.");
                 document.getElementById('modalTopup').style.display = 'flex';
                 return;
