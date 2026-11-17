@@ -3971,7 +3971,7 @@
 
                 if(t.distribusi_ke === 'REG') {
                     htmlTableReg += trHtml;
-                    htmlAktivasi += `<div class='token-card' onclick='document.querySelectorAll(".token-card").forEach(c=>c.classList.remove("selected")); this.classList.add("selected"); document.getElementById("selectedTokenCode").value="${t.kode_token}";'><div class='token-card-info'><div class='token-card-code'>${t.kode_token}</div><div class='token-card-amount' style='color:#f1c40f;'>${t.durasi_hari ? `EXTEND: ${t.durasi_hari} HARI` : "KODE AKTIVASI"}</div><div class='token-card-source'>Dari: ${asalToken}</div></div><div class='token-card-radio'></div></div>`;
+                    htmlAktivasi += `<div class='token-card' onclick='document.querySelectorAll(".token-card").forEach(c=>c.classList.remove("selected")); this.classList.add("selected"); document.getElementById("selectedTokenCode").value="${t.kode_token}";'><div class='token-card-info'><div class='token-card-code'>${t.kode_token}</div><div class='token-card-amount' style='color:#f1c40f;'>${t.durasi_hari ? `EXTEND: ${t.durasi_hari} HARI` : "KODE AKTIVASI"} &bull; Rp ${(t.nominal_rupiah || 10000).toLocaleString('id-ID')}</div><div class='token-card-source'>Dari: ${asalToken}</div></div><div class='token-card-radio'></div></div>`;
                 } else {
                     htmlTableMining += trHtml;
                     htmlBeliDaya += `<div class='token-card' onclick='document.querySelectorAll("#listTokenBeliDaya .token-card").forEach(c=>c.classList.remove("selected-burn")); this.classList.add("selected-burn"); document.getElementById("selectedTokenBeliDaya").value="${t.kode_token}"; document.getElementById("selectedNominalTokenBeliDaya").value="${t.nominal_rupiah}";' style='border-color:#2ecc71; background:rgba(46, 204, 113, 0.05);'><div class='token-card-info'><div class='token-card-code' style='color:#2ecc71;'>${t.kode_token}</div><div class='token-card-amount' style='color:#fff;'>Nilai: Rp ${(t.nominal_rupiah || 0).toLocaleString('id-ID')}</div><div class='token-card-source'>Dari: ${asalToken}</div></div><div class='token-card-radio' style='border-color:#2ecc71;'></div></div>`;
@@ -4204,7 +4204,6 @@
             let dataHarga = [];
             
             if (jenis === 'MINING') {
-                // Tarik langsung dari Config_Mining (Sesuai Daftar Paket Aktif di Pusat)
                 const snap = await getDocs(collection(db, "Config_Mining"));
                 snap.forEach(d => {
                     let p = d.data();
@@ -4212,28 +4211,41 @@
                         nominal: p.nominal,
                         speed: p.speed || 0,
                         durasi: p.durasi_hari || 30,
+                        ket: "",
                         isMining: true
                     });
                 });
             } else {
-                // Untuk REG, tarik dari Config_Marketplace
                 const snap = await getDocs(query(collection(db, "Config_Marketplace"), where("jenis", "==", jenis)));
                 snap.forEach(d => {
                     let p = d.data();
                     dataHarga.push({
                         nominal: p.modal || 0,
+                        ket: p.keterangan || "Aktivasi / Extend Akun",
                         isMining: false
                     });
                 });
+
+                const wajibReg = [
+                    { nominal: 10000, ket: "Aktivasi Akun Baru" },
+                    { nominal: 50000, ket: "Extend / Pajak REG 50K" },
+                    { nominal: 100000, ket: "Extend / Pajak REG 100K" },
+                    { nominal: 500000, ket: "Extend / Pajak REG 500K" }
+                ];
+                wajibReg.forEach(w => {
+                    if (!dataHarga.some(item => item.nominal === w.nominal)) {
+                        dataHarga.push({ nominal: w.nominal, ket: w.ket, isMining: false });
+                    }
+                });
             }
 
-            // Urutkan dari nominal terkecil ke terbesar
             dataHarga.sort((a,b) => a.nominal - b.nominal);
 
             let html = "<option value=''>-- Pilih Nominal Swap --</option>";
             dataHarga.forEach(p => {
-                // Tambahkan info V/s dan Hari jika itu token MINING
-                let infoTambahan = p.isMining ? ` (+${formatKripto(p.speed)} V/s | ${p.durasi} Hari)` : ` (Aktivasi Akun)`;
+                let infoTambahan = p.isMining 
+                    ? ` (+${formatKripto(p.speed)} V/s | ${p.durasi} Hari)` 
+                    : ` (${p.ket})`;
                 
                 html += `<option value='${p.nominal}'>Swap: Rp ${(p.nominal || 0).toLocaleString('id-ID')}${infoTambahan}</option>`;
             });
@@ -4255,38 +4267,53 @@
             let dataHarga = [];
             
             if (jenis === 'MINING') {
-                // Tarik langsung dari Config_Mining (Sesuai Daftar Paket Aktif di Pusat)
                 const snap = await getDocs(collection(db, "Config_Mining"));
                 snap.forEach(d => {
                     let p = d.data();
                     dataHarga.push({
-                        nominal: p.nominal,
+                        modal: p.nominal,
+                        jual: p.nominal,
                         speed: p.speed || 0,
                         durasi: p.durasi_hari || 30,
+                        ket: "",
                         isMining: true
                     });
                 });
             } else {
-                // Untuk REG, tarik dari Config_Marketplace
                 const snap = await getDocs(query(collection(db, "Config_Marketplace"), where("jenis", "==", jenis)));
                 snap.forEach(d => {
                     let p = d.data();
                     dataHarga.push({
-                        nominal: p.modal || 0,
+                        modal: p.modal || 0,
+                        jual: p.jual || p.modal || 0,
+                        ket: p.keterangan || "Aktivasi / Extend Akun",
                         isMining: false
                     });
                 });
+
+                // PENGAMAN OTOMATIS: Pastikan nominal Pajak Progresif (10K, 50K, 100K, 500K) selalu tersedia
+                const wajibReg = [
+                    { modal: 10000, jual: 10000, ket: "Aktivasi Akun Baru" },
+                    { modal: 50000, jual: 50000, ket: "Extend / Pajak REG 50K" },
+                    { modal: 100000, jual: 100000, ket: "Extend / Pajak REG 100K" },
+                    { modal: 500000, jual: 500000, ket: "Extend / Pajak REG 500K" }
+                ];
+                wajibReg.forEach(w => {
+                    if (!dataHarga.some(item => item.modal === w.modal)) {
+                        dataHarga.push({ modal: w.modal, jual: w.jual, ket: w.ket, isMining: false });
+                    }
+                });
             }
 
-            // Urutkan dari harga termurah
-            dataHarga.sort((a,b) => a.nominal - b.nominal);
+            dataHarga.sort((a,b) => a.modal - b.modal);
 
             let html = "<option value=''>-- Pilih Nominal Beli --</option>";
             dataHarga.forEach(p => {
-                // Tambahkan info V/s dan Hari jika itu token MINING
-                let infoTambahan = p.isMining ? ` (+${formatKripto(p.speed)} V/s | ${p.durasi} Hari)` : ` (Aktivasi Akun)`;
+                let infoTambahan = p.isMining 
+                    ? ` (+${formatKripto(p.speed)} V/s | ${p.durasi} Hari)` 
+                    : ` (${p.ket})`;
                 
-                html += `<option value='${p.nominal}|${p.nominal}|1'>Beli: Rp ${(p.nominal || 0).toLocaleString('id-ID')}${infoTambahan}</option>`;
+                html += `<option value='${p.modal}|${p.jual}|1'>Beli: Rp ${(p.jual || 0).toLocaleString('id-ID')}${infoTambahan}</option>`;
             });
             
             selNominal.innerHTML = html === "<option value=''>-- Pilih Nominal Beli --</option>" ? "<option value=''>Belum ada harga diatur Pusat</option>" : html;
