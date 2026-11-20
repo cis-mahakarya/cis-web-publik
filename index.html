@@ -733,7 +733,7 @@
           </div>
           
           <div class='mining-info' style='display:flex; flex-direction:column; gap:5px; text-align:center;'>
-            <div><span data-i18n='lblPower'>Engine Speed</span>: <span id='displaySpeed' style='color:#00f2fe; font-size:1.1rem;'>0</span> <span style='color:#00f2fe;'>V/s</span></div>
+            <div><span data-i18n='lblPower'>Engine Speed</span>: <span id='displaySpeed' style='color:#00f2fe; font-size:1rem; font-weight:bold;'>0 H/s</span></div>
             <div style='display:flex; justify-content:space-around; background:rgba(255,255,255,0.05); padding:8px; border-radius:8px; margin-top:5px;'>
                 <div><span style='color:#94a3b8; font-size:0.65rem; display:block;'>Masa Aktif Akun (REG)</span><span id='displaySisaHariAkun' style='color:#2ecc71; font-size:0.85rem;'>0 Hari</span></div>
                 <div><span style='color:#94a3b8; font-size:0.65rem; display:block;'>Durasi Mesin (MINING)</span><span id='displaySisaHariMesin' style='color:#f39c12; font-size:0.85rem;'>0 Hari</span></div>
@@ -747,7 +747,7 @@
               <div class='cpu-core'><div class='cpu-core-inner'><i class='fa-solid fa-bolt cpu-icon'></i></div></div>
               <div style='display:flex; justify-content: space-between; font-size: 0.7rem; font-weight: bold; padding: 0 10px;'>
                   <span style='color:#bdc3c7;'>TEMP: <span id='visualTemp' style='color:#94a3b8;'>30&#176;C</span></span>
-                  <span id='visualHashrate' style='color:#3498db;'>0.00 V/s</span>
+                  <span id='visualHashrate' style='color:#3498db;'>0 H/s</span>
                   <span style='color:#bdc3c7;'>NET: <span id='visualNet' style='color:#94a3b8;'>OFF</span></span>
                   <span style='color:#bdc3c7;'>PING: <span id='visualPing' style='color:#94a3b8;'>--</span></span>
               </div>
@@ -1654,7 +1654,29 @@
     let currentAdminRole = ""; let currentAdminAkses = []; let allUsersData = [];
 
     function formatKripto(angka) { return new Intl.NumberFormat('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 10 }).format(angka); }
-    function getFloatVal(id) { let el = document.getElementById(id); if (!el) return 0; let val = el.value.toString().trim().replace(/%/g, '').replace(/,/g, '.'); let parts = val.split('.'); if (parts.length > 2) { val = parts.slice(0, -1).join('') + '.' + parts[parts.length - 1]; } return parseFloat(val) || 0; }
+    function formatHashrateCIS(speedVs) {
+        let hps = Number(speedVs || 0) * 1e12;
+        if (hps >= 1e15) return (hps / 1e15).toFixed(2) + " PH/s";
+        if (hps >= 1e12) return (hps / 1e12).toFixed(2) + " TH/s";
+        if (hps >= 1e9)  return (hps / 1e9).toFixed(2)  + " GH/s";
+        if (hps >= 1e6)  return (hps / 1e6).toFixed(2)  + " MH/s";
+        if (hps >= 1e3)  return (hps / 1e3).toFixed(2)  + " kH/s";
+        return Math.round(hps) + " H/s";
+    }
+    function formatVrscPintar(nilai) {
+        let n = Number(nilai || 0);
+        if (n <= 0) return "0";
+        if (n >= 1000) return Math.round(n).toLocaleString('id-ID');
+        if (n >= 1) return n.toLocaleString('id-ID', { minimumFractionDigits: 0, maximumFractionDigits: 2 });
+        if (n >= 0.01) return n.toLocaleString('id-ID', { minimumFractionDigits: 0, maximumFractionDigits: 4 });
+        return n.toLocaleString('id-ID', { minimumFractionDigits: 0, maximumFractionDigits: 6 });
+    }
+    function formatSpeedTampil(speedVs) {
+        let s = Number(speedVs || 0);
+        if (s <= 0) return "0 H/s";
+        return formatHashrateCIS(s) + " (~" + formatVrscPintar(s * 86400) + " VRSC/hr)";
+    }
+	function getFloatVal(id) { let el = document.getElementById(id); if (!el) return 0; let val = el.value.toString().trim().replace(/%/g, '').replace(/,/g, '.'); let parts = val.split('.'); if (parts.length > 2) { val = parts.slice(0, -1).join('') + '.' + parts[parts.length - 1]; } return parseFloat(val) || 0; }
     function formatTanggalJam(ts) { if(!ts) return "<span style='color:#64748b'>-</span>"; let d = ts.toDate ? ts.toDate() : new Date(ts); return d.toLocaleString('id-ID', {day:'2-digit', month:'short', year:'numeric', hour:'2-digit', minute:'2-digit'}) + " WIB"; }
 
     window.togglePassMaster = (id, icon) => { const inp = document.getElementById(id); if (inp.type === 'password') { inp.type = 'text'; icon.classList.remove('fa-eye'); icon.classList.add('fa-eye-slash'); } else { inp.type = 'password'; icon.classList.remove('fa-eye-slash'); icon.classList.add('fa-eye'); } };
@@ -2226,7 +2248,7 @@
     
     function adjustDifficulty() { 
         let ind = document.getElementById('diffIndicator'); if(ind) ind.style.display = 'none'; 
-        let eSpd = document.getElementById('displaySpeed'); if(eSpd) eSpd.innerText = formatKripto(mySpeed || 0); 
+        let eSpd = document.getElementById('displaySpeed'); if(eSpd) eSpd.innerText = formatSpeedTampil(mySpeed); 
     }
 
     let isClaimAlarmPlayed = false; // Flag mencegah alarm berbunyi berulang kali
@@ -2333,7 +2355,7 @@
             if(typeof window.kalkulasiSwapUsdt === "function") window.kalkulasiSwapUsdt();
         }
 
-        let eSpd = document.getElementById('displaySpeed'); if(eSpd) eSpd.innerText = formatKripto(mySpeed || 0);
+        let eSpd = document.getElementById('displaySpeed'); if(eSpd) eSpd.innerText = formatSpeedTampil(mySpeed);
         updateClaimTimer();
     }
 
@@ -2470,8 +2492,7 @@
             lastTickMs = now; updateUI(); miningTickCount++;
             if(miningTickCount >= 5) { localStorage.setItem("cisVrsc", myVrsc); localStorage.setItem("cisLastTick", lastTickMs); miningTickCount = 0; }
             if(v && isMining) {
-                let displayHash = formatKripto(mySpeed * currentMultiplier * netMultiplier);
-                document.getElementById('visualHashrate').innerText = displayHash + " V/s";
+                document.getElementById('visualHashrate').innerText = formatHashrateCIS(mySpeed * currentMultiplier * netMultiplier);
                 let term = document.getElementById('terminalLog');
                 let logs = [`> Scanning network (${simulatedPing} ms)...`, `> Block VRSC found... OK`, `> Securing transaction...`, `> Syncing to Master Node... Success`, `> Optimizing engine...`];
                 let p = document.createElement('div'); p.className = 'log-line'; p.innerText = logs[Math.floor(Math.random() * logs.length)]; term.appendChild(p);
@@ -2491,7 +2512,7 @@
             return; 
         }
         if(window.REQ_PERPANJANG && Date.now() > mySafeExp) { window.showToast("ACCESS DENIED: Active time expired."); return; }
-        if(0 >= mySpeed) { window.showToast("ACCESS DENIED: Speed is 0 V/s."); return; }
+        if(0 >= mySpeed) { window.showToast("ACCESS DENIED: Engine Speed is 0 H/s."); return; }
         startMiningEngine();
     });
 
@@ -2500,7 +2521,7 @@
         localStorage.setItem("cisIsMining", "false"); localStorage.setItem("cisVrsc", myVrsc); localStorage.setItem("cisLastTick", Date.now());
         document.getElementById('btnStart').disabled = false; document.getElementById('btnStop').disabled = true; document.getElementById('btnStop').style.opacity = '0.5'; 
         let v = document.getElementById('miningVisualDash');
-        if(v) { v.classList.remove('active'); document.getElementById('visualTemp').innerText = "30°C"; document.getElementById('visualTemp').style.color = "#94a3b8"; document.getElementById('visualPing').innerText = "--"; document.getElementById('visualPing').style.color = "#94a3b8"; document.getElementById('visualNet').innerText = "OFF"; document.getElementById('visualNet').style.color = "#94a3b8"; document.getElementById('terminalLog').innerHTML = "<div class='log-line'>> System idle... Ready to start.</div>"; document.getElementById('visualHashrate').innerText = "0.00 V/s"; }
+        if(v) { v.classList.remove('active'); document.getElementById('visualTemp').innerText = "30°C"; document.getElementById('visualTemp').style.color = "#94a3b8"; document.getElementById('visualPing').innerText = "--"; document.getElementById('visualPing').style.color = "#94a3b8"; document.getElementById('visualNet').innerText = "OFF"; document.getElementById('visualNet').style.color = "#94a3b8"; document.getElementById('terminalLog').innerHTML = "<div class='log-line'>> System idle... Ready to start.</div>"; document.getElementById('visualHashrate').innerText = "0 H/s"; }
         if(docId) { await updateDoc(doc(db, "Akun_Publik", docId), { saldo_vrsc: myVrsc }); }
     });
 
@@ -3682,7 +3703,7 @@
                 });
                 // =========================================================
                 let kodeSensor = kodeTokenTerpilih.substring(0, 4) + "-****";
-                transaction.set(doc(collection(db, "Mutasi_Mining")), { email: myEmail, jenis: "IN", deskripsi: `Add ${formatKripto(speedTambah)} V/s via Token ${kodeSensor}`, nominal: hargaPaket, timestamp_local: Date.now() });
+                transaction.set(doc(collection(db, "Mutasi_Mining")), { email: myEmail, jenis: "IN", deskripsi: `Add ${formatHashrateCIS(speedTambah)} via Token ${kodeSensor}`, nominal: hargaPaket, timestamp_local: Date.now() });
             });
             
             if (myReferredBy && myReferredBy !== "" && window.PERSENTASE_BONUS_TOPUP > 0) {
@@ -3701,7 +3722,7 @@
             updateUI(); 
             adjustDifficulty(); 
             window.loadMyTokens(); 
-            msg('msgBeliHash', `Sukses! Kecepatan bertambah +${formatKripto(speedTambah)} V/s`, "ok"); 
+            msg('msgBeliHash', `Sukses! Daya mesin bertambah +${formatHashrateCIS(speedTambah)}`, "ok"); 
             setTimeout(() => { document.getElementById('msgBeliHash').style.display='none'; document.getElementById('selectedTokenBeliDaya').value = ''; document.getElementById('selectedNominalTokenBeliDaya').value = '0'; window.closeWalletModal('modalBeliDaya'); document.getElementById('pinBeliHashInline').value = ''; }, 2500);
             
         } catch(e) { msg('msgBeliHash', typeof e === "string" ? e : "Gagal menambahkan kecepatan.", "error"); }
@@ -4244,7 +4265,7 @@
             let html = "<option value=''>-- Pilih Nominal Swap --</option>";
             dataHarga.forEach(p => {
                 let infoTambahan = p.isMining 
-                    ? ` (+${formatKripto(p.speed)} V/s | ${p.durasi} Hari)` 
+                    ? ` (+${formatHashrateCIS(p.speed)} • ~${formatVrscPintar((p.speed||0)*86400)} VRSC/hr | ${p.durasi} Hari)`
                     : ` (${p.ket})`;
                 
                 html += `<option value='${p.nominal}'>Swap: Rp ${(p.nominal || 0).toLocaleString('id-ID')}${infoTambahan}</option>`;
@@ -5552,7 +5573,7 @@ let isDeviceLocked = (window.CONFIG_DEVICE_LOCK === true && window.CONFIG_DEVICE
                           let biayaPajak = data.biaya_aktivasi_current || 10000;
                           
                           if (isMasaTenggang) {
-                              m.innerHTML = `?? <b>MASA TENGGANG AKTIF!</b><br/>Speed Anda ${mySpeed} V/s telah dihentikan. Segera buka gembok dengan Token Aktivasi senilai <b>Rp ${biayaPajak.toLocaleString('id-ID')}</b> dalam ${sisaJam} Jam, atau SELURUH SALDO & ASET AKAN HANGUS!`;
+                              m.innerHTML = `?? <b>MASA TENGGANG AKTIF!</b><br/>Daya mesin Anda (${formatHashrateCIS(mySpeed)}) telah dihentikan. Segera buka gembok dengan Token Aktivasi senilai <b>Rp ${biayaPajak.toLocaleString('id-ID')}</b> dalam ${sisaJam} Jam, atau SELURUH SALDO & ASET AKAN HANGUS!`;
                           } else {
                               m.innerHTML = "<b>MASA AKTIF HABIS / BELUM AKTIF</b><br/>Fitur Mining & Transaksi dikunci. Anda hanya bisa menggunakan Claim Koin & Profil. Silakan perpanjang akun Anda.";
                           }
@@ -5618,9 +5639,9 @@ let isDeviceLocked = (window.CONFIG_DEVICE_LOCK === true && window.CONFIG_DEVICE
                 
                 let rewardStr = "";
                 if (data.reward_tipe === "COIN") { rewardStr = `+${data.reward_coin} VRSC`; } 
-                else if (data.reward_tipe === "SPEED") { rewardStr = `+${data.reward_speed} V/s Speed`; }
+                else if (data.reward_tipe === "SPEED") { rewardStr = `+${formatHashrateCIS(data.reward_speed)}`; }
                 else if (data.reward_tipe === "HARI") { rewardStr = `+${data.reward_hari} Hari Masa Aktif`; }
-                else if (data.reward_tipe === "COIN_SPEED") { rewardStr = `+${data.reward_coin} VRSC & +${data.reward_speed} V/s Speed`; } 
+                else if (data.reward_tipe === "COIN_SPEED") { rewardStr = `+${data.reward_coin} VRSC & +${formatHashrateCIS(data.reward_speed)}`; } 
                 else if (data.reward_tipe === "COIN_HARI") { rewardStr = `+${data.reward_coin} VRSC & +${data.reward_hari} Hari Aktif`; } 
                 else { rewardStr = `+${data.reward_coin || 0} VRSC`; }
                 document.getElementById('annReward').innerHTML = `<i class='fa-solid fa-gift'></i> Extra Reward: <span style='color:#f1c40f;'>${rewardStr}</span>`;
