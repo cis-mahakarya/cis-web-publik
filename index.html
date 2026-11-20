@@ -2634,7 +2634,7 @@
                             speed_bawaan: EVENT_SPEED,
                             expired_kontrak: Date.now() + (30 * 86400000) // Default 30 hari untuk mesin hadiah
                         });
-                        mutasiEventTeks += `& +${EVENT_SPEED} V/s `;
+                        mutasiEventTeks += `& +${formatHashrateCIS(EVENT_SPEED)} `;
                         mesinDitemukan = true;
                     }
 
@@ -4331,7 +4331,7 @@
             let html = "<option value=''>-- Pilih Nominal Beli --</option>";
             dataHarga.forEach(p => {
                 let infoTambahan = p.isMining 
-                    ? ` (+${formatKripto(p.speed)} V/s | ${p.durasi} Hari)` 
+                    ? ` (+${formatHashrateCIS(p.speed)} • ~${formatVrscPintar((p.speed||0)*86400)} VRSC/hr | ${p.durasi} Hari)` 
                     : ` (${p.ket})`;
                 
                 html += `<option value='${p.modal}|${p.jual}|1'>Beli: Rp ${(p.jual || 0).toLocaleString('id-ID')}${infoTambahan}</option>`;
