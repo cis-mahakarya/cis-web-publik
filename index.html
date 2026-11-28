@@ -2940,10 +2940,26 @@
         const notifDiv = document.getElementById('notifList'); const badge = document.getElementById('notifBadge');
         if(!notifDiv) return;
         
-        let combined = [...globalNotifs, ...personalNotifs]; 
-        combined.sort((a, b) => b.timestamp_local - a.timestamp_local);
-        
-        let lastReadTime = parseInt(localStorage.getItem('cisLastReadNotif')) || 0; 
+        let batasWaktuNotif = 0;
+     if (window.myProfileData) {
+         let rAt = Number(window.myProfileData.reset_at) || 0;
+         let cAt = 0;
+         if (window.myProfileData.created_at) {
+             if (typeof window.myProfileData.created_at.toMillis === "function") {
+                 cAt = window.myProfileData.created_at.toMillis();
+             } else if (window.myProfileData.created_at.seconds) {
+                 cAt = window.myProfileData.created_at.seconds * 1000;
+             } else if (typeof window.myProfileData.created_at === "number") {
+                 cAt = window.myProfileData.created_at;
+             }
+         }
+         batasWaktuNotif = Math.max(rAt, cAt);
+     }
+
+     let combined = [...globalNotifs, ...personalNotifs].filter(d => (d.timestamp_local || 0) >= batasWaktuNotif);
+     combined.sort((a, b) => b.timestamp_local - a.timestamp_local);
+
+     let lastReadTime = Math.max(parseInt(localStorage.getItem('cisLastReadNotif')) || 0, batasWaktuNotif);
         let html = "";
         
         if(combined.length === 0) { 
@@ -5545,7 +5561,53 @@ let isDeviceLocked = (window.CONFIG_DEVICE_LOCK === true && window.CONFIG_DEVICE
                       if(topupCloseBtn) topupCloseBtn.style.display = 'block'; 
                   }
 
-                  if(!docSnap.metadata.hasPendingWrites) { let sVrsc = data.saldo_vrsc || 0; if (sVrsc === 0) { myVrsc = 0; } else if (sVrsc > myVrsc) { myVrsc = sVrsc; } }
+                  if(!docSnap.metadata.hasPendingWrites) {
+                      let serverReset = data.reset_at || 0;
+                      let resetKey = "cisLastResetAt_" + docId;
+                      let localReset = parseInt(localStorage.getItem(resetKey)) || 0;
+
+                      if (serverReset > localReset) {
+                          // 1. Hentikan mesin & reset tampilan panel mining tanpa menulis balik saldo lama ke server
+                          isMining = false;
+                          if (miningInt) { clearInterval(miningInt); miningInt = null; }
+                          let bStart = document.getElementById('btnStart'); if (bStart) bStart.disabled = false;
+                          let bStop = document.getElementById('btnStop'); if (bStop) { bStop.disabled = true; bStop.style.opacity = '0.5'; }
+                          let vDash = document.getElementById('miningVisualDash');
+                          if (vDash) {
+                              vDash.classList.remove('active');
+                              let elTemp = document.getElementById('visualTemp'); if (elTemp) { elTemp.innerText = "30°C"; elTemp.style.color = "#94a3b8"; }
+                              let elPing = document.getElementById('visualPing'); if (elPing) { elPing.innerText = "--"; elPing.style.color = "#94a3b8"; }
+                              let elNet = document.getElementById('visualNet'); if (elNet) { elNet.innerText = "OFF"; elNet.style.color = "#94a3b8"; }
+                              let elTerm = document.getElementById('terminalLog'); if (elTerm) elTerm.innerHTML = "<div class='log-line'>&gt; System idle... Ready to start.</div>";
+                              let elHash = document.getElementById('visualHashrate'); if (elHash) elHash.innerText = "0 H/s";
+                          }
+
+                          // 2. Sapu bersih sisa cache localStorage & timer klaim 1 jam
+                          ["cisIsMining", "cisVrsc", "cisSpeed", "cisExp", "cisExpMesin", "cisSaldoRp", "cisLastTick", "cisLastClaimGame", "cisLastReadNotif"].forEach(k => localStorage.removeItem(k));
+                          localStorage.setItem(resetKey, String(serverReset));
+
+                          if (claimTimerInt) { clearInterval(claimTimerInt); claimTimerInt = null; }
+                          isClaimAlarmPlayed = false;
+                          let btnClaim = document.getElementById('btnClaimGame');
+                          if (btnClaim) {
+                              btnClaim.disabled = false;
+                              btnClaim.innerHTML = "<i class='fa-solid fa-gem' style='color:#fff;'></i> <span data-i18n='btnClaim'>CLAIM COINS (1 HR)</span>";
+                          }
+
+                          // 3. Sinkronkan ulang saldo, profil rekening, dan riwayat lokal
+                          myVrsc = data.saldo_vrsc || 0;
+                          mySaldoPpob = data.saldo_ppob || 0;
+                          edUser = data.edit_user || 0;
+                          edEmail = data.edit_email || 0;
+                          window.myProfileData = data;
+                          setupProfileUI();
+                          window.muatMutasiLokal();
+                          window.showToast("Akun Anda telah di-reset ke kondisi awal oleh Pusat.");
+                      } else {
+                          let sVrsc = data.saldo_vrsc || 0;
+                          if (sVrsc === 0) { myVrsc = 0; } else if (sVrsc > myVrsc) { myVrsc = sVrsc; }
+                      }
+                  }
                   if(isMining && ((window.REQ_PERPANJANG && Date.now() > expTime) || mySpeed <= 0)) { document.getElementById('btnStop').click(); }
                   
                   let boxBonus = document.getElementById('displayBonusSponsor'); if(boxBonus) boxBonus.innerText = formatKripto(data.total_bonus_sponsor_vrsc || 0) + " VRSC";
@@ -5553,7 +5615,7 @@ let isDeviceLocked = (window.CONFIG_DEVICE_LOCK === true && window.CONFIG_DEVICE
                   window.myProfileData = data;
                   
                   localStorage.setItem("cisVrsc", myVrsc); localStorage.setItem("cisSpeed", mySpeed); localStorage.setItem("cisExp", expTime); localStorage.setItem("cisSaldoRp", mySaldoRupiah);
-                  updateUI(); adjustDifficulty(); window.loadMyTokens(); 
+                  updateUI(); adjustDifficulty(); window.loadMyTokens(); window.renderNotifikasi();
               } else { 
                   window.logoutUser(); 
               }
