@@ -1076,10 +1076,7 @@
             </div>
         </div>
 
-        <button onclick="simpanBuktiMutasiGambar()" class="w-full mt-4 bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3 px-4 rounded-xl flex items-center justify-center gap-2 transition-all active:scale-95 shadow-lg shadow-emerald-900/50">
-    <i class="fa-solid fa-image"></i>
-    <span>UNDUH BUKTI GAMBAR (PNG)</span>
-</button>
+        <button id='btnUnduhBuktiProfit' class='btn-cyan' onclick='window.simpanBuktiMutasiGambar(this)' style='background:linear-gradient(135deg, #10b981, #059669); color:#fff; width:100%; margin-top:15px; border-radius:12px; display:flex; align-items:center; justify-content:center; gap:8px;'><i class='fa-solid fa-image'></i> UNDUH BUKTI GAMBAR (PNG)</button>
       </div>
     </div>
 	
@@ -6676,23 +6673,22 @@ window.openAkuntansiTeamModal = () => {
             btn.innerHTML = "<i class='fa-solid fa-check-double'></i> KIRIM LAPORAN KE MASTER"; btn.disabled = false;
         };
 		  
-window.simpanBuktiMutasiGambar = async function() {
-    const targetElement = document.querySelector('#modalMutasiProfit .relative') || document.querySelector('#modalMutasiProfit > div') || document.getElementById('modalMutasiProfit');
+window.simpanBuktiMutasiGambar = async function(btn) {
+    const modal = document.getElementById('modalRaporProfit');
+    const targetElement = modal ? modal.querySelector('.modal-card') : null;
     if (!targetElement) {
-        alert("Gagal menemukan panel Mutasi Profit.");
+        window.showToast("Gagal menemukan panel Mutasi Profit.");
         return;
     }
 
-    // 1. Beri visual loading sekejap
-    const btn = event.currentTarget || document.querySelector('button[onclick*="simpanBuktiMutasiGambar"]');
-    const originalContent = btn ? btn.innerHTML : "";
-    if (btn) {
-        btn.disabled = true;
-        btn.innerHTML = "<i class='fa-solid fa-spinner fa-spin'></i> Memproses Bukti...";
+    const btnEl = btn || document.getElementById('btnUnduhBuktiProfit');
+    const originalContent = btnEl ? btnEl.innerHTML : "";
+    if (btnEl) {
+        btnEl.disabled = true;
+        btnEl.innerHTML = "<i class='fa-solid fa-spinner fa-spin'></i> MEMPROSES GAMBAR...";
     }
 
     try {
-        // 2. Load script html2canvas dinamis jika belum ada
         if (!window.html2canvas) {
             await new Promise((resolve, reject) => {
                 const script = document.createElement('script');
@@ -6703,35 +6699,53 @@ window.simpanBuktiMutasiGambar = async function() {
             });
         }
 
-        // 3. Tangkap (Capture) elemen target menjadi Canvas (resolusi diperbesar 2x agar tajam)
         const canvas = await html2canvas(targetElement, {
             scale: 2,
             useCORS: true,
             allowTaint: true,
-            backgroundColor: "#0f172a", // Cocok dengan Dark Slate Slate-900 agar tetap elegan
-            logging: false
+            backgroundColor: "#0b0f19",
+            scrollX: 0,
+            scrollY: 0,
+            logging: false,
+            onclone: (clonedDoc) => {
+                const clonedCard = clonedDoc.querySelector('#modalRaporProfit .modal-card');
+                if (clonedCard) {
+                    clonedCard.style.setProperty('max-height', 'none', 'important');
+                    clonedCard.style.setProperty('overflow', 'visible', 'important');
+                    clonedCard.style.setProperty('padding-bottom', '20px', 'important');
+
+                    const closeBtn = clonedCard.querySelector('.btn-close-modal');
+                    if (closeBtn) closeBtn.style.display = 'none';
+
+                    const dlBtn = clonedCard.querySelector('#btnUnduhBuktiProfit');
+                    if (dlBtn) dlBtn.style.display = 'none';
+
+                    const wm = clonedDoc.createElement('div');
+                    wm.style.cssText = 'text-align:center; font-size:0.65rem; color:#64748b; margin-top:12px; font-family:Orbitron, sans-serif; letter-spacing:1px;';
+                    wm.innerText = 'VERIFIED BY CISVERUS.COM';
+                    clonedCard.appendChild(wm);
+                }
+            }
         });
 
-        // 4. Konversi ke Format Gambar dan Unduh
         const dataUrl = canvas.toDataURL("image/png");
         const downloadLink = document.createElement("a");
-
-        // Buat nama file khas sesuai Miner ID & Timestamp agar asli
-        const minerIdText = (document.querySelector('.text-cyan-400') || document.querySelector('#modalMutasiProfit h3') || {innerText: "MINER"}).innerText.trim().replace(/\s+/g, '_');
+        const minerEl = document.getElementById('raporUser');
+        const minerIdText = (minerEl ? minerEl.innerText : "MINER").trim().replace(/[^A-Z0-9_-]/gi, '_');
         downloadLink.download = `MUTASI_PROFIT_${minerIdText}_${Date.now()}.png`;
         downloadLink.href = dataUrl;
         document.body.appendChild(downloadLink);
         downloadLink.click();
-        document.body.appendChild(downloadLink).remove();
+        downloadLink.remove();
 
-        window.showToast("Bukti berhasil diunduh! Silakan kirim/unggah gambar asli tersebut.");
+        window.showToast("Bukti gambar PNG berhasil diunduh!");
     } catch (error) {
         console.error(error);
-        alert("Terjadi kesalahan saat memproses gambar: " + error.message);
+        window.showToast("Gagal memproses gambar: " + error.message);
     } finally {
-        if (btn) {
-            btn.disabled = false;
-            btn.innerHTML = originalContent;
+        if (btnEl) {
+            btnEl.disabled = false;
+            btnEl.innerHTML = originalContent;
         }
     }
 };
